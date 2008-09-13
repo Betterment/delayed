@@ -58,46 +58,7 @@ which are stored as their text representation and loaded from the database fresh
                                                                                                                     
 h2. Running the tasks
 
-You can invoke @rake jobs:work@ which will start working off jobs. You can cancel the rake task by @CTRL-C@. 
+Run @script/generate delayed_job@ to add @script/delayed_job@. This script can then be used to manage a process which will start working off jobs.
 
-At Shopify we run the the tasks from a simple script/job_runner which is being invoked by runnit: 
-  
-<pre><code>
-  #!/usr/bin/env ruby
-  require File.dirname(__FILE__) + '/../config/environment'
-  
-  SLEEP = 5
-  
-  trap('TERM') { puts 'Exiting...'; $exit = true }
-  trap('INT')  { puts 'Exiting...'; $exit = true }
-  
-  puts "*** Starting job worker #{Delayed::Job.worker_name}"
-  
-  begin
-  
-    loop do  
-      result = nil                                 
-  
-      realtime = Benchmark.realtime do  
-        result = Delayed::Job.work_off      
-      end                                                                          
-  
-      count = result.sum
-    
-      break if $exit
-  
-      if count.zero? 
-        sleep(SLEEP)
-        puts 'Waiting for more jobs...'
-      else
-        status = "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
-        RAILS_DEFAULT_LOGGER.info status
-        puts status
-      end
-    
-      break if $exit
-    end
-  ensure 
-    Delayed::Job.clear_locks!
-  end  
-</code></pre>
+  $ ruby script/delayed_job -e production start
+  $ ruby script/delayed_job -e production stop
