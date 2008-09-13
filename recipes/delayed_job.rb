@@ -19,7 +19,7 @@ namespace :delayed_job do
     run "cd #{current_path}; script/delayed_job -e #{rails_env} start"
   end
 
-  desc "Restart the Ferret DRb server"
+  desc "Restart the delayed_job process"
   task :restart, :roles => :app do
     run "cd #{current_path}; script/delayed_job -e #{rails_env} restart"
   end
