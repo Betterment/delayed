@@ -34,6 +34,7 @@ module Delayed
           logger = Logger.new(File.join(RAILS_ROOT, 'log', 'delayed_job.log'))
           logger.level = ActiveRecord::Base.logger.level
           ActiveRecord::Base.logger = logger
+          ActiveRecord::Base.clear_active_connections!
           
           logger.info "*** Starting job worker #{Delayed::Job.worker_name}"
           
