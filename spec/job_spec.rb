@@ -10,6 +10,10 @@ class ErrorJob
   def perform; raise 'did not work'; end
 end             
 
+class LongRunningJob
+  def perform; sleep 250; end
+end
+
 module M
   class ModuleJob
     cattr_accessor :runs; self.runs = 0
@@ -169,6 +173,13 @@ describe Delayed::Job do
     @job.reschedule 'FAIL'
 
     Delayed::Job.destroy_failed_jobs = default
+  end
+
+  it "should fail after MAX_RUN_TIME" do
+    @job = Delayed::Job.create :payload_object => LongRunningJob.new
+    Delayed::Job.reserve_and_run_one_job(1.second)
+    @job.reload.last_error.should =~ /expired/
+    @job.attempts.should == 1
   end
 
   it "should never find failed jobs" do

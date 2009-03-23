@@ -1,3 +1,5 @@
+require 'timeout'
+
 module Delayed
 
   class DeserializationError < StandardError
@@ -89,7 +91,7 @@ module Delayed
 
       begin
         runtime =  Benchmark.realtime do
-          invoke_job # TODO: raise error if takes longer than max_run_time
+          Timeout.timeout(max_run_time.to_i) { invoke_job }
           destroy
         end
         # TODO: warn if runtime > max_run_time ?
