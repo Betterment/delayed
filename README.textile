@@ -78,7 +78,8 @@ h2. Running the jobs
 
 Run @script/generate delayed_job@ to add @script/delayed_job@. This script can then be used to manage a process which will start working off jobs.
 
-  $ ruby script/delayed_job -e production start
+  # Runs two workers in separate processes.
+  $ ruby script/delayed_job -e production -n 2 start
   $ ruby script/delayed_job -e production stop
 
 You can invoke @rake jobs:work@ which will start working off jobs. You can cancel the rake task with @CTRL-C@. 
