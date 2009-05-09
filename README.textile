@@ -76,12 +76,12 @@ which are stored as their text representation and loaded from the database fresh
                                                                                                                     
 h2. Running the jobs
 
-You can invoke @rake jobs:work@ which will start working off jobs. You can cancel the rake task with @CTRL-C@. 
-
 Run @script/generate delayed_job@ to add @script/delayed_job@. This script can then be used to manage a process which will start working off jobs.
 
   $ ruby script/delayed_job -e production start
   $ ruby script/delayed_job -e production stop
+
+You can invoke @rake jobs:work@ which will start working off jobs. You can cancel the rake task with @CTRL-C@. 
 
 Workers can be running on any computer, as long as they have access to the database and their clock is in sync. You can even
 run multiple workers on per computer, but you must give each one a unique name. (TODO: put in an example)
