@@ -218,8 +218,27 @@ describe Delayed::Job do
       @job.lock_exclusively! 5.minutes, 'worker1'
       @job.lock_exclusively! 5.minutes, 'worker1'
     end                                        
-  end            
+  end
   
+  context "when another worker has worked on a task since the job was found to be available, it" do
+
+    before :each do
+      Delayed::Job.worker_name = 'worker1'
+      @job = Delayed::Job.create :payload_object => SimpleJob.new
+      @job_copy_for_worker_2 = Delayed::Job.find(@job.id)
+    end
+
+    it "should not allow a second worker to get exclusive access if already successfully processed by worker1" do
+      @job.delete
+      @job_copy_for_worker_2.lock_exclusively!(4.hours, 'worker2').should == false
+    end
+
+    it "should not allow a second worker to get exclusive access if failed to be processed by worker1 and run_at time is now in future (due to backing off behaviour)" do
+      @job.update_attributes(:attempts => 1, :run_at => Time.now + 1.day)
+      @job_copy_for_worker_2.lock_exclusively!(4.hours, 'worker2').should == false
+    end
+  end
+
   context "#name" do
     it "should be the class name of the job that was enqueued" do
       Delayed::Job.create(:payload_object => ErrorJob.new ).name.should == 'ErrorJob'
