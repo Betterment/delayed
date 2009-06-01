@@ -119,7 +119,6 @@ module Delayed
     end
 
     # Find a few candidate jobs to run (in case some immediately get locked by others).
-    # Return in random order prevent everyone trying to do same head job at once.
     def self.find_available(limit = 5, max_run_time = MAX_RUN_TIME)
 
       time_now = db_time_now
@@ -140,11 +139,9 @@ module Delayed
 
       conditions.unshift(sql)
 
-      records = ActiveRecord::Base.silence do
+      ActiveRecord::Base.silence do
         find(:all, :conditions => conditions, :order => NextTaskOrder, :limit => limit)
       end
-
-      records.sort_by { rand() }
     end
 
     # Run the next job we can get an exclusive lock on.
