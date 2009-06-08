@@ -43,6 +43,7 @@ module Delayed
     end
     
     def run(worker_name = nil)
+      Dir.chdir(RAILS_ROOT)
       require File.join(RAILS_ROOT, 'config', 'environment')
       
       # Replace the default logger
