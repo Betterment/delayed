@@ -80,10 +80,10 @@ module Delayed
 
     # Try to run one job. Returns true/false (work done/work failed) or nil if job can't be locked.
     def run_with_lock(max_run_time, worker_name)
-      logger.info "* [JOB] aquiring lock on #{name}"
+      logger.info "* [JOB] acquiring lock on #{name}"
       unless lock_exclusively!(max_run_time, worker_name)
         # We did not get the lock, some other worker process must have
-        logger.warn "* [JOB] failed to aquire exclusive lock for #{name}"
+        logger.warn "* [JOB] failed to acquire exclusive lock for #{name}"
         return nil # no work done
       end
 
@@ -233,7 +233,7 @@ module Delayed
       return handler if handler.respond_to?(:perform)
 
       raise DeserializationError,
-        'Job failed to load: Unknown handler. Try to manually require the appropiate file.'
+        'Job failed to load: Unknown handler. Try to manually require the appropriate file.'
     rescue TypeError, LoadError, NameError => e
       raise DeserializationError,
         "Job failed to load: #{e.message}. Try to manually require the required file."
