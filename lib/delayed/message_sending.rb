@@ -6,9 +6,10 @@ module Delayed
     
     module ClassMethods
       def handle_asynchronously(method)
-        without_name = "#{method}_without_send_later"
-        define_method("#{method}_with_send_later") do |*args|
-          send_later(without_name, *args)
+        aliased_method, punctuation = method.to_s.sub(/([?!=])$/, ''), $1
+        with_method, without_method = "#{aliased_method}_with_send_later#{punctuation}", "#{aliased_method}_without_send_later#{punctuation}"
+        define_method(with_method) do |*args|
+          send_later(without_method, *args)
         end
         alias_method_chain method, :send_later
       end
