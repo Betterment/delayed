@@ -2,11 +2,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{delayed_job}
-  s.version = "1.8.0"
+  s.version = "1.8.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Tobias L\303\274tke"]
-  s.date = %q{2009-07-19}
+  s.date = %q{2009-09-06}
   s.description = %q{Delayed_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. It is a direct extraction from Shopify where the job table is responsible for a multitude of core tasks.}
   s.email = %q{tobi@leetsoft.com}
   s.extra_rdoc_files = [
@@ -27,6 +27,7 @@ Gem::Specification.new do |s|
      "lib/delayed/job.rb",
      "lib/delayed/message_sending.rb",
      "lib/delayed/performable_method.rb",
+     "lib/delayed/tasks.rb",
      "lib/delayed/worker.rb",
      "lib/delayed_job.rb",
      "recipes/delayed_job.rb",
@@ -34,8 +35,7 @@ Gem::Specification.new do |s|
      "spec/delayed_method_spec.rb",
      "spec/job_spec.rb",
      "spec/story_spec.rb",
-     "tasks/jobs.rake",
-     "tasks/tasks.rb"
+     "tasks/jobs.rake"
   ]
   s.homepage = %q{http://github.com/tobi/delayed_job/tree/master}
   s.rdoc_options = ["--main", "README.textile", "--inline-source", "--line-numbers"]
