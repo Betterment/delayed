@@ -44,6 +44,14 @@ script/generate delayed_job
 rake db:migrate
 </pre>
 
+h2. Upgrading to 1.8
+
+If you are upgrading from a previous release, you will need to generate the new @script/delayed_job@:
+
+<pre>
+script/generate delayed_job --skip-migration
+</pre>
+
 h2. Queuing Jobs
 
 Call @#send_later(method, params)@ on any object and it will be processed in the background.
