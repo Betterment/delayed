@@ -14,8 +14,32 @@ It is a direct extraction from Shopify where the job table is responsible for a 
 
 h2. Installation
 
+To install as a gem, add the following to @config/environment.rb@:
+
+<pre>
+config.gem 'collectiveidea-delayed_job', :lib => 'delayed_job',
+  :source => 'http://gems.github.com'
+</pre>
+
+Rake tasks are not automatically loaded from gems, so you'll need to add the following to your Rakefile:
+
+<pre>
+begin
+  require 'delayed/tasks'
+rescue LoadError
+  STDERR.puts "Run `rake gems:install` to install delayed_job"
+end
+</pre>
+
+To install as a plugin:
+
 <pre>
 script/plugin install git://github.com/collectiveidea/delayed_job.git
+</pre>
+
+After delayed_job is installed, run:
+
+<pre>
 script/generate delayed_job
 rake db:migrate
 </pre>
