@@ -1,4 +1,3 @@
-require 'rubygems'
 require 'daemons'
 require 'optparse'
 
@@ -44,14 +43,14 @@ module Delayed
     
     def run(worker_name = nil)
       Dir.chdir(RAILS_ROOT)
-      require File.join(RAILS_ROOT, 'config', 'environment')
       
-      # Replace the default logger
-      logger = Logger.new(File.join(RAILS_ROOT, 'log', 'delayed_job.log'))
-      logger.level = ActiveRecord::Base.logger.level
-      ActiveRecord::Base.logger = logger
-      ActiveRecord::Base.clear_active_connections!
-      Delayed::Worker.logger = logger
+      # Replace the default logger…too bad Rails doesn't make this easier
+      Rails.logger.instance_eval do
+        @log.reopen File.join(RAILS_ROOT, 'log', 'delayed_job.log')
+      end
+      Delayed::Worker.logger = Rails.logger
+      ActiveRecord::Base.connection.reconnect!
+      
       Delayed::Job.worker_name = "#{worker_name} #{Delayed::Job.worker_name}"
       
       Delayed::Worker.new(@options).start  

@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-# Daemons sets pwd to /, so we have to explicitly set RAILS_ROOT
-RAILS_ROOT = File.expand_path(File.join(File.dirname(__FILE__), '..'))
-
-require File.join(File.dirname(__FILE__), *%w(.. vendor plugins delayed_job lib delayed command))
+require File.expand_path(File.join(File.dirname(__FILE__), '..', 'config', 'environment'))
+require 'delayed/command'
 Delayed::Command.new(ARGV).daemonize
