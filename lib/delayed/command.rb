@@ -7,7 +7,9 @@ module Delayed
     attr_accessor :worker_count
     
     def initialize(args)
+      @files_to_reopen = []
       @options = {:quiet => true}
+      
       @worker_count = 1
       
       opts = OptionParser.new do |opts|
@@ -34,6 +36,10 @@ module Delayed
     end
   
     def daemonize
+      ObjectSpace.each_object(File) do |file|
+        @files_to_reopen << file unless file.closed?
+      end
+      
       worker_count.times do |worker_index|
         process_name = worker_count == 1 ? "delayed_job" : "delayed_job.#{worker_index}"
         Daemons.run_proc(process_name, :dir => "#{RAILS_ROOT}/tmp/pids", :dir_mode => :normal, :ARGV => @args) do |*args|
@@ -45,10 +51,14 @@ module Delayed
     def run(worker_name = nil)
       Dir.chdir(RAILS_ROOT)
       
-      # Replace the default logger…too bad Rails doesn't make this easier
-      Rails.logger.instance_eval do
-        @log.reopen File.join(RAILS_ROOT, 'log', 'delayed_job.log')
+      # Re-open file handles
+      @files_to_reopen.each do |file|
+        begin
+          file.reopen File.join(RAILS_ROOT, 'log', 'delayed_job.log')
+        rescue ::Exception
+        end
       end
+      
       Delayed::Worker.logger = Rails.logger
       ActiveRecord::Base.connection.reconnect!
       
