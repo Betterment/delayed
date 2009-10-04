@@ -67,7 +67,7 @@ module Delayed
       
       Delayed::Worker.new(@options).start  
     rescue => e
-      logger.fatal e
+      Rails.logger.fatal e
       STDERR.puts e.message
       exit 1
     end
