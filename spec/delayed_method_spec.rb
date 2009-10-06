@@ -125,4 +125,26 @@ describe 'random ruby objects' do
     job.payload_object.perform.should == 'Once upon...'
   end
 
+  context "send_at" do
+    it "should queue a new job" do
+      lambda do
+        "string".send_at(1.hour.from_now, :length)
+      end.should change { Delayed::Job.count }.by(1)
+    end
+    
+    it "should schedule the job in the future" do
+      time = 1.hour.from_now
+      job = "string".send_at(time, :length)
+      job.run_at.should == time
+    end
+    
+    it "should store payload as PerformableMethod" do
+      job = "string".send_at(1.hour.from_now, :count, 'r')
+      job.payload_object.class.should   == Delayed::PerformableMethod
+      job.payload_object.method.should  == :count
+      job.payload_object.args.should    == ['r']
+      job.payload_object.perform.should == 1
+    end
+  end
+
 end
