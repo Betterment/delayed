@@ -162,14 +162,14 @@ describe Delayed::Job do
         Delayed::Job.destroy_failed_jobs = true
       end
       
-      it "should be destroyed if it failed more than MAX_ATTEMPTS times" do
+      it "should be destroyed if it failed more than Job::max_attempts times" do
         @job.should_receive(:destroy)
-        Delayed::Job::MAX_ATTEMPTS.times { @job.reschedule 'FAIL' }
+        Delayed::Job::max_attempts.times { @job.reschedule 'FAIL' }
       end
       
-      it "should not be destroyed if failed fewer than MAX_ATTEMPTS times" do
+      it "should not be destroyed if failed fewer than Job::max_attempts times" do
         @job.should_not_receive(:destroy)
-        (Delayed::Job::MAX_ATTEMPTS - 1).times { @job.reschedule 'FAIL' }
+        (Delayed::Job::max_attempts - 1).times { @job.reschedule 'FAIL' }
       end
     end
     
@@ -178,21 +178,21 @@ describe Delayed::Job do
         Delayed::Job.destroy_failed_jobs = false
       end
       
-      it "should be failed if it failed more than MAX_ATTEMPTS times" do
+      it "should be failed if it failed more than Job::max_attempts times" do
         @job.reload.failed_at.should == nil
-        Delayed::Job::MAX_ATTEMPTS.times { @job.reschedule 'FAIL' }
+        Delayed::Job::max_attempts.times { @job.reschedule 'FAIL' }
         @job.reload.failed_at.should_not == nil
       end
 
-      it "should not be failed if it failed fewer than MAX_ATTEMPTS times" do
-        (Delayed::Job::MAX_ATTEMPTS - 1).times { @job.reschedule 'FAIL' }
+      it "should not be failed if it failed fewer than Job::max_attempts times" do
+        (Delayed::Job::max_attempts - 1).times { @job.reschedule 'FAIL' }
         @job.reload.failed_at.should == nil
       end
       
     end
   end
   
-  it "should fail after MAX_RUN_TIME" do
+  it "should fail after Job::max_run_time" do
     @job = Delayed::Job.create :payload_object => LongRunningJob.new
     Delayed::Job.reserve_and_run_one_job(1.second)
     @job.reload.last_error.should =~ /expired/
@@ -379,7 +379,7 @@ describe Delayed::Job do
   context "while running with locked and expired jobs, it" do
     before(:each) do
       Delayed::Job.worker_name = 'worker1'
-      exp_time = Delayed::Job.db_time_now - (1.minutes + Delayed::Job::MAX_RUN_TIME)
+      exp_time = Delayed::Job.db_time_now - (1.minutes + Delayed::Job::max_run_time)
       Delayed::Job.create(:payload_object => SimpleJob.new, :locked_by => 'worker1', :locked_at => exp_time)
       Delayed::Job.create(:payload_object => SimpleJob.new, :locked_by => 'worker2', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
       Delayed::Job.create(:payload_object => SimpleJob.new)
