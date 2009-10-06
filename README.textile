@@ -142,6 +142,7 @@ Here is an example of changing job parameters in Rails:
 # config/initializers/delayed_job_config.rb
 Delayed::Job.destroy_failed_jobs = false
 silence_warnings do
+  Delayed::Worker::sleep_delay = 60
   Delayed::Job::max_attempts = 3
   Delayed::Job::max_run_time = 5.minutes
 end
