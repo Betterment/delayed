@@ -250,7 +250,7 @@ module Delayed
     # Note: This does not ping the DB to get the time, so all your clients
     # must have syncronized clocks.
     def self.db_time_now
-      (ActiveRecord::Base.default_timezone == :utc) ? Time.now.utc : Time.now
+      (ActiveRecord::Base.default_timezone == :utc) ? Time.now.utc : Time.zone.now
     end
 
   protected
