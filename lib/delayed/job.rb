@@ -98,28 +98,31 @@ module Delayed
     end
 
 
-    # Try to run one job. Returns true/false (work done/work failed) or nil if job can't be locked.
+    # Try to lock and run job. Returns true/false (work done/work failed) or nil if job can't be locked.
     def run_with_lock(max_run_time, worker_name)
       logger.info "* [JOB] acquiring lock on #{name}"
-      unless lock_exclusively!(max_run_time, worker_name)
+      if lock_exclusively!(max_run_time, worker_name)
+        run(max_run_time)
+      else
         # We did not get the lock, some other worker process must have
         logger.warn "* [JOB] failed to acquire exclusive lock for #{name}"
-        return nil # no work done
+        nil # no work done
       end
+    end
 
-      begin
-        runtime =  Benchmark.realtime do
-          Timeout.timeout(max_run_time.to_i) { invoke_job }
-          destroy
-        end
-        # TODO: warn if runtime > max_run_time ?
-        logger.info "* [JOB] #{name} completed after %.4f" % runtime
-        return true  # did work
-      rescue Exception => e
-        reschedule e.message, e.backtrace
-        log_exception(e)
-        return false  # work failed
+    # Try to run job. Returns true/false (work done/work failed)
+    def run(max_run_time)
+      runtime =  Benchmark.realtime do
+        Timeout.timeout(max_run_time.to_i) { invoke_job }
+        destroy
       end
+      # TODO: warn if runtime > max_run_time ?
+      logger.info "* [JOB] #{name} completed after %.4f" % runtime
+      return true  # did work
+    rescue Exception => e
+      reschedule e.message, e.backtrace
+      log_exception(e)
+      return false  # work failed
     end
 
     # Add a job to the queue
