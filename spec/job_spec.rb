@@ -262,7 +262,7 @@ describe Delayed::Job do
     end
 
     it "should not allow a second worker to get exclusive access if failed to be processed by worker1 and run_at time is now in future (due to backing off behaviour)" do
-      @job.update_attributes(:attempts => 1, :run_at => Time.now + 1.day)
+      @job.update_attributes(:attempts => 1, :run_at => 1.day.from_now)
       @job_copy_for_worker_2.lock_exclusively!(4.hours, 'worker2').should == false
     end
   end
