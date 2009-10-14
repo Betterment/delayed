@@ -27,7 +27,7 @@ module Delayed
         result = nil
 
         realtime = Benchmark.realtime do
-          result = Delayed::Job.work_off
+          result = work_off
         end
 
         count = result.sum
@@ -45,6 +45,26 @@ module Delayed
 
     ensure
       Delayed::Job.clear_locks!
+    end
+
+    # Do num jobs and return stats on success/failure.
+    # Exit early if interrupted.
+    def work_off(num = 100)
+      success, failure = 0, 0
+
+      num.times do
+        case Delayed::Job.reserve_and_run_one_job
+        when true
+            success += 1
+        when false
+            failure += 1
+        else
+          break  # leave if no work could be done
+        end
+        break if $exit # leave if we're exiting
+      end
+
+      return [success, failure]
     end
 
     def say(text)

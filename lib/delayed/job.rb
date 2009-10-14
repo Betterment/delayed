@@ -209,26 +209,6 @@ module Delayed
       logger.error(error)
     end
 
-    # Do num jobs and return stats on success/failure.
-    # Exit early if interrupted.
-    def self.work_off(num = 100)
-      success, failure = 0, 0
-
-      num.times do
-        case self.reserve_and_run_one_job
-        when true
-            success += 1
-        when false
-            failure += 1
-        else
-          break  # leave if no work could be done
-        end
-        break if $exit # leave if we're exiting
-      end
-
-      return [success, failure]
-    end
-
     # Moved into its own method so that new_relic can trace it.
     def invoke_job
       payload_object.perform
