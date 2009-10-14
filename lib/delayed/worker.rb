@@ -11,6 +11,14 @@ module Delayed
       RAILS_DEFAULT_LOGGER
     end
 
+    def job_max_run_time
+      Delayed::Job.max_run_time
+    end
+
+    def name
+      Delayed::Job.worker_name
+    end
+
     def initialize(options={})
       @quiet = options[:quiet]
       Delayed::Job.min_priority = options[:min_priority] if options.has_key?(:min_priority)
@@ -47,13 +55,34 @@ module Delayed
       Delayed::Job.clear_locks!
     end
 
+    def say(text)
+      puts text unless @quiet
+      logger.info text if logger
+    end
+
+    protected
+
+    # Run the next job we can get an exclusive lock on.
+    # If no jobs are left we return nil
+    def reserve_and_run_one_job(max_run_time = job_max_run_time)
+
+      # We get up to 5 jobs from the db. In case we cannot get exclusive access to a job we try the next.
+      # this leads to a more even distribution of jobs across the worker processes
+      Delayed::Job.find_available(5, max_run_time).each do |job|
+        t = job.run_with_lock(max_run_time, name)
+        return t unless t == nil  # return if we did work (good or bad)
+      end
+
+      nil # we didn't do any work, all 5 were not lockable
+    end
+
     # Do num jobs and return stats on success/failure.
     # Exit early if interrupted.
     def work_off(num = 100)
       success, failure = 0, 0
 
       num.times do
-        case Delayed::Job.reserve_and_run_one_job
+        case reserve_and_run_one_job
         when true
             success += 1
         when false
@@ -66,11 +95,5 @@ module Delayed
 
       return [success, failure]
     end
-
-    def say(text)
-      puts text unless @quiet
-      logger.info text if logger
-    end
-
   end
 end

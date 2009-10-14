@@ -6,6 +6,10 @@ describe Delayed::Worker do
     Delayed::Job.create(opts.merge(:payload_object => SimpleJob.new))
   end
 
+  before do
+    Delayed::Worker.class_eval('public :work_off')
+  end
+
   before(:each) do
     @worker = Delayed::Worker.new(:max_priority => nil, :min_priority => nil)
 

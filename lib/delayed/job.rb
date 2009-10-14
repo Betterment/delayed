@@ -162,20 +162,6 @@ module Delayed
       end
     end
 
-    # Run the next job we can get an exclusive lock on.
-    # If no jobs are left we return nil
-    def self.reserve_and_run_one_job(max_run_time = max_run_time)
-
-      # We get up to 5 jobs from the db. In case we cannot get exclusive access to a job we try the next.
-      # this leads to a more even distribution of jobs across the worker processes
-      find_available(5, max_run_time).each do |job|
-        t = job.run_with_lock(max_run_time, worker_name)
-        return t unless t == nil  # return if we did work (good or bad)
-      end
-
-      nil # we didn't do any work, all 5 were not lockable
-    end
-
     # Lock this job for this worker.
     # Returns true if we have the lock, false otherwise.
     def lock_exclusively!(max_run_time, worker = worker_name)

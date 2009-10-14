@@ -74,11 +74,11 @@ describe 'random ruby objects' do
 
   it "should ignore ActiveRecord::RecordNotFound errors because they are permanent" do
 
-    ErrorObject.new.send_later(:throw)
+    job = ErrorObject.new.send_later(:throw)
 
     Delayed::Job.count.should == 1
 
-    Delayed::Job.reserve_and_run_one_job
+    job.run_with_lock(Delayed::Job.max_run_time, Delayed::Job.worker_name)
 
     Delayed::Job.count.should == 0
 
