@@ -54,7 +54,7 @@ module Delayed
       # Re-open file handles
       @files_to_reopen.each do |file|
         begin
-          file.reopen File.join(RAILS_ROOT, 'log', 'delayed_job.log'), 'w+'
+          file.reopen File.join(RAILS_ROOT, 'log', 'delayed_job.log'), 'a+'
           file.sync = true
         rescue ::Exception
         end
