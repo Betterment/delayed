@@ -64,7 +64,7 @@ module Delayed
       ActiveRecord::Base.connection.reconnect!
       
       worker = Delayed::Worker.new(@options)
-      worker.name = "#{worker_name} #{worker.name}"
+      worker.name_prefix = "#{worker_name} "
       worker.start
     rescue => e
       Rails.logger.fatal e

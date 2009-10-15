@@ -11,6 +11,9 @@ module Delayed
       RAILS_DEFAULT_LOGGER
     end
 
+    # name_prefix is ignored if name is set directly
+    attr_accessor :name_prefix
+
     def job_max_run_time
       Delayed::Job.max_run_time
     end
@@ -20,9 +23,11 @@ module Delayed
     # Workers can safely resume working on tasks which are locked by themselves. The worker will assume that it crashed before.
     def name
       return @name unless @name.nil?
-      "host:#{Socket.gethostname} pid:#{Process.pid}" rescue "pid:#{Process.pid}"
+      "#{@name_prefix}host:#{Socket.gethostname} pid:#{Process.pid}" rescue "#{@name_prefix}pid:#{Process.pid}"
     end
 
+    # Sets the name of the worker.
+    # Setting the name to nil will reset the default worker name
     def name=(val)
       @name = val
     end
