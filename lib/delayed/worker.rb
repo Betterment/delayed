@@ -63,9 +63,9 @@ module Delayed
       Delayed::Job.clear_locks!(name)
     end
 
-    def say(text)
+    def say(text, level = Logger::INFO)
       puts text unless @quiet
-      logger.info text if logger
+      logger.add level, text if logger
     end
 
     protected
@@ -76,12 +76,21 @@ module Delayed
 
       # We get up to 5 jobs from the db. In case we cannot get exclusive access to a job we try the next.
       # this leads to a more even distribution of jobs across the worker processes
-      Delayed::Job.find_available(name, 5, max_run_time).each do |job|
-        t = job.run_with_lock(max_run_time, name)
-        return t unless t == nil  # return if we did work (good or bad)
+      job = Delayed::Job.find_available(name, 5, max_run_time).detect do |job|
+        if job.lock_exclusively!(max_run_time, name)
+          say "* [Worker(#{name})] acquired lock on #{job.name}"
+          true
+        else
+          say "* [Worker(#{name})] failed to acquire exclusive lock for #{job.name}", Logger::WARN
+          false
+        end
       end
 
-      nil # we didn't do any work, all 5 were not lockable
+      if job.nil?
+        nil # we didn't do any work, all 5 were not lockable
+      else
+        job.run(max_run_time)
+      end
     end
 
     # Do num jobs and return stats on success/failure.
