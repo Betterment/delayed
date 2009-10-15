@@ -15,8 +15,16 @@ module Delayed
       Delayed::Job.max_run_time
     end
 
+    # Every worker has a unique name which by default is the pid of the process.
+    # There are some advantages to overriding this with something which survives worker retarts:
+    # Workers can safely resume working on tasks which are locked by themselves. The worker will assume that it crashed before.
     def name
-      Delayed::Job.worker_name
+      return @name unless @name.nil?
+      "host:#{Socket.gethostname} pid:#{Process.pid}" rescue "pid:#{Process.pid}"
+    end
+
+    def name=(val)
+      @name = val
     end
 
     def initialize(options={})
@@ -26,7 +34,7 @@ module Delayed
     end
 
     def start
-      say "*** Starting job worker #{Delayed::Job.worker_name}"
+      say "*** Starting job worker #{name}"
 
       trap('TERM') { say 'Exiting...'; $exit = true }
       trap('INT')  { say 'Exiting...'; $exit = true }
@@ -52,7 +60,7 @@ module Delayed
       end
 
     ensure
-      Delayed::Job.clear_locks!
+      Delayed::Job.clear_locks!(name)
     end
 
     def say(text)
@@ -68,7 +76,7 @@ module Delayed
 
       # We get up to 5 jobs from the db. In case we cannot get exclusive access to a job we try the next.
       # this leads to a more even distribution of jobs across the worker processes
-      Delayed::Job.find_available(5, max_run_time).each do |job|
+      Delayed::Job.find_available(name, 5, max_run_time).each do |job|
         t = job.run_with_lock(max_run_time, name)
         return t unless t == nil  # return if we did work (good or bad)
       end

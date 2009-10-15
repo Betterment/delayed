@@ -21,28 +21,6 @@ module Delayed
     cattr_accessor :destroy_failed_jobs
     self.destroy_failed_jobs = true
 
-    # Every worker has a unique name which by default is the pid of the process.
-    # There are some advantages to overriding this with something which survives worker retarts:
-    # Workers can safely resume working on tasks which are locked by themselves. The worker will assume that it crashed before.
-    @@worker_name = nil
-
-    def self.worker_name
-      return @@worker_name unless @@worker_name.nil?
-      "host:#{Socket.gethostname} pid:#{Process.pid}" rescue "pid:#{Process.pid}"
-    end
-
-    def self.worker_name=(val)
-      @@worker_name = val
-    end
-
-    def worker_name
-      self.class.worker_name
-    end
-
-    def worker_name=(val)
-      @@worker_name = val
-    end
-
     NextTaskSQL         = '(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR (locked_by = ?)) AND failed_at IS NULL'
     NextTaskOrder       = 'priority DESC, run_at ASC'
 
@@ -53,7 +31,7 @@ module Delayed
     self.max_priority = nil
 
     # When a worker is exiting, make sure we don't have any locked jobs.
-    def self.clear_locks!
+    def self.clear_locks!(worker_name)
       update_all("locked_by = null, locked_at = null", ["locked_by = ?", worker_name])
     end
 
@@ -140,7 +118,7 @@ module Delayed
     end
 
     # Find a few candidate jobs to run (in case some immediately get locked by others).
-    def self.find_available(limit = 5, max_run_time = max_run_time)
+    def self.find_available(worker_name, limit = 5, max_run_time = max_run_time)
 
       time_now = db_time_now
 
@@ -167,7 +145,7 @@ module Delayed
 
     # Lock this job for this worker.
     # Returns true if we have the lock, false otherwise.
-    def lock_exclusively!(max_run_time, worker = worker_name)
+    def lock_exclusively!(max_run_time, worker)
       now = self.class.db_time_now
       affected_rows = if locked_by != worker
         # We don't own this job so we will update the locked_by name and the locked_at

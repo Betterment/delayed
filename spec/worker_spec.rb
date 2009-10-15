@@ -47,7 +47,7 @@ describe Delayed::Worker do
 
   context "while running alongside other workers that locked jobs, it" do
     before(:each) do
-      Delayed::Job.worker_name = 'worker1'
+      @worker.name = 'worker1'
       job_create(:locked_by => 'worker1', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
       job_create(:locked_by => 'worker2', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
       job_create
@@ -55,14 +55,14 @@ describe Delayed::Worker do
     end
 
     it "should ingore locked jobs from other workers" do
-      Delayed::Job.worker_name = 'worker3'
+      @worker.name = 'worker3'
       SimpleJob.runs.should == 0
       @worker.work_off
       SimpleJob.runs.should == 1 # runs the one open job
     end
 
     it "should find our own jobs regardless of locks" do
-      Delayed::Job.worker_name = 'worker1'
+      @worker.name = 'worker1'
       SimpleJob.runs.should == 0
       @worker.work_off
       SimpleJob.runs.should == 3 # runs open job plus worker1 jobs that were already locked
@@ -71,7 +71,7 @@ describe Delayed::Worker do
 
   context "while running with locked and expired jobs, it" do
     before(:each) do
-      Delayed::Job.worker_name = 'worker1'
+      @worker.name = 'worker1'
       exp_time = Delayed::Job.db_time_now - (1.minutes + Delayed::Job::max_run_time)
       job_create(:locked_by => 'worker1', :locked_at => exp_time)
       job_create(:locked_by => 'worker2', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
@@ -80,14 +80,14 @@ describe Delayed::Worker do
     end
 
     it "should only find unlocked and expired jobs" do
-      Delayed::Job.worker_name = 'worker3'
+      @worker.name = 'worker3'
       SimpleJob.runs.should == 0
       @worker.work_off
       SimpleJob.runs.should == 2 # runs the one open job and one expired job
     end
 
     it "should ignore locks when finding our own jobs" do
-      Delayed::Job.worker_name = 'worker1'
+      @worker.name = 'worker1'
       SimpleJob.runs.should == 0
       @worker.work_off
       SimpleJob.runs.should == 3 # runs open job plus worker1 jobs
