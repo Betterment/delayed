@@ -21,8 +21,10 @@ module Delayed
     cattr_accessor :destroy_failed_jobs
     self.destroy_failed_jobs = true
 
-    NextTaskSQL         = '(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR (locked_by = ?)) AND failed_at IS NULL'
-    NextTaskOrder       = 'priority DESC, run_at ASC'
+    named_scope :ready_to_run, lambda {|worker_name, max_run_time|
+      {:conditions => ['(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR locked_by = ?) AND failed_at IS NULL', db_time_now, db_time_now - max_run_time, worker_name]}
+    }
+    named_scope :by_priority, :order => 'priority DESC, run_at ASC'
 
     ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/
 
@@ -119,27 +121,12 @@ module Delayed
 
     # Find a few candidate jobs to run (in case some immediately get locked by others).
     def self.find_available(worker_name, limit = 5, max_run_time = max_run_time)
-
-      time_now = db_time_now
-
-      sql = NextTaskSQL.dup
-
-      conditions = [time_now, time_now - max_run_time, worker_name]
-
-      if self.min_priority
-        sql << ' AND (priority >= ?)'
-        conditions << min_priority
-      end
-
-      if self.max_priority
-        sql << ' AND (priority <= ?)'
-        conditions << max_priority
-      end
-
-      conditions.unshift(sql)
-
+      scope = self.ready_to_run(worker_name, max_run_time)
+      scope = scope.scoped(:conditions => ['priority >= ?', min_priority]) if min_priority
+      scope = scope.scoped(:conditions => ['priority <= ?', max_priority]) if max_priority
+      
       ActiveRecord::Base.silence do
-        find(:all, :conditions => conditions, :order => NextTaskOrder, :limit => limit)
+        scope.by_priority.all(:limit => limit)
       end
     end
 
