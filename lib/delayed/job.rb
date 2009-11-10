@@ -64,22 +64,17 @@ module Delayed
     # Reschedule the job in the future (when a job fails).
     # Uses an exponential scale depending on the number of failed attempts.
     def reschedule(message, backtrace = [], time = nil)
+      self.last_error   = message + "\n" + backtrace.join("\n")
+
       if (self.attempts += 1) < max_attempts
         time ||= Job.db_time_now + (attempts ** 4) + 5
 
         self.run_at       = time
-        self.last_error   = message + "\n" + backtrace.join("\n")
         self.unlock
         save!
       else
         logger.info "* [JOB] PERMANENTLY removing #{self.name} because of #{attempts} consecutive failures."
-        if destroy_failed_jobs
-          destroy
-        else
-          self.failed_at = Delayed::Job.db_time_now
-          self.last_error = message + "\n" + backtrace.join("\n")
-          save!
-        end
+        destroy_failed_jobs ? destroy : update_attribute(:failed_at, Delayed::Job.db_time_now)
       end
     end
 

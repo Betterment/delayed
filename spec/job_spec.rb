@@ -93,14 +93,11 @@ describe Delayed::Job do
   it "should record last_error when destroy_failed_jobs = false, max_attempts = 1" do
     Delayed::Job.destroy_failed_jobs = false
     Delayed::Job::max_attempts = 1
-    Delayed::Job.enqueue ErrorJob.new
-    Delayed::Job.work_off(1)
-
-    job = Delayed::Job.find(:first)
-
+    job = Delayed::Job.enqueue ErrorJob.new
+    job.run(1)
     job.reload
     job.last_error.should =~ /did not work/
-    job.last_error.should =~ /job_spec.rb:10:in `perform'/
+    job.last_error.should =~ /job_spec.rb/
     job.attempts.should == 1
 
     job.failed_at.should_not == nil
