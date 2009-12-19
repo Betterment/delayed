@@ -72,7 +72,7 @@ describe Delayed::Worker do
   context "while running with locked and expired jobs, it" do
     before(:each) do
       @worker.name = 'worker1'
-      exp_time = Delayed::Job.db_time_now - (1.minutes + Delayed::Job::max_run_time)
+      exp_time = Delayed::Job.db_time_now - (1.minutes + Delayed::Worker.max_run_time)
       job_create(:locked_by => 'worker1', :locked_at => exp_time)
       job_create(:locked_by => 'worker2', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
       job_create

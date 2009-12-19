@@ -2,9 +2,11 @@ module Delayed
   class Worker
     @@sleep_delay = 5
     
-    cattr_accessor :sleep_delay
-
-    cattr_accessor :logger
+    @@max_attempts = 25
+    @@max_run_time = 4.hours
+    
+    cattr_accessor :max_attempts, :max_run_time, :sleep_delay, :logger
+    
     self.logger = if defined?(Merb::Logger)
       Merb.logger
     elsif defined?(RAILS_DEFAULT_LOGGER)
@@ -13,10 +15,6 @@ module Delayed
 
     # name_prefix is ignored if name is set directly
     attr_accessor :name_prefix
-
-    def job_max_run_time
-      Delayed::Job.max_run_time
-    end
 
     # Every worker has a unique name which by default is the pid of the process.
     # There are some advantages to overriding this with something which survives worker retarts:
@@ -77,7 +75,7 @@ module Delayed
 
     # Run the next job we can get an exclusive lock on.
     # If no jobs are left we return nil
-    def reserve_and_run_one_job(max_run_time = job_max_run_time)
+    def reserve_and_run_one_job(max_run_time = self.class.max_run_time)
 
       # We get up to 5 jobs from the db. In case we cannot get exclusive access to a job we try the next.
       # this leads to a more even distribution of jobs across the worker processes

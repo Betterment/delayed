@@ -48,7 +48,7 @@ describe Delayed::Job do
     SimpleJob.runs.should == 0
 
     job = Delayed::Job.enqueue SimpleJob.new
-    job.run_with_lock(Delayed::Job.max_run_time, 'worker')
+    job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
 
     SimpleJob.runs.should == 1
   end
@@ -62,7 +62,7 @@ describe Delayed::Job do
     JOB
     end
 
-    job.run_with_lock(Delayed::Job.max_run_time, 'worker')
+    job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
 
     $eval_job_ran.should == true
   end
@@ -71,14 +71,14 @@ describe Delayed::Job do
     M::ModuleJob.runs.should == 0
 
     job = Delayed::Job.enqueue M::ModuleJob.new
-    job.run_with_lock(Delayed::Job.max_run_time, 'worker')
+    job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
 
     M::ModuleJob.runs.should == 1
   end
                    
   it "should re-schedule by about 1 second at first and increment this more and more minutes when it fails to execute properly" do
     job = Delayed::Job.enqueue ErrorJob.new
-    job.run_with_lock(Delayed::Job.max_run_time, 'worker')
+    job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
 
     job = Delayed::Job.find(:first)
 
@@ -92,7 +92,7 @@ describe Delayed::Job do
 
   it "should record last_error when destroy_failed_jobs = false, max_attempts = 1" do
     Delayed::Job.destroy_failed_jobs = false
-    Delayed::Job::max_attempts = 1
+    Delayed::Worker.max_attempts = 1
     job = Delayed::Job.enqueue ErrorJob.new
     job.run(1)
     job.reload
@@ -154,14 +154,14 @@ describe Delayed::Job do
         Delayed::Job.destroy_failed_jobs = true
       end
       
-      it "should be destroyed if it failed more than Job::max_attempts times" do
+      it "should be destroyed if it failed more than Worker.max_attempts times" do
         @job.should_receive(:destroy)
-        Delayed::Job::max_attempts.times { @job.reschedule 'FAIL' }
+        Delayed::Worker.max_attempts.times { @job.reschedule 'FAIL' }
       end
       
-      it "should not be destroyed if failed fewer than Job::max_attempts times" do
+      it "should not be destroyed if failed fewer than Worker.max_attempts times" do
         @job.should_not_receive(:destroy)
-        (Delayed::Job::max_attempts - 1).times { @job.reschedule 'FAIL' }
+        (Delayed::Worker.max_attempts - 1).times { @job.reschedule 'FAIL' }
       end
     end
     
@@ -170,14 +170,14 @@ describe Delayed::Job do
         Delayed::Job.destroy_failed_jobs = false
       end
       
-      it "should be failed if it failed more than Job::max_attempts times" do
+      it "should be failed if it failed more than Worker.max_attempts times" do
         @job.reload.failed_at.should == nil
-        Delayed::Job::max_attempts.times { @job.reschedule 'FAIL' }
+        Delayed::Worker.max_attempts.times { @job.reschedule 'FAIL' }
         @job.reload.failed_at.should_not == nil
       end
 
-      it "should not be failed if it failed fewer than Job::max_attempts times" do
-        (Delayed::Job::max_attempts - 1).times { @job.reschedule 'FAIL' }
+      it "should not be failed if it failed fewer than Worker.max_attempts times" do
+        (Delayed::Worker.max_attempts - 1).times { @job.reschedule 'FAIL' }
         @job.reload.failed_at.should == nil
       end
       
@@ -306,7 +306,7 @@ describe Delayed::Job do
     it "should leave the queue in a consistent state and not run the job if locking fails" do
       SimpleJob.runs.should == 0     
       @job.stub!(:lock_exclusively!).with(any_args).once.and_return(false)
-      @job.run_with_lock(Delayed::Job.max_run_time, 'worker')
+      @job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
       SimpleJob.runs.should == 0
     end
   

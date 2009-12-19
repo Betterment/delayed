@@ -8,11 +8,6 @@ module Delayed
   # A job object that is persisted to the database.
   # Contains the work object as a YAML field.
   class Job < ActiveRecord::Base
-    @@max_attempts = 25
-    @@max_run_time = 4.hours
-    
-    cattr_accessor :max_attempts, :max_run_time
-    
     set_table_name :delayed_jobs
 
     # By default failed jobs are destroyed after too many attempts.
@@ -66,7 +61,7 @@ module Delayed
     def reschedule(message, backtrace = [], time = nil)
       self.last_error   = message + "\n" + backtrace.join("\n")
 
-      if (self.attempts += 1) < max_attempts
+      if (self.attempts += 1) < Worker.max_attempts
         time ||= Job.db_time_now + (attempts ** 4) + 5
 
         self.run_at       = time
@@ -121,7 +116,7 @@ module Delayed
     end
 
     # Find a few candidate jobs to run (in case some immediately get locked by others).
-    def self.find_available(worker_name, limit = 5, max_run_time = max_run_time)
+    def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
       scope = self.ready_to_run(worker_name, max_run_time)
       scope = scope.scoped(:conditions => ['priority >= ?', min_priority]) if min_priority
       scope = scope.scoped(:conditions => ['priority <= ?', max_priority]) if max_priority

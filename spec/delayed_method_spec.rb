@@ -78,7 +78,7 @@ describe 'random ruby objects' do
 
     Delayed::Job.count.should == 1
 
-    job.run_with_lock(Delayed::Job.max_run_time, 'worker')
+    job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
 
     Delayed::Job.count.should == 0
 
