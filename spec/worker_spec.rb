@@ -10,7 +10,7 @@ describe Delayed::Worker do
   end
 
   before(:each) do
-    @worker = Delayed::Worker.new(:max_priority => nil, :min_priority => nil)
+    @worker = Delayed::Worker.new(:max_priority => nil, :min_priority => nil, :quiet => true)
 
     Delayed::Job.delete_all
     
@@ -19,7 +19,7 @@ describe Delayed::Worker do
 
   context "worker prioritization" do
     before(:each) do
-      @worker = Delayed::Worker.new(:max_priority => 5, :min_priority => -5)
+      @worker = Delayed::Worker.new(:max_priority => 5, :min_priority => -5, :quiet => true)
     end
 
     it "should only work_off jobs that are >= min_priority" do
