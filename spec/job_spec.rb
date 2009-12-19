@@ -43,19 +43,6 @@ describe Delayed::Job do
     Delayed::Job.first.run_at.should be_close(later, 1)
   end
 
-  it "should work with eval jobs" do
-    $eval_job_ran = false
-
-    job = Delayed::Job.enqueue do <<-JOB
-      $eval_job_ran = true
-    JOB
-    end
-
-    job.invoke_job
-
-    $eval_job_ran.should == true
-  end
-                   
   it "should work with jobs in modules" do
     job = Delayed::Job.enqueue M::ModuleJob.new
     lambda { job.invoke_job }.should change { M::ModuleJob.runs }.from(0).to(1)

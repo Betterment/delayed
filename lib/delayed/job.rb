@@ -47,10 +47,9 @@ module Delayed
     end
 
     # Add a job to the queue
-    def self.enqueue(*args, &block)
-      object = block_given? ? EvaledJob.new(&block) : args.shift
-
-      unless object.respond_to?(:perform) || block_given?
+    def self.enqueue(*args)
+      object = args.shift
+      unless object.respond_to?(:perform)
         raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
       end
     
@@ -150,15 +149,5 @@ module Delayed
       self.run_at ||= self.class.db_time_now
     end
 
-  end
-
-  class EvaledJob
-    def initialize
-      @job = yield
-    end
-
-    def perform
-      eval(@job)
-    end
   end
 end
