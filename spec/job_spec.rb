@@ -102,46 +102,6 @@ describe Delayed::Job do
     lambda { job.payload_object.perform }.should raise_error(Delayed::DeserializationError)
   end
   
-  context "reschedule" do
-    before do
-      @job = Delayed::Job.create :payload_object => SimpleJob.new
-    end
-    
-    context "and we want to destroy jobs" do
-      before do
-        Delayed::Job.destroy_failed_jobs = true
-      end
-      
-      it "should be destroyed if it failed more than Worker.max_attempts times" do
-        @job.should_receive(:destroy)
-        Delayed::Worker.max_attempts.times { @job.reschedule 'FAIL' }
-      end
-      
-      it "should not be destroyed if failed fewer than Worker.max_attempts times" do
-        @job.should_not_receive(:destroy)
-        (Delayed::Worker.max_attempts - 1).times { @job.reschedule 'FAIL' }
-      end
-    end
-    
-    context "and we don't want to destroy jobs" do
-      before do
-        Delayed::Job.destroy_failed_jobs = false
-      end
-      
-      it "should be failed if it failed more than Worker.max_attempts times" do
-        @job.reload.failed_at.should == nil
-        Delayed::Worker.max_attempts.times { @job.reschedule 'FAIL' }
-        @job.reload.failed_at.should_not == nil
-      end
-
-      it "should not be failed if it failed fewer than Worker.max_attempts times" do
-        (Delayed::Worker.max_attempts - 1).times { @job.reschedule 'FAIL' }
-        @job.reload.failed_at.should == nil
-      end
-      
-    end
-  end
-  
   it "should never find failed jobs" do
     @job = Delayed::Job.create :payload_object => SimpleJob.new, :attempts => 50, :failed_at => Delayed::Job.db_time_now
     Delayed::Job.find_available('worker', 1).length.should == 0

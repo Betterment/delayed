@@ -7,7 +7,6 @@ describe Delayed::Worker do
 
   before(:all) do
     Delayed::Worker.send :public, :work_off
-    Delayed::Worker.send :public, :run
   end
 
   before(:each) do
@@ -90,14 +89,14 @@ describe Delayed::Worker do
   describe "failed jobs" do
     before do
       # reset defaults
-      Delayed::Job.destroy_failed_jobs = true
+      Delayed::Worker.destroy_failed_jobs = true
       Delayed::Worker.max_attempts = 25
 
       @job = Delayed::Job.enqueue ErrorJob.new
     end
 
     it "should record last_error when destroy_failed_jobs = false, max_attempts = 1" do
-      Delayed::Job.destroy_failed_jobs = false
+      Delayed::Worker.destroy_failed_jobs = false
       Delayed::Worker.max_attempts = 1
       @worker.run(@job)
       @job.reload
@@ -117,4 +116,46 @@ describe Delayed::Worker do
       @job.run_at.should < Delayed::Job.db_time_now + 10.minutes
     end
   end
+  
+  context "reschedule" do
+    before do
+      @job = Delayed::Job.create :payload_object => SimpleJob.new
+    end
+    
+    context "and we want to destroy jobs" do
+      before do
+        Delayed::Worker.destroy_failed_jobs = true
+      end
+      
+      it "should be destroyed if it failed more than Worker.max_attempts times" do
+        @job.should_receive(:destroy)
+        Delayed::Worker.max_attempts.times { @worker.reschedule(@job) }
+      end
+      
+      it "should not be destroyed if failed fewer than Worker.max_attempts times" do
+        @job.should_not_receive(:destroy)
+        (Delayed::Worker.max_attempts - 1).times { @worker.reschedule(@job) }
+      end
+    end
+    
+    context "and we don't want to destroy jobs" do
+      before do
+        Delayed::Worker.destroy_failed_jobs = false
+      end
+      
+      it "should be failed if it failed more than Worker.max_attempts times" do
+        @job.reload.failed_at.should == nil
+        Delayed::Worker.max_attempts.times { @worker.reschedule(@job) }
+        @job.reload.failed_at.should_not == nil
+      end
+
+      it "should not be failed if it failed fewer than Worker.max_attempts times" do
+        (Delayed::Worker.max_attempts - 1).times { @worker.reschedule(@job) }
+        @job.reload.failed_at.should == nil
+      end
+      
+    end
+  end
+  
+  
 end

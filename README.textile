@@ -134,18 +134,16 @@ The default Worker.max_run_time is 4.hours. If your job takes longer than that, 
 make sure your job doesn't exceed this time. You should set this to the longest time you think the job could take.
 
 By default, it will delete failed jobs (and it always deletes successful jobs). If you want to keep failed jobs, set
-Delayed::Job.destroy_failed_jobs = false. The failed jobs will be marked with non-null failed_at.
+Delayed::Worker.destroy_failed_jobs = false. The failed jobs will be marked with non-null failed_at.
 
 Here is an example of changing job parameters in Rails:
 
 <pre>
 # config/initializers/delayed_job_config.rb
-Delayed::Job.destroy_failed_jobs = false
-silence_warnings do
-  Delayed::Worker.sleep_delay = 60
-  Delayed::Worker.max_attempts = 3
-  Delayed::Worker.max_run_time = 5.minutes
-end
+Delayed::Worker.destroy_failed_jobs = false
+Delayed::Worker.sleep_delay = 60
+Delayed::Worker.max_attempts = 3
+Delayed::Worker.max_run_time = 5.minutes
 </pre>
 
 h3. Cleaning up

@@ -10,12 +10,6 @@ module Delayed
   class Job < ActiveRecord::Base
     set_table_name :delayed_jobs
 
-    # By default failed jobs are destroyed after too many attempts.
-    # If you want to keep them around (perhaps to inspect the reason
-    # for the failure), set this to false.
-    cattr_accessor :destroy_failed_jobs
-    self.destroy_failed_jobs = true
-
     named_scope :ready_to_run, lambda {|worker_name, max_run_time|
       {:conditions => ['(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR locked_by = ?) AND failed_at IS NULL', db_time_now, db_time_now - max_run_time, worker_name]}
     }
@@ -50,23 +44,6 @@ module Delayed
 
     def payload_object=(object)
       self['handler'] = object.to_yaml
-    end
-
-    # Reschedule the job in the future (when a job fails).
-    # Uses an exponential scale depending on the number of failed attempts.
-    def reschedule(message, backtrace = [], time = nil)
-      self.last_error   = message + "\n" + backtrace.join("\n")
-
-      if (self.attempts += 1) < Worker.max_attempts
-        time ||= Job.db_time_now + (attempts ** 4) + 5
-
-        self.run_at       = time
-        self.unlock
-        save!
-      else
-        logger.info "* [JOB] PERMANENTLY removing #{self.name} because of #{attempts} consecutive failures."
-        destroy_failed_jobs ? destroy : update_attribute(:failed_at, Delayed::Job.db_time_now)
-      end
     end
 
     # Add a job to the queue
