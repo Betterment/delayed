@@ -1,11 +1,9 @@
 module Delayed
   class Worker
-    @@sleep_delay = 5
-    
-    @@max_attempts = 25
-    @@max_run_time = 4.hours
-    
-    cattr_accessor :max_attempts, :max_run_time, :sleep_delay, :logger
+    cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time, :sleep_delay, :logger
+    self.sleep_delay = 5
+    self.max_attempts = 25
+    self.max_run_time = 4.hours
     
     self.logger = if defined?(Merb::Logger)
       Merb.logger
@@ -32,8 +30,8 @@ module Delayed
 
     def initialize(options={})
       @quiet = options[:quiet]
-      Delayed::Job.min_priority = options[:min_priority] if options.has_key?(:min_priority)
-      Delayed::Job.max_priority = options[:max_priority] if options.has_key?(:max_priority)
+      self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
+      self.class.max_priority = options[:max_priority] if options.has_key?(:max_priority)
     end
 
     def start

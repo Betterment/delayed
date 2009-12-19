@@ -3,8 +3,8 @@ require File.dirname(__FILE__) + '/sample_jobs'
 
 describe Delayed::Job do
   before  do               
-    Delayed::Job.max_priority = nil
-    Delayed::Job.min_priority = nil      
+    Delayed::Worker.max_priority = nil
+    Delayed::Worker.min_priority = nil
     
     Delayed::Job.delete_all
   end
@@ -275,8 +275,8 @@ describe Delayed::Job do
   context "worker prioritization" do
     
     before(:each) do
-      Delayed::Job.max_priority = nil
-      Delayed::Job.min_priority = nil      
+      Delayed::Worker.max_priority = nil
+      Delayed::Worker.min_priority = nil
     end
 
     it "should fetch jobs ordered by priority" do
