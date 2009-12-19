@@ -70,15 +70,33 @@ module Delayed
     end
 
     protected
+    
+    def run(job)
+      runtime =  Benchmark.realtime do
+        Timeout.timeout(self.class.max_run_time.to_i) { job.invoke_job }
+        job.destroy
+      end
+      # TODO: warn if runtime > max_run_time ?
+      say "* [JOB] #{name} completed after %.4f" % runtime
+      return true  # did work
+    rescue Exception => e
+      handle_failed_job(job, e)
+      return false  # work failed
+    end
+    
+    def handle_failed_job(job, error)
+      job.reschedule error.message, error.backtrace
+      say "* [JOB] #{name} failed with #{error.class.name}: #{error.message} - #{job.attempts} failed attempts", Logger::ERROR
+    end
 
     # Run the next job we can get an exclusive lock on.
     # If no jobs are left we return nil
-    def reserve_and_run_one_job(max_run_time = self.class.max_run_time)
+    def reserve_and_run_one_job
 
       # We get up to 5 jobs from the db. In case we cannot get exclusive access to a job we try the next.
       # this leads to a more even distribution of jobs across the worker processes
-      job = Delayed::Job.find_available(name, 5, max_run_time).detect do |job|
-        if job.lock_exclusively!(max_run_time, name)
+      job = Delayed::Job.find_available(name, 5, self.class.max_run_time).detect do |job|
+        if job.lock_exclusively!(self.class.max_run_time, name)
           say "* [Worker(#{name})] acquired lock on #{job.name}"
           true
         else
@@ -87,11 +105,7 @@ module Delayed
         end
       end
 
-      if job.nil?
-        nil # we didn't do any work, all 5 were not lockable
-      else
-        job.run(max_run_time)
-      end
+      run(job) if job
     end
 
     # Do num jobs and return stats on success/failure.

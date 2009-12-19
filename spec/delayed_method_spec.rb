@@ -73,15 +73,8 @@ describe 'random ruby objects' do
   end
 
   it "should ignore ActiveRecord::RecordNotFound errors because they are permanent" do
-
     job = ErrorObject.new.send_later(:throw)
-
-    Delayed::Job.count.should == 1
-
-    job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
-
-    Delayed::Job.count.should == 0
-
+    lambda { job.invoke_job }.should_not raise_error
   end
 
   it "should store the object as string if its an active record" do

@@ -5,8 +5,9 @@ describe Delayed::Worker do
     Delayed::Job.create(opts.merge(:payload_object => SimpleJob.new))
   end
 
-  before do
-    Delayed::Worker.class_eval('public :work_off')
+  before(:all) do
+    Delayed::Worker.send :public, :work_off
+    Delayed::Worker.send :public, :run
   end
 
   before(:each) do
@@ -16,7 +17,22 @@ describe Delayed::Worker do
     
     SimpleJob.runs = 0
   end
-
+  
+  describe "running a job" do
+    it "should fail after Worker.max_run_time" do
+      begin
+        old_max_run_time = Delayed::Worker.max_run_time
+        Delayed::Worker.max_run_time = 1.second
+        @job = Delayed::Job.create :payload_object => LongRunningJob.new
+        @worker.run(@job)
+        @job.reload.last_error.should =~ /expired/
+        @job.attempts.should == 1
+      ensure
+        Delayed::Worker.max_run_time = old_max_run_time
+      end
+    end
+  end
+  
   context "worker prioritization" do
     before(:each) do
       @worker = Delayed::Worker.new(:max_priority => 5, :min_priority => -5, :quiet => true)
@@ -44,55 +60,61 @@ describe Delayed::Worker do
     end
   end
 
-  context "while running alongside other workers that locked jobs, it" do
+  context "while running with locked and expired jobs" do
     before(:each) do
       @worker.name = 'worker1'
-      job_create(:locked_by => 'worker1', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
-      job_create(:locked_by => 'worker2', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
+    end
+    
+    it "should not run jobs locked by another worker" do
+      job_create(:locked_by => 'other_worker', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
+      lambda { @worker.work_off }.should_not change { SimpleJob.runs }
+    end
+    
+    it "should run open jobs" do
       job_create
-      job_create(:locked_by => 'worker1', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
+      lambda { @worker.work_off }.should change { SimpleJob.runs }.from(0).to(1)
     end
-
-    it "should ingore locked jobs from other workers" do
-      @worker.name = 'worker3'
-      SimpleJob.runs.should == 0
-      @worker.work_off
-      SimpleJob.runs.should == 1 # runs the one open job
+    
+    it "should run expired jobs" do
+      expired_time = Delayed::Job.db_time_now - (1.minutes + Delayed::Worker.max_run_time)
+      job_create(:locked_by => 'other_worker', :locked_at => expired_time)
+      lambda { @worker.work_off }.should change { SimpleJob.runs }.from(0).to(1)
     end
-
-    it "should find our own jobs regardless of locks" do
-      @worker.name = 'worker1'
-      SimpleJob.runs.should == 0
-      @worker.work_off
-      SimpleJob.runs.should == 3 # runs open job plus worker1 jobs that were already locked
+    
+    it "should run own jobs" do
+      job_create(:locked_by => @worker.name, :locked_at => (Delayed::Job.db_time_now - 1.minutes))
+      lambda { @worker.work_off }.should change { SimpleJob.runs }.from(0).to(1)
     end
   end
+  
+  describe "failed jobs" do
+    before do
+      # reset defaults
+      Delayed::Job.destroy_failed_jobs = true
+      Delayed::Worker.max_attempts = 25
 
-  context "while running with locked and expired jobs, it" do
-    before(:each) do
-      @worker.name = 'worker1'
-      exp_time = Delayed::Job.db_time_now - (1.minutes + Delayed::Worker.max_run_time)
-      job_create(:locked_by => 'worker1', :locked_at => exp_time)
-      job_create(:locked_by => 'worker2', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
-      job_create
-      job_create(:locked_by => 'worker1', :locked_at => (Delayed::Job.db_time_now - 1.minutes))
+      @job = Delayed::Job.enqueue ErrorJob.new
     end
 
-    it "should only find unlocked and expired jobs" do
-      @worker.name = 'worker3'
-      SimpleJob.runs.should == 0
-      @worker.work_off
-      SimpleJob.runs.should == 2 # runs the one open job and one expired job
+    it "should record last_error when destroy_failed_jobs = false, max_attempts = 1" do
+      Delayed::Job.destroy_failed_jobs = false
+      Delayed::Worker.max_attempts = 1
+      @worker.run(@job)
+      @job.reload
+      @job.last_error.should =~ /did not work/
+      @job.last_error.should =~ /worker_spec.rb/
+      @job.attempts.should == 1
+      @job.failed_at.should_not be_nil
     end
-
-    it "should ignore locks when finding our own jobs" do
-      @worker.name = 'worker1'
-      SimpleJob.runs.should == 0
-      @worker.work_off
-      SimpleJob.runs.should == 3 # runs open job plus worker1 jobs
-      # This is useful in the case of a crash/restart on worker1, but make sure multiple workers on the same host have unique names!
+    
+    it "should re-schedule jobs after failing" do
+      @worker.run(@job)
+      @job.reload
+      @job.last_error.should =~ /did not work/
+      @job.last_error.should =~ /sample_jobs.rb:8:in `perform'/
+      @job.attempts.should == 1
+      @job.run_at.should > Delayed::Job.db_time_now - 10.minutes
+      @job.run_at.should < Delayed::Job.db_time_now + 10.minutes
     end
-
   end
-
 end

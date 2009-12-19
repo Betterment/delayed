@@ -69,34 +69,6 @@ module Delayed
       end
     end
 
-
-    # Try to lock and run job. Returns true/false (work done/work failed) or nil if job can't be locked.
-    def run_with_lock(max_run_time, worker_name)
-      logger.info "* [JOB] acquiring lock on #{name}"
-      if lock_exclusively!(max_run_time, worker_name)
-        run(max_run_time)
-      else
-        # We did not get the lock, some other worker process must have
-        logger.warn "* [JOB] failed to acquire exclusive lock for #{name}"
-        nil # no work done
-      end
-    end
-
-    # Try to run job. Returns true/false (work done/work failed)
-    def run(max_run_time)
-      runtime =  Benchmark.realtime do
-        Timeout.timeout(max_run_time.to_i) { invoke_job }
-        destroy
-      end
-      # TODO: warn if runtime > max_run_time ?
-      logger.info "* [JOB] #{name} completed after %.4f" % runtime
-      return true  # did work
-    rescue Exception => e
-      reschedule e.message, e.backtrace
-      log_exception(e)
-      return false  # work failed
-    end
-
     # Add a job to the queue
     def self.enqueue(*args, &block)
       object = block_given? ? EvaledJob.new(&block) : args.shift
@@ -147,12 +119,6 @@ module Delayed
     def unlock
       self.locked_at    = nil
       self.locked_by    = nil
-    end
-
-    # This is a good hook if you need to report job processing errors in additional or different ways
-    def log_exception(error)
-      logger.error "* [JOB] #{name} failed with #{error.class.name}: #{error.message} - #{attempts} failed attempts"
-      logger.error(error)
     end
 
     # Moved into its own method so that new_relic can trace it.

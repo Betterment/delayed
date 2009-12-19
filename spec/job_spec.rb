@@ -43,16 +43,6 @@ describe Delayed::Job do
     Delayed::Job.first.run_at.should be_close(later, 1)
   end
 
-  it "should call perform on jobs when running run_with_lock" do
-    SimpleJob.runs.should == 0
-
-    job = Delayed::Job.enqueue SimpleJob.new
-    job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
-
-    SimpleJob.runs.should == 1
-  end
-                     
-                     
   it "should work with eval jobs" do
     $eval_job_ran = false
 
@@ -61,47 +51,16 @@ describe Delayed::Job do
     JOB
     end
 
-    job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
+    job.invoke_job
 
     $eval_job_ran.should == true
   end
                    
   it "should work with jobs in modules" do
-    M::ModuleJob.runs.should == 0
-
     job = Delayed::Job.enqueue M::ModuleJob.new
-    job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
-
-    M::ModuleJob.runs.should == 1
+    lambda { job.invoke_job }.should change { M::ModuleJob.runs }.from(0).to(1)
   end
                    
-  it "should re-schedule by about 1 second at first and increment this more and more minutes when it fails to execute properly" do
-    job = Delayed::Job.enqueue ErrorJob.new
-    job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
-
-    job = Delayed::Job.find(:first)
-
-    job.last_error.should =~ /did not work/
-    job.last_error.should =~ /sample_jobs.rb:8:in `perform'/
-    job.attempts.should == 1
-
-    job.run_at.should > Delayed::Job.db_time_now - 10.minutes
-    job.run_at.should < Delayed::Job.db_time_now + 10.minutes
-  end
-
-  it "should record last_error when destroy_failed_jobs = false, max_attempts = 1" do
-    Delayed::Job.destroy_failed_jobs = false
-    Delayed::Worker.max_attempts = 1
-    job = Delayed::Job.enqueue ErrorJob.new
-    job.run(1)
-    job.reload
-    job.last_error.should =~ /did not work/
-    job.last_error.should =~ /job_spec.rb/
-    job.attempts.should == 1
-
-    job.failed_at.should_not == nil
-  end
-
   it "should raise an DeserializationError when the job class is totally unknown" do
 
     job = Delayed::Job.new
@@ -183,13 +142,6 @@ describe Delayed::Job do
     end
   end
   
-  it "should fail after Worker.max_run_time" do
-    @job = Delayed::Job.create :payload_object => LongRunningJob.new
-    @job.run_with_lock(1.second, 'worker')
-    @job.reload.last_error.should =~ /expired/
-    @job.attempts.should == 1
-  end
-
   it "should never find failed jobs" do
     @job = Delayed::Job.create :payload_object => SimpleJob.new, :attempts => 50, :failed_at => Delayed::Job.db_time_now
     Delayed::Job.find_available('worker', 1).length.should == 0
@@ -292,23 +244,6 @@ describe Delayed::Job do
       ordered.should == true
     end
    
-  end
-  
-  context "when pulling jobs off the queue for processing, it" do
-    before(:each) do
-      @job = Delayed::Job.create(
-        :payload_object => SimpleJob.new, 
-        :locked_by => 'worker1', 
-        :locked_at => Delayed::Job.db_time_now - 5.minutes)
-    end
-
-    it "should leave the queue in a consistent state and not run the job if locking fails" do
-      SimpleJob.runs.should == 0     
-      @job.stub!(:lock_exclusively!).with(any_args).once.and_return(false)
-      @job.run_with_lock(Delayed::Worker.max_run_time, 'worker')
-      SimpleJob.runs.should == 0
-    end
-  
   end
   
   context "db_time_now" do
