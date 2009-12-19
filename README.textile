@@ -127,10 +127,10 @@ The library evolves around a delayed_jobs table which looks as follows:
 
 On failure, the job is scheduled again in 5 seconds + N ** 4, where N is the number of retries.
 
-The default Job::max_attempts is 25. After this, the job either deleted (default), or left in the database with "failed_at" set.
+The default Worker.max_attempts is 25. After this, the job either deleted (default), or left in the database with "failed_at" set.
 With the default of 25 attempts, the last retry will be 20 days later, with the last interval being almost 100 hours.
 
-The default Job::max_run_time is 4.hours. If your job takes longer than that, another computer could pick it up. It's up to you to
+The default Worker.max_run_time is 4.hours. If your job takes longer than that, another computer could pick it up. It's up to you to
 make sure your job doesn't exceed this time. You should set this to the longest time you think the job could take.
 
 By default, it will delete failed jobs (and it always deletes successful jobs). If you want to keep failed jobs, set
@@ -142,9 +142,9 @@ Here is an example of changing job parameters in Rails:
 # config/initializers/delayed_job_config.rb
 Delayed::Job.destroy_failed_jobs = false
 silence_warnings do
-  Delayed::Worker::sleep_delay = 60
-  Delayed::Job::max_attempts = 3
-  Delayed::Job::max_run_time = 5.minutes
+  Delayed::Worker.sleep_delay = 60
+  Delayed::Worker.max_attempts = 3
+  Delayed::Worker.max_run_time = 5.minutes
 end
 </pre>
 

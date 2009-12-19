@@ -184,7 +184,7 @@ describe Delayed::Job do
     end
   end
   
-  it "should fail after Job::max_run_time" do
+  it "should fail after Worker.max_run_time" do
     @job = Delayed::Job.create :payload_object => LongRunningJob.new
     @job.run_with_lock(1.second, 'worker')
     @job.reload.last_error.should =~ /expired/
