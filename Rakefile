@@ -19,6 +19,9 @@ Jeweler::Tasks.new do |s|
   s.extra_rdoc_files = ["README.textile"]
   
   s.test_files = Dir['spec/**/*']
+  
+  s.add_development_dependency "rspec"
+  s.add_development_dependency "sqlite3-ruby"
 end
 
 require 'spec/rake/spectask'
@@ -31,4 +34,5 @@ Spec::Rake::SpecTask.new(:spec) do |t|
   t.pattern = 'spec/**/*_spec.rb'
   t.verbose = true
 end
+task :spec => :check_dependencies
 

@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/database'
+require 'spec_helper'
 
 class SimpleJob
   cattr_accessor :runs; self.runs = 0

@@ -1,5 +1,4 @@
-require File.dirname(__FILE__) + '/database'
-require File.dirname(__FILE__) + '/sample_jobs'
+require 'spec_helper'
 
 describe Delayed::Worker do
   def job_create(opts = {})
