@@ -41,6 +41,11 @@ module Delayed
           all(conditions)
         end
         
+        # When a worker is exiting, make sure we don't have any locked jobs.
+        def self.clear_locks!(worker_name)
+          collection.update({:locked_by => worker_name}, {"$set" => {:locked_at => nil, :locked_by => nil}}, :multi => true)
+        end
+        
         # Lock this job for this worker.
         # Returns true if we have the lock, false otherwise.
         def lock_exclusively!(max_run_time, worker = worker_name)
