@@ -213,4 +213,16 @@ shared_examples_for 'a backend' do
     end
   end
   
+  context "unlock" do
+    before do
+      @job = create_job(:locked_by => 'worker', :locked_at => @backend.db_time_now)
+    end
+
+    it "should clear locks" do
+      @job.unlock
+      @job.locked_by.should be_nil
+      @job.locked_at.should be_nil
+    end
+  end
+  
 end

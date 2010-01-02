@@ -51,12 +51,6 @@ module Delayed
           end
         end
 
-        # Unlock this job (note: not saved to DB)
-        def unlock
-          self.locked_at    = nil
-          self.locked_by    = nil
-        end
-
         # Get the current time (GMT or local depending on DB)
         # Note: This does not ping the DB to get the time, so all your clients
         # must have syncronized clocks.

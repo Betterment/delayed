@@ -52,7 +52,13 @@ module Delayed
       def invoke_job
         payload_object.perform
       end
-    
+      
+      # Unlock this job (note: not saved to DB)
+      def unlock
+        self.locked_at    = nil
+        self.locked_by    = nil
+      end
+      
     private
 
       def deserialize(source)
