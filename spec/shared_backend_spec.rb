@@ -1,4 +1,8 @@
 shared_examples_for 'a backend' do
+  def create_job(opts = {})
+    @backend.create(opts.merge(:payload_object => SimpleJob.new))
+  end
+
   before do
     SimpleJob.runs = 0
   end
@@ -68,10 +72,6 @@ shared_examples_for 'a backend' do
   end
   
   describe "find_available" do
-    def create_job(opts = {})
-      @backend.create(opts.merge(:payload_object => SimpleJob.new))
-    end
-  
     it "should not find failed jobs" do
       @job = create_job :attempts => 50, :failed_at => @backend.db_time_now
       @backend.find_available('worker', 5, 1.second).should_not include(@job)
@@ -177,7 +177,6 @@ shared_examples_for 'a backend' do
   end
   
   context "worker prioritization" do
-    
     before(:each) do
       Delayed::Worker.max_priority = nil
       Delayed::Worker.min_priority = nil
@@ -196,7 +195,22 @@ shared_examples_for 'a backend' do
       }
       ordered.should == true
     end
-   
+  end
+  
+  context "clear_locks!" do
+    before do
+      @job = create_job(:locked_by => 'worker', :locked_at => @backend.db_time_now)
+    end
+    
+    it "should clear locks for the given worker" do
+      @backend.clear_locks!('worker')
+      @backend.find_available('worker2', 5, 1.minute).should include(@job)
+    end
+    
+    it "should not clear locks for other workers" do
+      @backend.clear_locks!('worker1')
+      @backend.find_available('worker1', 5, 1.minute).should_not include(@job)
+    end
   end
   
 end
