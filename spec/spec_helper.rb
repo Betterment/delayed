@@ -38,3 +38,4 @@ class Story < ActiveRecord::Base
 end
 
 require 'sample_jobs'
+require 'shared_backend_spec'

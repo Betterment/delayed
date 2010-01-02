@@ -18,6 +18,17 @@ module Delayed
 
     # name_prefix is ignored if name is set directly
     attr_accessor :name_prefix
+    
+    cattr_reader :backend
+    
+    def self.backend=(backend)
+      if backend.is_a? Symbol
+        require "delayed/backend/#{backend}"
+        backend = "Delayed::Backend::#{backend.to_s.classify}::Job".constantize
+      end
+      @@backend = backend
+      silence_warnings { ::Delayed.const_set(:Job, backend) }
+    end
 
     def initialize(options={})
       @quiet = options[:quiet]
