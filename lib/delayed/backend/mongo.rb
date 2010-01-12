@@ -32,7 +32,7 @@ module Delayed
             '$where' => where,
             :limit => limit,
             :failed_at => nil,
-            :sort => [['priority', -1], ['run_at', 1]]
+            :sort => [['priority', 1], ['run_at', 1]]
           }
           
           # (conditions[:priority] ||= {})['$gte'] = Worker.min_priority if Worker.min_priority
