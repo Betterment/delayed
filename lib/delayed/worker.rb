@@ -81,6 +81,26 @@ module Delayed
       Delayed::Job.clear_locks!(name)
     end
     
+    # Do num jobs and return stats on success/failure.
+    # Exit early if interrupted.
+    def work_off(num = 100)
+      success, failure = 0, 0
+
+      num.times do
+        case reserve_and_run_one_job
+        when true
+            success += 1
+        when false
+            failure += 1
+        else
+          break  # leave if no work could be done
+        end
+        break if $exit # leave if we're exiting
+      end
+
+      return [success, failure]
+    end
+    
     def run(job)
       runtime =  Benchmark.realtime do
         Timeout.timeout(self.class.max_run_time.to_i) { job.invoke_job }
@@ -138,26 +158,6 @@ module Delayed
       end
 
       run(job) if job
-    end
-
-    # Do num jobs and return stats on success/failure.
-    # Exit early if interrupted.
-    def work_off(num = 100)
-      success, failure = 0, 0
-
-      num.times do
-        case reserve_and_run_one_job
-        when true
-            success += 1
-        when false
-            failure += 1
-        else
-          break  # leave if no work could be done
-        end
-        break if $exit # leave if we're exiting
-      end
-
-      return [success, failure]
     end
   end
 end

@@ -12,7 +12,7 @@ module Delayed
         named_scope :ready_to_run, lambda {|worker_name, max_run_time|
           {:conditions => ['(run_at <= ? AND (locked_at IS NULL OR locked_at < ?) OR locked_by = ?) AND failed_at IS NULL', db_time_now, db_time_now - max_run_time, worker_name]}
         }
-        named_scope :by_priority, :order => 'priority DESC, run_at ASC'
+        named_scope :by_priority, :order => 'priority ASC, run_at ASC'
 
         # When a worker is exiting, make sure we don't have any locked jobs.
         def self.clear_locks!(worker_name)
