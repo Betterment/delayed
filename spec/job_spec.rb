@@ -183,7 +183,7 @@ describe Delayed::Job do
       jobs = Delayed::Job.find_available('worker', 10)
       ordered = true
       jobs[1..-1].each_index{ |i| 
-        if (jobs[i].priority < jobs[i+1].priority)
+        if (jobs[i].priority > jobs[i+1].priority)
           ordered = false
           break
         end
