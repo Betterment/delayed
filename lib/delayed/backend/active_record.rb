@@ -1,4 +1,3 @@
-require 'timeout'
 
 class ActiveRecord::Base
   def self.load_for_delayed_job(id)

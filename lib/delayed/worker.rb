@@ -1,3 +1,5 @@
+require 'timeout'
+
 module Delayed
   class Worker
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time, :sleep_delay, :logger
