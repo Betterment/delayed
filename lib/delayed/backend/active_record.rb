@@ -1,5 +1,15 @@
 require 'timeout'
 
+class ActiveRecord::Base
+  def self.load_for_delayed_job(id)
+    find(id)
+  end
+  
+  def dump_for_delayed_job
+    "#{self.class};#{id}"
+  end
+end
+
 module Delayed
   module Backend
     module ActiveRecord

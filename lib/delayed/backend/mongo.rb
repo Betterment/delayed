@@ -1,5 +1,21 @@
 require 'mongo_mapper'
 
+module MongoMapper
+  module Document
+    module ClassMethods
+      def load_for_delayed_job(id)
+        find!(id)
+      end
+    end
+
+    module InstanceMethods
+      def dump_for_delayed_job
+        "#{self.class};#{id}"
+      end
+    end
+  end
+end
+
 module Delayed
   module Backend
     module Mongo

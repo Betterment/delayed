@@ -1,8 +1,16 @@
+class Class
+  def load_for_delayed_job(arg)
+    self
+  end
+  
+  def dump_for_delayed_job
+    name
+  end
+end
+
 module Delayed
   class PerformableMethod < Struct.new(:object, :method, :args)
-    CLASS_STRING_FORMAT = /^CLASS\:([A-Z][\w\:]+)$/
-    AR_STRING_FORMAT    = /^AR\:([A-Z][\w\:]+)\:(\d+)$/
-    MM_STRING_FORMAT    = /^MM\:([A-Z][\w\:]+)\:(\w+)$/
+    STRING_FORMAT = /^LOAD\;([A-Z][\w\:]+)(?:\;(\w+))?$/
     
     class LoadError < StandardError
     end
@@ -15,30 +23,28 @@ module Delayed
       self.method = method.to_sym
     end
     
-    def display_name  
-      case self.object
-      when CLASS_STRING_FORMAT then "#{$1}.#{method}"
-      when AR_STRING_FORMAT    then "#{$1}##{method}"
-      when MM_STRING_FORMAT    then "#{$1}##{method}"
-      else "Unknown##{method}"
-      end      
-    end    
-
+    def display_name
+      if STRING_FORMAT === object
+        "#{$1}#{$2 ? '#' : '.'}#{method}"
+      else
+        "#{object.class}##{method}"
+      end
+    end
+    
     def perform
       load(object).send(method, *args.map{|a| load(a)})
     rescue PerformableMethod::LoadError
-      # We cannot do anything about objects which were deleted in the meantime
+      # We cannot do anything about objects that can't be loaded
       true
     end
 
     private
 
     def load(obj)
-      case obj
-      when CLASS_STRING_FORMAT then $1.constantize
-      when AR_STRING_FORMAT    then $1.constantize.find($2)
-      when MM_STRING_FORMAT    then $1.constantize.find!($2)
-      else obj
+      if STRING_FORMAT === obj
+        $1.constantize.load_for_delayed_job($2)
+      else
+        obj
       end
     rescue => e
       Delayed::Worker.logger.warn "Could not load object for job: #{e.message}"
@@ -46,11 +52,10 @@ module Delayed
     end
 
     def dump(obj)
-      case obj
-      when Class                  then "CLASS:#{obj.name}"
-      when ActiveRecord::Base     then "AR:#{obj.class}:#{obj.id}"
-      when MongoMapper::Document  then "MM:#{obj.class}:#{obj.id}"
-      else obj
+      if obj.respond_to?(:dump_for_delayed_job)
+        "LOAD;#{obj.dump_for_delayed_job}"
+      else
+        obj
       end
     end
   end
