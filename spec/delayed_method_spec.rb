@@ -28,14 +28,6 @@ class StoryReader
 
 end
 
-class StoryReader
-
-  def read(story)
-    "Epilog: #{story.tell}"
-  end
-
-end
-
 describe 'random ruby objects' do
   before       { Delayed::Job.delete_all }
 
