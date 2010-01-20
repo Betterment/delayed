@@ -20,6 +20,7 @@ Jeweler::Tasks.new do |s|
   
   s.test_files = Dir['spec/**/*']
   
+  s.add_dependency "daemons"
   s.add_development_dependency "rspec"
   s.add_development_dependency "sqlite3-ruby"
 end
