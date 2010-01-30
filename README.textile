@@ -39,9 +39,20 @@ script/plugin install git://github.com/collectiveidea/delayed_job.git
 
 After delayed_job is installed, run:
 
+h2. Backends
+
+delayed_job supports multiple backends for storing the job queue. The default is Active Record, which requires a jobs table.
+
 <pre>
 script/generate delayed_job
 rake db:migrate
+</pre>
+
+You can change the backend in an initializer:
+
+<pre>
+# config/initializers/delayed_job.rb
+Delayed::Worker.backend = :mongo
 </pre>
 
 h2. Upgrading to 1.8
@@ -51,6 +62,8 @@ If you are upgrading from a previous release, you will need to generate the new 
 <pre>
 script/generate delayed_job --skip-migration
 </pre>
+
+Known Issues: script/delayed_job does not work properly with anything besides the Active Record backend.  That will be resolved before the next gem release.
 
 h2. Queuing Jobs
 
