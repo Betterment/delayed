@@ -11,23 +11,6 @@ class RandomRubyObject
   end
 end
 
-class ErrorObject
-
-  def throw
-    raise ActiveRecord::RecordNotFound, '...'
-    false
-  end
-
-end
-
-class StoryReader
-
-  def read(story)
-    "Epilog: #{story.tell}"
-  end
-
-end
-
 class StoryReader
 
   def read(story)
@@ -73,7 +56,9 @@ describe 'random ruby objects' do
   end
 
   it "should ignore ActiveRecord::RecordNotFound errors because they are permanent" do
-    job = ErrorObject.new.send_later(:throw)
+    story = Story.create :text => 'Once upon...'
+    job = story.send_later(:tell)
+    story.destroy
     lambda { job.invoke_job }.should_not raise_error
   end
 
@@ -83,7 +68,7 @@ describe 'random ruby objects' do
 
     job =  Delayed::Job.find(:first)
     job.payload_object.class.should   == Delayed::PerformableMethod
-    job.payload_object.object.should  == "AR:Story:#{story.id}"
+    job.payload_object.object.should  == "LOAD;Story;#{story.id}"
     job.payload_object.method.should  == :tell
     job.payload_object.args.should    == []
     job.payload_object.perform.should == 'Once upon...'
@@ -99,7 +84,7 @@ describe 'random ruby objects' do
     job =  Delayed::Job.find(:first)
     job.payload_object.class.should   == Delayed::PerformableMethod
     job.payload_object.method.should  == :read
-    job.payload_object.args.should    == ["AR:Story:#{story.id}"]
+    job.payload_object.args.should    == ["LOAD;Story;#{story.id}"]
     job.payload_object.perform.should == 'Epilog: Once upon...'
   end                 
   

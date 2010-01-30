@@ -4,8 +4,10 @@ require 'rubygems'
 require 'spec'
 require 'active_record'
 require 'delayed_job'
-  
-ActiveRecord::Base.logger = Logger.new('/tmp/dj.log')
+
+logger = Logger.new('/tmp/dj.log')
+ActiveRecord::Base.logger = logger
+Delayed::Worker.logger = logger
 ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
 ActiveRecord::Migration.verbose = false
 
@@ -38,3 +40,4 @@ class Story < ActiveRecord::Base
 end
 
 require 'sample_jobs'
+require 'shared_backend_spec'

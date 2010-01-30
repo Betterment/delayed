@@ -10,11 +10,28 @@ describe Delayed::Worker do
   end
 
   before(:each) do
+    # Make sure backend is set to active record
+    Delayed::Worker.backend = :active_record
+    
     @worker = Delayed::Worker.new(:max_priority => nil, :min_priority => nil, :quiet => true)
 
     Delayed::Job.delete_all
     
     SimpleJob.runs = 0
+  end
+  
+  describe "backend=" do
+    it "should set the Delayed::Job constant to the backend" do
+      @clazz = Class.new
+      Delayed::Worker.backend = @clazz
+      Delayed::Job.should == @clazz
+    end
+    
+    it "should set backend with a symbol" do
+      Delayed::Worker.backend = Class.new
+      Delayed::Worker.backend = :active_record
+      Delayed::Worker.backend.should == Delayed::Backend::ActiveRecord::Job
+    end
   end
   
   describe "running a job" do
