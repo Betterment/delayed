@@ -132,7 +132,7 @@ module Delayed
 
     def say(text, level = Logger::INFO)
       puts text unless @quiet
-      logger.add level, text if logger
+      logger.add level, "#{Time.now.strftime('%FT%T%z')}: #{text}" if logger
     end
 
   protected
