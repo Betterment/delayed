@@ -36,7 +36,7 @@ To install as a plugin:
 script/plugin install git://github.com/collectiveidea/delayed_job.git
 </pre>
 
-After delayed_job is installed, run:
+After delayed_job is installed, you will need to setup the backend.
 
 h2. Backends
 
