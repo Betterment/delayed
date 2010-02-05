@@ -17,8 +17,7 @@ h2. Installation
 To install as a gem, add the following to @config/environment.rb@:
 
 <pre>
-config.gem 'collectiveidea-delayed_job', :lib => 'delayed_job',
-  :source => 'http://gems.github.com'
+config.gem 'delayed_job'
 </pre>
 
 Rake tasks are not automatically loaded from gems, so you'll need to add the following to your Rakefile:
