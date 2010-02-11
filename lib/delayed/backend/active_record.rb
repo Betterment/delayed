@@ -2,7 +2,11 @@ require 'active_record'
 
 class ActiveRecord::Base
   def self.load_for_delayed_job(id)
-    find(id)
+    if id
+      find(id)
+    else
+      super
+    end
   end
   
   def dump_for_delayed_job
