@@ -12,6 +12,10 @@ describe Delayed::Job do
     SimpleJob.runs = 0
   end
   
+  after do
+    Time.zone = nil
+  end
+  
   it_should_behave_like 'a backend'
 
   context "db_time_now" do
@@ -27,9 +31,9 @@ describe Delayed::Job do
     end
 
     it "should return local time if that is the AR default" do
-      Time.zone = nil
+      Time.zone = 'Central Time (US & Canada)'
       ActiveRecord::Base.default_timezone = :local
-      Delayed::Job.db_time_now.zone.should_not == 'UTC'
+      Delayed::Job.db_time_now.zone.should == 'CST'
     end
   end
   
