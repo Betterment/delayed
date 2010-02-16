@@ -41,7 +41,7 @@ module Delayed
         end
         
         def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
-          where = "this.run_at <= new Date(#{db_time_now.to_i * 1000}) && (this.locked_at == null || this.locked_at < new Date(#{(db_time_now - max_run_time).to_i * 1000})) || this.locked_by == #{worker_name.to_json}"
+          where = "this.run_at <= new Date(#{db_time_now.to_f * 1000}) && (this.locked_at == null || this.locked_at < new Date(#{(db_time_now - max_run_time).to_f * 1000})) || this.locked_by == #{worker_name.to_json}"
           # all(:limit => limit, :failed_at => nil, '$where' => where)
           
           conditions = {
