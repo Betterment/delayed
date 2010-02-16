@@ -183,17 +183,12 @@ shared_examples_for 'a backend' do
     end
 
     it "should fetch jobs ordered by priority" do
-      number_of_jobs = 10
-      number_of_jobs.times { @backend.enqueue SimpleJob.new, rand(10) }
+      10.times { @backend.enqueue SimpleJob.new, rand(10) }
       jobs = @backend.find_available('worker', 10)
-      ordered = true
-      jobs[1..-1].each_index{ |i| 
-        if (jobs[i].priority > jobs[i+1].priority)
-          ordered = false
-          break
-        end
-      }
-      ordered.should == true
+      jobs.size.should == 10
+      jobs.each_cons(2) do |a, b| 
+        a.priority.should <= b.priority
+      end
     end
   end
   
