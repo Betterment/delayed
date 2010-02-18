@@ -51,7 +51,7 @@ You can change the backend in an initializer:
 
 <pre>
 # config/initializers/delayed_job.rb
-Delayed::Worker.backend = :mongo
+Delayed::Worker.backend = :mongo_mapper
 </pre>
 
 h2. Upgrading to 1.8

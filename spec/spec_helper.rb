@@ -2,42 +2,32 @@ $:.unshift(File.dirname(__FILE__) + '/../lib')
 
 require 'rubygems'
 require 'spec'
-require 'active_record'
+require 'logger'
+
+backends_available = []
+%w(active_record mongo_mapper).each do |backend|
+  begin
+    require backend
+    backends_available << backend
+  rescue LoadError => e
+    $stderr.puts "The backend '#{backend}' is not available. Skipping tests"
+  end
+end
+
+if backends_available.empty?
+  raise LoadError, "Cannot run delayed_job specs. No backends available"
+end
+
 require 'delayed_job'
-
-logger = Logger.new('/tmp/dj.log')
-ActiveRecord::Base.logger = logger
-Delayed::Worker.logger = logger
-ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
-ActiveRecord::Migration.verbose = false
-
-ActiveRecord::Schema.define do
-
-  create_table :delayed_jobs, :force => true do |table|
-    table.integer  :priority, :default => 0
-    table.integer  :attempts, :default => 0
-    table.text     :handler
-    table.string   :last_error
-    table.datetime :run_at
-    table.datetime :locked_at
-    table.string   :locked_by
-    table.datetime :failed_at
-    table.timestamps
-  end
-
-  create_table :stories, :force => true do |table|
-    table.string :text
-  end
-
-end
-
-# Purely useful for test cases...
-class Story < ActiveRecord::Base
-  def tell; text; end       
-  def whatever(n, _); tell*n; end
-  
-  handle_asynchronously :whatever
-end
-
 require 'sample_jobs'
-require 'shared_backend_spec'
+require 'backend/shared_backend_spec'
+
+DELAYED_JOB_LOGGER = Logger.new('/tmp/dj.log')
+Delayed::Worker.logger = DELAYED_JOB_LOGGER
+
+DEFAULT_BACKEND = backends_available.first.to_sym
+
+backends_available.each do |backend|
+  require "setup/#{backend}"
+  require "backend/#{backend}_job_spec"
+end

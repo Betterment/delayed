@@ -1,13 +1,10 @@
 require 'spec_helper'
 
-require 'delayed/backend/mongo'
+require 'delayed/backend/mongo_mapper'
 
-MongoMapper.connection = Mongo::Connection.new nil, nil, :logger => ActiveRecord::Base.logger
-MongoMapper.database = 'delayed_job'
-
-describe Delayed::Backend::Mongo::Job do
+describe Delayed::Backend::MongoMapper::Job do
   before(:all) do
-    @backend = Delayed::Backend::Mongo::Job
+    @backend = Delayed::Backend::MongoMapper::Job
   end
   
   before(:each) do
@@ -24,7 +21,7 @@ describe Delayed::Backend::Mongo::Job do
     end
     
     class MongoStory
-      include MongoMapper::Document
+      include ::MongoMapper::Document
       key :text, String
       
       def tell

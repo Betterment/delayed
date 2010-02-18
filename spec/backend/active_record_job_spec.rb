@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'delayed/backend/active_record'
 
 describe Delayed::Job do
   before(:all) do

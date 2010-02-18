@@ -1,6 +1,6 @@
 require 'mongo_mapper'
 
-module MongoMapper
+module ::MongoMapper
   module Document
     module ClassMethods
       def load_for_delayed_job(id)
@@ -18,9 +18,9 @@ end
 
 module Delayed
   module Backend
-    module Mongo
+    module MongoMapper
       class Job
-        include MongoMapper::Document
+        include ::MongoMapper::Document
         include Delayed::Backend::Base
         set_collection_name 'delayed_jobs'
         
@@ -37,7 +37,7 @@ module Delayed
         before_save :set_default_run_at
         
         def self.db_time_now
-          MongoMapper.time_class.now.utc
+          ::MongoMapper.time_class.now.utc
         end
         
         def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
