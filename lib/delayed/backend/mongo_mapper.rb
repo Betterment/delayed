@@ -41,20 +41,23 @@ module Delayed
         end
         
         def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
-          where = "this.run_at <= new Date(#{db_time_now.to_f * 1000}) && (this.locked_at == null || this.locked_at < new Date(#{(db_time_now - max_run_time).to_f * 1000})) || this.locked_by == #{worker_name.to_json}"
-          # all(:limit => limit, :failed_at => nil, '$where' => where)
-          
+          right_now = db_time_now
+
           conditions = {
-            '$where' => where,
+            :run_at => {"$lte" => right_now},
             :limit => limit,
             :failed_at => nil,
             :sort => [['priority', 1], ['run_at', 1]]
           }
-          
-          # (conditions[:priority] ||= {})['$gte'] = Worker.min_priority if Worker.min_priority
-          # (conditions[:priority] ||= {})['$lte'] = Worker.max_priority if Worker.max_priority
 
-          all(conditions)
+          where = "this.locked_at == null || this.locked_at < #{make_date(right_now - max_run_time)}"
+          
+          (conditions[:priority] ||= {})['$gte'] = Worker.min_priority if Worker.min_priority
+          (conditions[:priority] ||= {})['$lte'] = Worker.max_priority if Worker.max_priority
+
+          results = all(conditions.merge(:locked_by => worker_name))
+          results += all(conditions.merge('$where' => where)) if results.size < limit
+          results
         end
         
         # When a worker is exiting, make sure we don't have any locked jobs.
@@ -65,16 +68,16 @@ module Delayed
         # Lock this job for this worker.
         # Returns true if we have the lock, false otherwise.
         def lock_exclusively!(max_run_time, worker = worker_name)
-          now = self.class.db_time_now
-          overtime = make_date(now - max_run_time.to_i)
+          right_now = self.class.db_time_now
+          overtime = right_now - max_run_time.to_i
           
-          query = "this._id == #{id.to_json} && this.run_at <= #{make_date(now)} && (this.locked_at == null || this.locked_at < #{overtime} || this.locked_by == #{worker.to_json})"
+          query = "this.locked_at == null || this.locked_at < #{make_date(overtime)} || this.locked_by == #{worker.to_json}"
+          conditions = {:_id => id, :run_at => {"$lte" => right_now}, "$where" => query}
 
-          conditions = {"$where" => make_query(query)}
-          collection.update(conditions, {"$set" => {:locked_at => now, :locked_by => worker}}, :multi => true)
+          collection.update(conditions, {"$set" => {:locked_at => right_now, :locked_by => worker}})
           affected_rows = collection.find({:_id => id, :locked_by => worker}).count
           if affected_rows == 1
-            self.locked_at = now
+            self.locked_at = right_now
             self.locked_by = worker
             return true
           else
@@ -84,23 +87,14 @@ module Delayed
         
       private
       
-        def self.make_date(date)
-          "new Date(#{date.to_f * 1000})"
+        def self.make_date(date_or_seconds)
+          "new Date(#{date_or_seconds.to_f * 1000})"
         end
 
         def make_date(date)
           self.class.make_date(date)
         end
         
-        def self.make_query(string)
-          "function() { return (#{string}); }"
-        end
-
-        def make_query(string)
-          self.class.make_query(string)
-        end
-      
-      
         def set_default_run_at
           self.run_at ||= self.class.db_time_now
         end
