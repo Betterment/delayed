@@ -12,6 +12,16 @@ describe Delayed::Backend::MongoMapper::Job do
   end
   
   it_should_behave_like 'a backend'
+
+  describe "indexes" do
+    it "should have combo index on priority and run_at" do
+      @backend.collection.index_information.detect { |index| index[0] == 'priority_1_run_at_1' }.should_not be_nil
+    end
+
+    it "should have index on locked_by" do
+      @backend.collection.index_information.detect { |index| index[0] == 'locked_by_1' }.should_not be_nil
+    end
+  end
   
   describe "delayed method" do
     class MongoStoryReader
