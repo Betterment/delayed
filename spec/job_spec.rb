@@ -21,7 +21,7 @@ describe Delayed::Job do
   context "db_time_now" do
     it "should return time in current time zone if set" do
       Time.zone = 'Eastern Time (US & Canada)'
-      Delayed::Job.db_time_now.zone.should == 'EST'
+      %w(EST EDT).should include(Delayed::Job.db_time_now.zone)
     end
     
     it "should return UTC time if that is the AR default" do
@@ -33,7 +33,7 @@ describe Delayed::Job do
     it "should return local time if that is the AR default" do
       Time.zone = 'Central Time (US & Canada)'
       ActiveRecord::Base.default_timezone = :local
-      Delayed::Job.db_time_now.zone.should == 'CST'
+      %w(CST CDT).should include(Delayed::Job.db_time_now.zone)
     end
   end
   
