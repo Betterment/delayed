@@ -27,7 +27,7 @@ describe 'random ruby objects' do
     story.whatever(1, 5)
   
     Delayed::Job.count.should == 1
-    job =  Delayed::Job.find(:first)
+    job =  Delayed::Job.first
     job.payload_object.class.should   == Delayed::PerformableMethod
     job.payload_object.method.should  == :whatever_without_send_later
     job.payload_object.args.should    == [1, 5]
@@ -42,9 +42,9 @@ describe 'random ruby objects' do
     end
     
     it "should schedule the job in the future" do
-      time = 1.hour.from_now
+      time = 1.hour.from_now.utc.to_time
       job = "string".send_at(time, :length)
-      job.run_at.should == time
+      job.run_at.to_i.should == time.to_i
     end
     
     it "should store payload as PerformableMethod" do

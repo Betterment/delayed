@@ -101,6 +101,11 @@ shared_examples_for 'a backend' do
       @job = create_job(:locked_by => 'worker', :locked_at => (@backend.db_time_now - 1.minutes))
       @backend.find_available('worker', 5, 4.hours).should include(@job)
     end
+
+    it "should find only the right amount of jobs" do
+      10.times { create_job }
+      @backend.find_available('worker', 7, 4.hours).should have(7).jobs
+    end
   end
   
   context "when another worker is already performing an task, it" do
@@ -189,6 +194,22 @@ shared_examples_for 'a backend' do
       jobs.each_cons(2) do |a, b| 
         a.priority.should <= b.priority
       end
+    end
+
+    it "should only find jobs greater than or equal to min priority" do
+      min = 5
+      Delayed::Worker.min_priority = min
+      10.times {|i| @backend.enqueue SimpleJob.new, i }
+      jobs = @backend.find_available('worker', 10)
+      jobs.each {|job| job.priority.should >= min}
+    end
+
+    it "should only find jobs less than or equal to max priority" do
+      max = 5
+      Delayed::Worker.max_priority = max
+      10.times {|i| @backend.enqueue SimpleJob.new, i }
+      jobs = @backend.find_available('worker', 10)
+      jobs.each {|job| job.priority.should <= max}
     end
   end
   

@@ -39,7 +39,4 @@ describe Delayed::PerformableMethod do
     p.args.should    == ["LOAD;Story;#{story.id}"]
     p.perform.should == 'Epilog: Once upon...'
   end                 
-  
-  
-  
 end

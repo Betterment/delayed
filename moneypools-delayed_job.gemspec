@@ -4,12 +4,12 @@
 # -*- encoding: utf-8 -*-
 
 Gem::Specification.new do |s|
-  s.name = %q{delayed_job}
+  s.name = %q{moneypools-delayed_job}
   s.version = "1.8.4"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Brandon Keepers", "Tobias L\303\274tke"]
-  s.date = %q{2010-03-25}
+  s.date = %q{2010-02-23}
   s.description = %q{Delayed_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. It is a direct extraction from Shopify where the job table is responsible for a multitude of core tasks.}
   s.email = %q{tobi@leetsoft.com}
   s.extra_rdoc_files = [
@@ -37,7 +37,6 @@ Gem::Specification.new do |s|
      "lib/delayed/tasks.rb",
      "lib/delayed/worker.rb",
      "lib/delayed_job.rb",
-     "moneypools-delayed_job.gemspec",
      "recipes/delayed_job.rb",
      "spec/backend/active_record_job_spec.rb",
      "spec/backend/mongo_mapper_job_spec.rb",
@@ -55,7 +54,7 @@ Gem::Specification.new do |s|
   s.homepage = %q{http://github.com/collectiveidea/delayed_job}
   s.rdoc_options = ["--main", "README.textile", "--inline-source", "--line-numbers"]
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.3.5}
+  s.rubygems_version = %q{1.3.6}
   s.summary = %q{Database-backed asynchronous priority queue system -- Extracted from Shopify}
   s.test_files = [
     "spec/backend",

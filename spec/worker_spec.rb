@@ -11,7 +11,7 @@ describe Delayed::Worker do
 
   before(:each) do
     # Make sure backend is set to active record
-    Delayed::Worker.backend = :active_record
+    Delayed::Worker.backend = DEFAULT_BACKEND
     
     @worker = Delayed::Worker.new(:max_priority => nil, :min_priority => nil, :quiet => true)
 

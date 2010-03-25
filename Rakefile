@@ -32,7 +32,7 @@ task :default => :spec
 desc 'Run the specs'
 Spec::Rake::SpecTask.new(:spec) do |t|
   t.libs << 'lib'
-  t.pattern = 'spec/**/*_spec.rb'
+  t.pattern = 'spec/*_spec.rb'
   t.verbose = true
 end
 task :spec => :check_dependencies

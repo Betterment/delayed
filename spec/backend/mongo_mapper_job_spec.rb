@@ -1,13 +1,10 @@
 require 'spec_helper'
 
-require 'delayed/backend/mongo'
+require 'delayed/backend/mongo_mapper'
 
-MongoMapper.connection = Mongo::Connection.new nil, nil, :logger => ActiveRecord::Base.logger
-MongoMapper.database = 'delayed_job'
-
-describe Delayed::Backend::Mongo::Job do
+describe Delayed::Backend::MongoMapper::Job do
   before(:all) do
-    @backend = Delayed::Backend::Mongo::Job
+    @backend = Delayed::Backend::MongoMapper::Job
   end
   
   before(:each) do
@@ -15,6 +12,16 @@ describe Delayed::Backend::Mongo::Job do
   end
   
   it_should_behave_like 'a backend'
+
+  describe "indexes" do
+    it "should have combo index on priority and run_at" do
+      @backend.collection.index_information.detect { |index| index[0] == 'priority_1_run_at_1' }.should_not be_nil
+    end
+
+    it "should have index on locked_by" do
+      @backend.collection.index_information.detect { |index| index[0] == 'locked_by_1' }.should_not be_nil
+    end
+  end
   
   describe "delayed method" do
     class MongoStoryReader
@@ -24,7 +31,7 @@ describe Delayed::Backend::Mongo::Job do
     end
     
     class MongoStory
-      include MongoMapper::Document
+      include ::MongoMapper::Document
       key :text, String
       
       def tell
