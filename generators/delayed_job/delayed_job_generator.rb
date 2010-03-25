@@ -4,7 +4,7 @@ class DelayedJobGenerator < Rails::Generator::Base
   def manifest
     record do |m|
       m.template 'script', 'script/delayed_job', :chmod => 0755
-      unless options[:skip_migration]
+      if !options[:skip_migration] && defined?(ActiveRecord)
         m.migration_template "migration.rb", 'db/migrate',
                              :migration_file_name => "create_delayed_jobs"
       end
