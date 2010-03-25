@@ -5,23 +5,6 @@ require 'delayed/backend/data_mapper'
 DataMapper.logger = ActiveRecord::Base.logger
 DataMapper.setup(:default, "sqlite3::memory:")
 
-module Delayed
-  module Backend
-    module DataMapper
-      class Job
-        def self.find id
-          get id
-        end
-        
-        def update_attributes(attributes)
-          self.update attributes
-          self.save
-        end
-      end
-    end
-  end
-end
-
 describe Delayed::Backend::DataMapper::Job do
   before(:all) do
     @backend = Delayed::Backend::DataMapper::Job

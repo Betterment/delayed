@@ -40,7 +40,7 @@ module Delayed
         def self.db_time_now
           Time.now.utc
         end
-        
+                
         def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
           # not yet running  
           running = all(:run_at.lte => db_time_now) 
@@ -85,7 +85,18 @@ module Delayed
           else
             return false
           end
-        end        
+        end
+        
+        # FIMXE - shouldn't the spec call load_for_delayed_job?
+        def self.find id
+          get id
+        end
+        
+        # I guess Mongo and AR both have this function
+        def update_attributes(attributes)
+          self.update attributes
+          self.save
+        end
       end
       
       class JobObserver
