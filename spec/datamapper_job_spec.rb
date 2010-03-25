@@ -33,22 +33,4 @@ describe Delayed::Backend::DataMapper::Job do
   end
   
   it_should_behave_like 'a backend'
-  
-  describe "delayed method" do
-    class DMStoryReader
-      def read(story)
-        "Epilog: #{story.tell}"
-      end
-    end
-    
-    class DMStory
-      include DataMapper::Resource
-      property :id,   Serial
-      property :text, String
-      
-      def tell
-        text
-      end
-    end
-  end
 end
