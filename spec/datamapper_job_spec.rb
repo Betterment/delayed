@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-require 'delayed/backend/datamapper'
+require 'delayed/backend/data_mapper'
 
 DataMapper.logger = ActiveRecord::Base.logger
 DataMapper.setup(:default, "sqlite3::memory:")
