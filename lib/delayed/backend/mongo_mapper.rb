@@ -38,6 +38,14 @@ module Delayed
 
         ensure_index [[:priority, 1], [:run_at, 1]]
         
+        def self.before_fork
+          ::MongoMapper.connection.close
+        end
+        
+        def self.after_fork
+          ::MongoMapper.connection.connect_to_master
+        end
+        
         def self.db_time_now
           ::MongoMapper.time_class.now.utc
         end

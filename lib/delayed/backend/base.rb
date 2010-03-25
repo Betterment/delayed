@@ -20,6 +20,14 @@ module Delayed
           run_at   = args[1]
           self.create(:payload_object => object, :priority => priority.to_i, :run_at => run_at)
         end
+        
+        # Hook method that is called before a new worker is forked
+        def before_fork
+        end
+        
+        # Hook method that is called after a new worker is forked
+        def after_fork
+        end
       end
       
       ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/

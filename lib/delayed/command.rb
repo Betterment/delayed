@@ -36,6 +36,8 @@ module Delayed
     end
   
     def daemonize
+      Delayed::Worker.backend.before_fork
+
       ObjectSpace.each_object(File) do |file|
         @files_to_reopen << file unless file.closed?
       end
@@ -64,7 +66,7 @@ module Delayed
       if Delayed::Worker.logger.respond_to? :auto_flushing=
         Delayed::Worker.logger.auto_flushing = true
       end
-      ActiveRecord::Base.connection.reconnect!
+      Delayed::Worker.backend.after_fork
       
       worker = Delayed::Worker.new(@options)
       worker.name_prefix = "#{worker_name} "
