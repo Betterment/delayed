@@ -104,10 +104,6 @@ module Delayed
         def make_date(date)
           self.class.make_date(date)
         end
-        
-        def set_default_run_at
-          self.run_at ||= self.class.db_time_now
-        end
       end
     end
   end

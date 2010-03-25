@@ -97,7 +97,7 @@ module Delayed
 
     protected
 
-      def before_save
+      def set_default_run_at
         self.run_at ||= self.class.db_time_now
       end
     
