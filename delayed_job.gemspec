@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{delayed_job}
-  s.version = "1.8.4"
+  s.version = "1.9.0pre"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Brandon Keepers", "Tobias L\303\274tke"]
-  s.date = %q{2010-03-25}
+  s.date = %q{2010-03-26}
   s.description = %q{Delayed_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. It is a direct extraction from Shopify where the job table is responsible for a multitude of core tasks.}
   s.email = %q{tobi@leetsoft.com}
   s.extra_rdoc_files = [
@@ -26,7 +26,6 @@ Gem::Specification.new do |s|
      "generators/delayed_job/delayed_job_generator.rb",
      "generators/delayed_job/templates/migration.rb",
      "generators/delayed_job/templates/script",
-     "init.rb",
      "lib/delayed/backend/active_record.rb",
      "lib/delayed/backend/base.rb",
      "lib/delayed/backend/mongo_mapper.rb",
@@ -38,6 +37,7 @@ Gem::Specification.new do |s|
      "lib/delayed/worker.rb",
      "lib/delayed_job.rb",
      "moneypools-delayed_job.gemspec",
+     "rails/init.rb",
      "recipes/delayed_job.rb",
      "spec/backend/active_record_job_spec.rb",
      "spec/backend/mongo_mapper_job_spec.rb",
