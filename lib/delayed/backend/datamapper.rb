@@ -42,17 +42,19 @@ module Delayed
         end
         
         def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
-          where = "this.run_at <= new Date(#{db_time_now.to_f * 1000}) && (this.locked_at == null || this.locked_at < new Date(#{(db_time_now - max_run_time).to_f * 1000})) || this.locked_by == #{worker_name.to_json}"
-          # all(:limit => limit, :failed_at => nil, '$where' => where)
+          # not yet running  
+          running = all(:run_at.lte => db_time_now) 
           
-          complex = all(:run_at.lte => db_time_now) &
-                    (( all(:locked_at => nil ) | all(:locked_at.lt => db_time_now - max_run_time)) |
-                    all(:locked_by => worker_name));
-          
-          complex.all( :limit => limit,
-            :failed_at => nil,
-            :order => [:priority.asc, :run_at.asc] )
-          
+          # lockable 
+          lockable = (
+            # not locked or past the max time
+            ( all(:locked_at => nil ) | all(:locked_at.lt => db_time_now - max_run_time)) |
+
+            # OR locked by our worker
+            all(:locked_by => worker_name))
+            
+          # plus some other boring junk 
+          (running & lockable).all( :limit => limit, :failed_at => nil, :order => [:priority.asc, :run_at.asc] )
         end
         
         # When a worker is exiting, make sure we don't have any locked jobs.
