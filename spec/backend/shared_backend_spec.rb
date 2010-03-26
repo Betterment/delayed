@@ -4,6 +4,8 @@ shared_examples_for 'a backend' do
   end
 
   before do
+    Delayed::Worker.max_priority = nil
+    Delayed::Worker.min_priority = nil
     SimpleJob.runs = 0
   end
   

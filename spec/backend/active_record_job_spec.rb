@@ -8,8 +8,6 @@ describe Delayed::Job do
   end
   
   before(:each) do
-    Delayed::Worker.max_priority = nil
-    Delayed::Worker.min_priority = nil
     Delayed::Job.delete_all
     SimpleJob.runs = 0
   end

@@ -23,7 +23,8 @@ describe Delayed::Worker do
     describe "with the #{backend} backend" do
       before do
         Delayed::Worker.backend = backend
-        Delayed::Job.delete_all
+        DatabaseCleaner.orm = backend.to_s
+        DatabaseCleaner.clean
 
         @worker = Delayed::Worker.new(:max_priority => nil, :min_priority => nil, :quiet => true)
 
