@@ -27,6 +27,8 @@ Delayed::Worker.logger = DELAYED_JOB_LOGGER
 
 DEFAULT_BACKEND = backends_available.first.to_sym
 
+Delayed::Worker.backend = DEFAULT_BACKEND
+
 backends_available.each do |backend|
   require "setup/#{backend}"
   require "backend/#{backend}_job_spec"
