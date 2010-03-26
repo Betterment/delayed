@@ -19,7 +19,7 @@ describe Delayed::Worker do
     end
   end
   
-  [:active_record, :mongo_mapper].each do |backend|
+  BACKENDS.each do |backend|
     describe "with the #{backend} backend" do
       before do
         Delayed::Worker.backend = backend

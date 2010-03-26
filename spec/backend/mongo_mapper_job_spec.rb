@@ -1,5 +1,5 @@
 require 'spec_helper'
-
+require 'backend/shared_backend_spec'
 require 'delayed/backend/mongo_mapper'
 
 describe Delayed::Backend::MongoMapper::Job do

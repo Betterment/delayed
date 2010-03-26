@@ -23,6 +23,7 @@ Jeweler::Tasks.new do |s|
   s.add_dependency "daemons"
   s.add_development_dependency "rspec"
   s.add_development_dependency "sqlite3-ruby"
+  s.add_development_dependency "mongo_mapper"
 end
 
 require 'spec/rake/spectask'
@@ -32,7 +33,7 @@ task :default => :spec
 desc 'Run the specs'
 Spec::Rake::SpecTask.new(:spec) do |t|
   t.libs << 'lib'
-  t.pattern = 'spec/*_spec.rb'
+  t.pattern = 'spec/**/*_spec.rb'
   t.verbose = true
 end
 task :spec => :check_dependencies

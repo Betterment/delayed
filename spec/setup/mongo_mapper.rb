@@ -1,4 +1,6 @@
-MongoMapper.connection = Mongo::Connection.new nil, nil, :logger => DELAYED_JOB_LOGGER
+require 'mongo_mapper'
+
+MongoMapper.connection = Mongo::Connection.new nil, nil, :logger => Delayed::Worker.logger
 MongoMapper.database = 'delayed_job'
 
 unless defined?(Story)
