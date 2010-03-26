@@ -38,7 +38,6 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
      "lib/delayed/tasks.rb",
      "lib/delayed/worker.rb",
      "lib/delayed_job.rb",
-     "moneypools-delayed_job.gemspec",
      "rails/init.rb",
      "recipes/delayed_job.rb",
      "spec/backend/active_record_job_spec.rb",
