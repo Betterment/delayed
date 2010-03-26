@@ -18,7 +18,7 @@ Jeweler::Tasks.new do |s|
   s.rdoc_options = ["--main", "README.textile", "--inline-source", "--line-numbers"]
   s.extra_rdoc_files = ["README.textile"]
   
-  s.test_files = Dir['spec/**/*']
+  s.test_files = Dir['spec/*_spec.rb']
   
   s.add_dependency "daemons"
   s.add_development_dependency "rspec"
@@ -38,7 +38,7 @@ task :default => :spec
 desc 'Run the specs'
 Spec::Rake::SpecTask.new(:spec) do |t|
   t.libs << 'lib'
-  t.pattern = 'spec/**/*_spec.rb'
+  t.pattern = 'spec/*_spec.rb'
   t.verbose = true
 end
 task :spec => :check_dependencies

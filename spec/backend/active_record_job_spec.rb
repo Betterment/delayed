@@ -2,13 +2,13 @@ require 'spec_helper'
 require 'backend/shared_backend_spec'
 require 'delayed/backend/active_record'
 
-describe Delayed::Job do
+describe Delayed::Backend::ActiveRecord::Job do
   before(:all) do
-    @backend = Delayed::Job
+    @backend = Delayed::Backend::ActiveRecord::Job
   end
   
   before(:each) do
-    Delayed::Job.delete_all
+    Delayed::Backend::ActiveRecord::Job.delete_all
     SimpleJob.runs = 0
   end
   
@@ -27,14 +27,13 @@ describe Delayed::Job do
     it "should return UTC time if that is the AR default" do
       Time.zone = nil
       ActiveRecord::Base.default_timezone = :utc
-      Delayed::Job.db_time_now.zone.should == 'UTC'
+      Delayed::Backend::ActiveRecord::Job.db_time_now.zone.should == 'UTC'
     end
 
     it "should return local time if that is the AR default" do
       Time.zone = 'Central Time (US & Canada)'
       ActiveRecord::Base.default_timezone = :local
-      %w(CST CDT).should include(Delayed::Job.db_time_now.zone)
+      %w(CST CDT).should include(Delayed::Backend::ActiveRecord::Job.db_time_now.zone)
     end
-  end
-  
+  end  
 end
