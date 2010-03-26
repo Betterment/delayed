@@ -1,4 +1,6 @@
 require 'dm-core'
+require 'delayed/backend/data_mapper'
 
-DataMapper.logger = ActiveRecord::Base.logger
+DataMapper.logger = Delayed::Worker.logger
 DataMapper.setup(:default, "sqlite3::memory:")
+DataMapper.auto_migrate!

@@ -42,8 +42,12 @@ module Delayed
         end
                 
         def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
-          # not yet running  
-          running = all(:run_at.lte => db_time_now) 
+          
+          simple_conditions = { :run_at.lte => db_time_now, :limit => limit, :failed_at => nil, :order => [:priority.asc, :run_at.asc]  }
+
+          # respect priorities
+          simple_conditions[:priority.gte] = Worker.min_priority if Worker.min_priority
+          simple_conditions[:priority.lte] = Worker.max_priority if Worker.max_priority
           
           # lockable 
           lockable = (
@@ -54,7 +58,7 @@ module Delayed
             all(:locked_by => worker_name))
             
           # plus some other boring junk 
-          (running & lockable).all( :limit => limit, :failed_at => nil, :order => [:priority.asc, :run_at.asc] )
+          (lockable).all( simple_conditions )
         end
         
         # When a worker is exiting, make sure we don't have any locked jobs.
@@ -87,16 +91,23 @@ module Delayed
           end
         end
         
-        # FIMXE - shouldn't the spec call load_for_delayed_job?
+        # these are common to the other backends, so we provide an implementation
+        def self.delete_all
+          Delayed::Job.auto_migrate!
+        end
+        
         def self.find id
           get id
         end
         
-        # I guess Mongo and AR both have this function
         def update_attributes(attributes)
-          self.update attributes
+          attributes.each do |k,v|
+            self[k] = v
+          end
           self.save
         end
+        
+        
       end
       
       class JobObserver
