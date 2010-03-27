@@ -40,7 +40,7 @@ After delayed_job is installed, you will need to setup the backend.
 
 h2. Backends
 
-delayed_job supports multiple backends for storing the job queue. The default is Active Record, which requires a jobs table.
+delayed_job supports multiple backends for storing the job queue. There are currently implementations for Active Record, MongoMapper, and DataMapper. The default is Active Record, which requires a jobs table.
 
 <pre>
 script/generate delayed_job
@@ -53,16 +53,6 @@ You can change the backend in an initializer:
 # config/initializers/delayed_job.rb
 Delayed::Worker.backend = :mongo_mapper
 </pre>
-
-h2. Upgrading to 1.8
-
-If you are upgrading from a previous release, you will need to generate the new @script/delayed_job@:
-
-<pre>
-script/generate delayed_job --skip-migration
-</pre>
-
-Known Issues: script/delayed_job does not work properly with anything besides the Active Record backend.  That will be resolved before the next gem release.
 
 h2. Queuing Jobs
 
@@ -92,7 +82,7 @@ device.deliver
 
 h2. Running Jobs
 
-@script/delayed_job@ can be used to manage a background process which will start working off jobs.
+@script/delayed_job@ can be used to manage a background process which will start working off jobs.  Make sure you've run `script/generate delayed_job`.
 
 <pre>
 $ RAILS_ENV=production script/delayed_job start
