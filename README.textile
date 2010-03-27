@@ -40,18 +40,30 @@ After delayed_job is installed, you will need to setup the backend.
 
 h2. Backends
 
-delayed_job supports multiple backends for storing the job queue. There are currently implementations for Active Record, MongoMapper, and DataMapper. The default is Active Record, which requires a jobs table.
+delayed_job supports multiple backends for storing the job queue. There are currently implementations for Active Record, MongoMapper, and DataMapper.
+
+h3. Active Record
+
+The default is Active Record, which requires a jobs table.
 
 <pre>
-script/generate delayed_job
-rake db:migrate
+$ script/generate delayed_job
+$ rake db:migrate
 </pre>
 
-You can change the backend in an initializer:
+h3. MongoMapper
 
 <pre>
 # config/initializers/delayed_job.rb
 Delayed::Worker.backend = :mongo_mapper
+</pre>
+
+h3. DataMapper
+
+<pre>
+# config/initializers/delayed_job.rb
+Delayed::Worker.backend = :data_mapper
+Delayed::Worker.backend.auto_upgrade!
 </pre>
 
 h2. Queuing Jobs
