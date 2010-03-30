@@ -62,8 +62,8 @@ module Delayed
 
           where = "this.locked_at == null || this.locked_at < #{make_date(right_now - max_run_time)}"
           
-          (conditions[:priority] ||= {})['$gte'] = Worker.min_priority if Worker.min_priority
-          (conditions[:priority] ||= {})['$lte'] = Worker.max_priority if Worker.max_priority
+          (conditions[:priority] ||= {})['$gte'] = Worker.min_priority.to_i if Worker.min_priority
+          (conditions[:priority] ||= {})['$lte'] = Worker.max_priority.to_i if Worker.max_priority
 
           results = all(conditions.merge(:locked_by => worker_name))
           results += all(conditions.merge('$where' => where)) if results.size < limit
