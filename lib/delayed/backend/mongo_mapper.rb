@@ -43,7 +43,7 @@ module Delayed
         end
         
         def self.after_fork
-          ::MongoMapper.connection.connect_to_master
+          ::MongoMapper.connect(RAILS_ENV)
         end
         
         def self.db_time_now
