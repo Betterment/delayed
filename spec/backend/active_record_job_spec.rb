@@ -35,5 +35,12 @@ describe Delayed::Backend::ActiveRecord::Job do
       ActiveRecord::Base.default_timezone = :local
       %w(CST CDT).should include(Delayed::Backend::ActiveRecord::Job.db_time_now.zone)
     end
-  end  
+  end
+  
+  describe "after_fork" do
+    it "should call reconnect on the connection" do
+      ActiveRecord::Base.connection.should_receive(:reconnect!)
+      Delayed::Backend::ActiveRecord::Job.after_fork
+    end
+  end
 end

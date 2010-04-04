@@ -66,4 +66,29 @@ describe Delayed::Backend::MongoMapper::Job do
       job.payload_object.perform.should == 'Epilog: Once upon a time...'
     end
   end
+  
+  describe "before_fork" do
+    after do
+      MongoMapper.connection.connect_to_master
+    end
+    
+    it "should disconnect" do
+      lambda do
+        Delayed::Backend::MongoMapper::Job.before_fork
+      end.should change { !!MongoMapper.connection.connected? }.from(true).to(false)
+    end
+  end
+
+  describe "after_fork" do
+    before do
+      MongoMapper.connection.close
+    end
+    
+    it "should call reconnect" do
+      lambda do
+        Delayed::Backend::MongoMapper::Job.after_fork
+      end.should change { !!MongoMapper.connection.connected? }.from(false).to(true)
+    end
+  end
+  
 end
