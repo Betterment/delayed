@@ -123,6 +123,20 @@ end
 Delayed::Job.enqueue NewsletterJob.new('lorem ipsum...', Customers.find(:all).collect(&:email))
 </pre>
 
+You can also add an optional on_permanent_failure method which will run if the job has failed too many times to be retried:
+
+<pre>
+class ParanoidNewsletterJob < NewsletterJob
+  def perform
+    emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
+  end    
+
+  def on_permanent_failure
+    page_sysadmin_in_the_middle_of_the_night
+  end
+end  
+</pre>
+
 h2. Gory Details
 
 The library evolves around a delayed_jobs table which looks as follows: 

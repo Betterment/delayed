@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'ruby-debug'
 
 describe Delayed::Worker do
   def job_create(opts = {})
@@ -134,12 +135,52 @@ describe Delayed::Worker do
         before do
           @job = Delayed::Job.create :payload_object => SimpleJob.new
         end
-    
+   
+        share_examples_for "any failure more than Worker.max_attempts times" do
+          context "when the job's payload has an #on_permanent_failure hook" do
+            before do
+              @job = Delayed::Job.create :payload_object => OnPermanentFailureJob.new
+              @job.payload_object.should respond_to :on_permanent_failure
+            end
+
+            it "should run that hook" do
+              @job.payload_object.should_receive :on_permanent_failure
+              Delayed::Worker.max_attempts.times { @worker.reschedule(@job) }
+            end
+          end
+
+          context "when the job's payload has no #on_permanent_failure hook" do
+            # It's a little tricky to test this in a straightforward way, 
+            # because putting a should_not_receive expectation on 
+            # @job.payload_object.on_permanent_failure makes that object
+            # incorrectly return true to 
+            # payload_object.respond_to? :on_permanent_failure, which is what
+            # reschedule uses to decide whether to call on_permanent_failure.  
+            # So instead, we just make sure that the payload_object as it 
+            # already stands doesn't respond_to? on_permanent_failure, then
+            # shove it through the iterated reschedule loop and make sure we
+            # don't get a NoMethodError (caused by calling that nonexistent
+            # on_permanent_failure method).
+            
+            before do
+              @job.payload_object.should_not respond_to(:on_permanent_failure)
+            end
+
+            it "should not try to run that hook" do
+              lambda do
+                Delayed::Worker.max_attempts.times { @worker.reschedule(@job) }
+              end.should_not raise_exception(NoMethodError)
+            end
+          end
+        end
+
         context "and we want to destroy jobs" do
           before do
             Delayed::Worker.destroy_failed_jobs = true
           end
-      
+
+          it_should_behave_like "any failure more than Worker.max_attempts times"
+
           it "should be destroyed if it failed more than Worker.max_attempts times" do
             @job.should_receive(:destroy)
             Delayed::Worker.max_attempts.times { @worker.reschedule(@job) }
@@ -156,6 +197,8 @@ describe Delayed::Worker do
             Delayed::Worker.destroy_failed_jobs = false
           end
       
+          it_should_behave_like "any failure more than Worker.max_attempts times"
+
           it "should be failed if it failed more than Worker.max_attempts times" do
             @job.reload.failed_at.should == nil
             Delayed::Worker.max_attempts.times { @worker.reschedule(@job) }
@@ -166,7 +209,6 @@ describe Delayed::Worker do
             (Delayed::Worker.max_attempts - 1).times { @worker.reschedule(@job) }
             @job.reload.failed_at.should == nil
           end
-      
         end
       end
     end
