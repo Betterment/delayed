@@ -28,10 +28,10 @@ module Delayed
         storage_names[:default] = 'delayed_jobs'
         
         property :id,          Serial
-        property :priority,    Integer, :default => 0
+        property :priority,    Integer, :default => 0, :index => :run_at_priority
         property :attempts,    Integer, :default => 0
         property :handler,     Text
-        property :run_at,      Time
+        property :run_at,      Time, :index => :run_at_priority
         property :locked_at,   Time
         property :locked_by,   String
         property :failed_at,   Time
