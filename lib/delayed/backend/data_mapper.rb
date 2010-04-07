@@ -30,7 +30,7 @@ module Delayed
         property :id,          Serial
         property :priority,    Integer, :default => 0
         property :attempts,    Integer, :default => 0
-        property :handler,     String
+        property :handler,     Text
         property :run_at,      Time
         property :locked_at,   Time
         property :locked_by,   String
