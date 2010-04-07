@@ -35,7 +35,7 @@ module Delayed
         property :locked_at,   Time
         property :locked_by,   String
         property :failed_at,   Time
-        property :last_error,  String
+        property :last_error,  Text
                 
         def self.db_time_now
           Time.now

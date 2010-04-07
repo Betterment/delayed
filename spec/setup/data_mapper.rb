@@ -1,4 +1,6 @@
 require 'dm-core'
+require 'dm-validations'
+
 require 'delayed/backend/data_mapper'
 
 DataMapper.logger = Delayed::Worker.logger
