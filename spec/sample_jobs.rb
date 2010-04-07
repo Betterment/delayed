@@ -1,3 +1,5 @@
+require 'ruby-debug'
+
 class SimpleJob
   cattr_accessor :runs; self.runs = 0
   def perform; @@runs += 1; end
@@ -10,6 +12,11 @@ end
 
 class LongRunningJob
   def perform; sleep 250; end
+end
+
+class OnPermanentFailureJob < SimpleJob
+  def on_permanent_failure
+  end
 end
 
 module M

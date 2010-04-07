@@ -47,7 +47,7 @@ module Delayed
         end
         
         def self.db_time_now
-          ::MongoMapper.time_class.now.utc
+          Time.now.utc
         end
         
         def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
