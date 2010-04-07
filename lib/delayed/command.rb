@@ -42,9 +42,12 @@ module Delayed
         @files_to_reopen << file unless file.closed?
       end
       
+      dir = "#{RAILS_ROOT}/tmp/pids"
+      Dir.mkdir(dir) unless File.exists?(dir)
+      
       worker_count.times do |worker_index|
         process_name = worker_count == 1 ? "delayed_job" : "delayed_job.#{worker_index}"
-        Daemons.run_proc(process_name, :dir => "#{RAILS_ROOT}/tmp/pids", :dir_mode => :normal, :ARGV => @args) do |*args|
+        Daemons.run_proc(process_name, :dir => dir, :dir_mode => :normal, :ARGV => @args) do |*args|
           run process_name
         end
       end
