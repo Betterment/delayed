@@ -6,8 +6,20 @@ require 'benchmark'
 
 Delayed::Worker.logger = Logger.new('/dev/null')
 
+BACKENDS = []
+Dir.glob("#{File.dirname(__FILE__)}/spec/setup/*.rb") do |backend|
+  begin
+    backend = File.basename(backend, '.rb')
+    require "spec/setup/#{backend}"
+    BACKENDS << backend.to_sym
+  rescue LoadError
+    puts "Unable to load #{backend} backend! #{$!}"
+  end
+end
+
+
 Benchmark.bm(10) do |x|
-  [:active_record, :mongo_mapper, :data_mapper].each do |backend|
+  BACKENDS.each do |backend|
     require "spec/setup/#{backend}"
     Delayed::Worker.backend = backend
   

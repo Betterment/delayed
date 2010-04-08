@@ -30,9 +30,9 @@ module Delayed
         property :id,          Serial
         property :priority,    Integer, :default => 0, :index => :run_at_priority
         property :attempts,    Integer, :default => 0
-        property :handler,     Text
+        property :handler,     Text, :lazy => false
         property :run_at,      Time, :index => :run_at_priority
-        property :locked_at,   Time
+        property :locked_at,   Time, :index => true
         property :locked_by,   String
         property :failed_at,   Time
         property :last_error,  Text
@@ -69,6 +69,7 @@ module Delayed
         # Lock this job for this worker.
         # Returns true if we have the lock, false otherwise.
         def lock_exclusively!(max_run_time, worker = worker_name)
+
           now = self.class.db_time_now
           overtime = now - max_run_time
           
