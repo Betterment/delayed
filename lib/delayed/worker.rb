@@ -32,6 +32,17 @@ module Delayed
       @@backend = backend
       silence_warnings { ::Delayed.const_set(:Job, backend) }
     end
+    
+    def self.guess_backend
+      self.backend ||= if defined?(ActiveRecord)
+        :active_record
+      elsif defined?(MongoMapper)
+        :mongo_mapper
+      else
+        logger.warn "Could not decide on a backend, defaulting to active_record"
+        :active_record
+      end
+    end
 
     def initialize(options={})
       @quiet = options[:quiet]
