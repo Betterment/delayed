@@ -1,5 +1,3 @@
-require 'ruby-debug'
-
 class SimpleJob
   cattr_accessor :runs; self.runs = 0
   def perform; @@runs += 1; end
@@ -24,5 +22,4 @@ module M
     cattr_accessor :runs; self.runs = 0
     def perform; @@runs += 1; end    
   end
-  
 end

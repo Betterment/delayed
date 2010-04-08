@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'ruby-debug'
 
 describe Delayed::Worker do
   def job_create(opts = {})
