@@ -8,7 +8,10 @@ module Delayed
     
     def initialize(args)
       @files_to_reopen = []
-      @options = {:quiet => true}
+      @options = {
+        :quiet => true,
+        :pid_dir => "#{RAILS_ROOT}/tmp/pids"
+      }
       
       @worker_count = 1
       
@@ -31,6 +34,9 @@ module Delayed
         opts.on('-n', '--number_of_workers=workers', "Number of unique workers to spawn") do |worker_count|
           @worker_count = worker_count.to_i rescue 1
         end
+        opts.on('--pid-dir=DIR', 'Specifies an alternate directory in which to store the process ids.') do |dir|
+          @options[:pid_dir] = dir
+        end
       end
       @args = opts.parse!(args)
     end
@@ -42,7 +48,7 @@ module Delayed
         @files_to_reopen << file unless file.closed?
       end
       
-      dir = "#{RAILS_ROOT}/tmp/pids"
+      dir = @options[:pid_dir]
       Dir.mkdir(dir) unless File.exists?(dir)
       
       worker_count.times do |worker_index|
