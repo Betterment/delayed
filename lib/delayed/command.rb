@@ -37,6 +37,9 @@ module Delayed
         opts.on('--pid-dir=DIR', 'Specifies an alternate directory in which to store the process ids.') do |dir|
           @options[:pid_dir] = dir
         end
+        opts.on('-i', '--identifier=n', 'A numeric identifier for the worker.') do |n|
+          @options[:identifier] = n
+        end
       end
       @args = opts.parse!(args)
     end
@@ -51,11 +54,22 @@ module Delayed
       dir = @options[:pid_dir]
       Dir.mkdir(dir) unless File.exists?(dir)
       
-      worker_count.times do |worker_index|
-        process_name = worker_count == 1 ? "delayed_job" : "delayed_job.#{worker_index}"
-        Daemons.run_proc(process_name, :dir => dir, :dir_mode => :normal, :ARGV => @args) do |*args|
-          run process_name
+      if @worker_count > 1 && @options[:identifier]
+        raise ArgumentError, 'Cannot specify both --number-of-workers and --identifier'
+      elsif @worker_count == 1 && @options[:identifier]
+        process_name = "delayed_job.#{@options[:identifier]}"
+        run_process(process_name, dir)
+      else
+        worker_count.times do |worker_index|
+          process_name = worker_count == 1 ? "delayed_job" : "delayed_job.#{worker_index}"
+          run_process(process_name, dir)
         end
+      end
+    end
+    
+    def run_process(process_name, dir)
+      Daemons.run_proc(process_name, :dir => dir, :dir_mode => :normal, :ARGV => @args) do |*args|
+        run process_name
       end
     end
     
