@@ -1,7 +1,9 @@
 require 'mongo_mapper'
 
-MongoMapper.connection = Mongo::Connection.new nil, nil, :logger => Delayed::Worker.logger
-MongoMapper.database = 'delayed_job'
+MongoMapper.config = {
+  RAILS_ENV => {'database' => 'delayed_job'}
+}
+MongoMapper.connect RAILS_ENV
 
 unless defined?(Story)
   class Story

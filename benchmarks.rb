@@ -4,6 +4,8 @@ require 'logger'
 require 'delayed_job'
 require 'benchmark'
 
+RAILS_ENV = 'test'
+
 Delayed::Worker.logger = Logger.new('/dev/null')
 
 BACKENDS = []

@@ -8,6 +8,7 @@ require 'delayed_job'
 require 'sample_jobs'
 
 Delayed::Worker.logger = Logger.new('/tmp/dj.log')
+RAILS_ENV = 'test'
 
 # determine the available backends
 BACKENDS = []
