@@ -79,16 +79,13 @@ module Delayed
       # Re-open file handles
       @files_to_reopen.each do |file|
         begin
-          file.reopen File.join(RAILS_ROOT, 'log', 'delayed_job.log'), 'a+'
+          file.reopen file.path
           file.sync = true
         rescue ::Exception
         end
       end
       
-      Delayed::Worker.logger = Rails.logger
-      if Delayed::Worker.logger.respond_to? :auto_flushing=
-        Delayed::Worker.logger.auto_flushing = true
-      end
+      Delayed::Worker.logger = Logger.new(File.join(RAILS_ROOT, 'log', 'delayed_job.log'))
       Delayed::Worker.backend.after_fork
       
       worker = Delayed::Worker.new(@options)
