@@ -1,5 +1,1 @@
-require 'delayed_job'
-
-config.after_initialize do
-  Delayed::Worker.guess_backend
-end
+require File.join(File.dirname(__FILE__), 'rails', 'init')
