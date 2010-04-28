@@ -21,7 +21,8 @@ class DelayedJobGenerator < Rails::Generators::Base
   end
   
   def create_script_file
-    template 'script', 'script/delayed_job', :chmod => 0755
+    template 'script', 'script/delayed_job'
+    chmod 'script/delayed_job', 0755
   end
   
   def create_migration_file
