@@ -68,14 +68,14 @@ Delayed::Worker.backend.auto_upgrade!
 
 h2. Queuing Jobs
 
-Call @#send_later(method, params)@ on any object and it will be processed in the background.
+Call @.delay.method(params)@ on any object and it will be processed in the background.
 
 <pre>
 # without delayed_job
 Notifier.deliver_signup(@user)
 
 # with delayed_job
-Notifier.send_later :deliver_signup, @user
+Notifier.delay.deliver_signup @user
 </pre>
 
 If a method should always be run in the background, you can call @#handle_asynchronously@ after the method declaration:

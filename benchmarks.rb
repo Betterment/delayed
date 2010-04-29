@@ -26,7 +26,7 @@ Benchmark.bm(10) do |x|
     Delayed::Worker.backend = backend
   
     n = 10000
-    n.times { "foo".send_later :length }
+    n.times { "foo".delay.length }
 
     x.report(backend.to_s) { Delayed::Worker.new(:quiet => true).work_off(n) }
   end  

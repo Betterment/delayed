@@ -173,12 +173,12 @@ shared_examples_for 'a backend' do
     end
 
     it "should be the method that will be called if its a performable method object" do
-      @job = Story.send_later(:create)
+      @job = Story.delay.create
       @job.name.should == "Story.create"
     end
 
     it "should be the instance method that will be called if its a performable method object" do
-      @job = Story.create(:text => "...").send_later(:save)
+      @job = Story.create(:text => "...").delay.save
       @job.name.should == 'Story#save'
     end
   end
