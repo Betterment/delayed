@@ -1,5 +1,22 @@
 module Delayed
+  class DelayProxy < ActiveSupport::BasicObject
+    def initialize(target, options)
+      @target = target
+      @options = options
+    end
+    
+    def method_missing(method, *args)
+      Delayed::Job.create @options.merge(
+        :payload_object => Delayed::PerformableMethod.new(@target, method.to_sym, args)
+      )
+    end
+  end
+  
   module MessageSending
+    def delay(options = {})
+      DelayProxy.new(self, options)
+    end
+    
     def send_later(method, *args)
       Delayed::Job.enqueue Delayed::PerformableMethod.new(self, method.to_sym, args)
     end
