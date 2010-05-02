@@ -200,14 +200,7 @@ If you want to contribute an enhancement or a fix:
 # Commit the changes without making changes to the Rakefile, VERSION, or any other files that aren't related to your enhancement or fix
 # Send a pull request.
 
-h3. Changes
+h3. Changelog
 
-* 1.7.0: Added failed_at column which can optionally be set after a certain amount of failed job attempts. By default failed job attempts are destroyed after about a month. 
+See http://wiki.github.com/collectiveidea/delayed_job/changelog for a list of changes.
 
-* 1.6.0: Renamed locked_until to locked_at. We now store when we start a given job instead of how long it will be locked by the worker. This allows us to get a reading on how long a job took to execute.                    
-
-* 1.5.0: Job runners can now be run in parallel. Two new database columns are needed: locked_until and locked_by. This allows us to use   pessimistic locking instead of relying on row level locks. This enables us to run as many worker processes as we need to speed up queue processing.
-
-* 1.2.0: Added #send_later to Object for simpler job creation
-
-* 1.0.0: Initial release
