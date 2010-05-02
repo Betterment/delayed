@@ -4,6 +4,8 @@ require 'rubygems'
 require 'spec'
 require 'logger'
 
+gem 'activerecord', ENV['RAILS_VERSION'] if ENV['RAILS_VERSION']
+
 require 'delayed_job'
 require 'sample_jobs'
 
