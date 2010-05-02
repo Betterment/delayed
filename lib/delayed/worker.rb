@@ -1,5 +1,6 @@
 require 'timeout'
 require 'active_support/core_ext/numeric/time'
+require 'active_support/core_ext/class/attribute_accessors'
 
 module Delayed
   class Worker

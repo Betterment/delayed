@@ -1,3 +1,5 @@
+require 'active_support/basic_object'
+
 module Delayed
   class DelayProxy < ActiveSupport::BasicObject
     def initialize(target, options)
