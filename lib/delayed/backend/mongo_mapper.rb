@@ -1,16 +1,12 @@
 require 'mongo_mapper'
 
-YAML.add_domain_type("MongoMapper,2010", "") do |type, val|
-  begin
-    type.split(':', 3).last.constantize.find!(val['_id'])
+MongoMapper::Document.class_eval do
+  yaml_as "tag:ruby.yaml.org,2002:MongoMapper"
+  
+  def self.yaml_new(klass, tag, val)
+    klass.find!(val['_id'])
   rescue MongoMapper::DocumentNotFound
     nil
-  end
-end
-
-module MongoMapper::Document
-  def to_yaml_type
-    "!MongoMapper,2010/#{self.class}"
   end
 
   def to_yaml_properties
