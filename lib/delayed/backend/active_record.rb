@@ -1,16 +1,16 @@
 require 'active_record'
 
+YAML.add_domain_type("ActiveRecord,2007", "") do |type, val|
+  type.split(':', 3).last.constantize.find(val['attributes']['id'])
+end
+
 class ActiveRecord::Base
-  def self.load_for_delayed_job(id)
-    if id
-      find(id)
-    else
-      super
-    end
+  def to_yaml_type
+    "!ActiveRecord,2007/#{self.class}"
   end
-  
-  def dump_for_delayed_job
-    "#{self.class};#{id}"
+
+  def to_yaml_properties
+    ['@attributes']
   end
 end
 

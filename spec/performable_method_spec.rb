@@ -19,7 +19,7 @@ describe Delayed::PerformableMethod do
     story = Story.create :text => 'Once upon...'
     p = Delayed::PerformableMethod.new(story, :tell, [])
     p.class.should   == Delayed::PerformableMethod
-    p.object.should  == "LOAD;Story;#{story.id}"
+    p.object.should  == story
     p.method.should  == :tell
     p.args.should    == []
     p.perform.should == 'Once upon...'
@@ -27,7 +27,7 @@ describe Delayed::PerformableMethod do
   
   it "should allow class methods to be called on ActiveRecord models" do
     p = Delayed::PerformableMethod.new(Story, :count, [])
-    lambda { p.send(:load, p.object) }.should_not raise_error
+    lambda { p.perform.should be_kind_of(Fixnum) }.should_not raise_error
   end
   
   it "should store arguments as string if they are active record objects" do
@@ -36,7 +36,7 @@ describe Delayed::PerformableMethod do
     p = Delayed::PerformableMethod.new(reader, :read, [story])
     p.class.should   == Delayed::PerformableMethod
     p.method.should  == :read
-    p.args.should    == ["LOAD;Story;#{story.id}"]
+    p.args.should    == [story]
     p.perform.should == 'Epilog: Once upon...'
   end                 
 end

@@ -51,7 +51,7 @@ describe Delayed::Backend::MongoMapper::Job do
       job = story.delay.tell
 
       job.payload_object.class.should   == Delayed::PerformableMethod
-      job.payload_object.object.should  == "LOAD;MongoStory;#{story.id}"
+      job.payload_object.object.should  == story
       job.payload_object.method.should  == :tell
       job.payload_object.args.should    == []
       job.payload_object.perform.should == 'Once upon a time...'
@@ -62,7 +62,7 @@ describe Delayed::Backend::MongoMapper::Job do
       job = MongoStoryReader.new.delay.read(story)
       job.payload_object.class.should   == Delayed::PerformableMethod
       job.payload_object.method.should  == :read
-      job.payload_object.args.should    == ["LOAD;MongoStory;#{story.id}"]
+      job.payload_object.args.should    == [story]
       job.payload_object.perform.should == 'Epilog: Once upon a time...'
     end
   end

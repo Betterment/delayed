@@ -1,3 +1,9 @@
+class NamedJob < Struct.new(:perform)
+  def display_name
+    'named_job'
+  end
+end
+
 shared_examples_for 'a backend' do
   def create_job(opts = {})
     @backend.create(opts.merge(:payload_object => SimpleJob.new))
@@ -43,34 +49,36 @@ shared_examples_for 'a backend' do
     job = @backend.enqueue M::ModuleJob.new
     lambda { job.invoke_job }.should change { M::ModuleJob.runs }.from(0).to(1)
   end
-                   
-  it "should raise an DeserializationError when the job class is totally unknown" do
-    job = @backend.new :handler => "--- !ruby/object:JobThatDoesNotExist {}"
-    lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
-  end
+  
+  describe "payload_object" do
+    it "should raise a DeserializationError when the job class is totally unknown" do
+      job = @backend.new :handler => "--- !ruby/object:JobThatDoesNotExist {}"
+      lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
+    end
+    
+    it "should try to load the class when it is unknown at the time of the deserialization" do
+      job = @backend.new :handler => "--- !ruby/object:JobThatDoesNotExist {}"
+      job.should_receive(:attempt_to_load).with('JobThatDoesNotExist').and_return(true)
+      lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
+    end
 
-  it "should try to load the class when it is unknown at the time of the deserialization" do
-    job = @backend.new :handler => "--- !ruby/object:JobThatDoesNotExist {}"
-    job.should_receive(:attempt_to_load).with('JobThatDoesNotExist').and_return(true)
-    lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
-  end
+    it "should try include the namespace when loading unknown objects" do
+      job = @backend.new :handler => "--- !ruby/object:Delayed::JobThatDoesNotExist {}"
+      job.should_receive(:attempt_to_load).with('Delayed::JobThatDoesNotExist').and_return(true)
+      lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
+    end
 
-  it "should try include the namespace when loading unknown objects" do
-    job = @backend.new :handler => "--- !ruby/object:Delayed::JobThatDoesNotExist {}"
-    job.should_receive(:attempt_to_load).with('Delayed::JobThatDoesNotExist').and_return(true)
-    lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
-  end
+    it "should also try to load structs when they are unknown (raises TypeError)" do
+      job = @backend.new :handler => "--- !ruby/struct:JobThatDoesNotExist {}"
+      job.should_receive(:attempt_to_load).with('JobThatDoesNotExist').and_return(true)
+      lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
+    end
 
-  it "should also try to load structs when they are unknown (raises TypeError)" do
-    job = @backend.new :handler => "--- !ruby/struct:JobThatDoesNotExist {}"
-    job.should_receive(:attempt_to_load).with('JobThatDoesNotExist').and_return(true)
-    lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
-  end
-
-  it "should try include the namespace when loading unknown structs" do
-    job = @backend.new :handler => "--- !ruby/struct:Delayed::JobThatDoesNotExist {}"
-    job.should_receive(:attempt_to_load).with('Delayed::JobThatDoesNotExist').and_return(true)
-    lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
+    it "should try include the namespace when loading unknown structs" do
+      job = @backend.new :handler => "--- !ruby/struct:Delayed::JobThatDoesNotExist {}"
+      job.should_receive(:attempt_to_load).with('Delayed::JobThatDoesNotExist').and_return(true)
+      lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
+    end
   end
   
   describe "find_available" do
@@ -171,10 +179,10 @@ shared_examples_for 'a backend' do
     it "should be the class name of the job that was enqueued" do
       @backend.create(:payload_object => ErrorJob.new ).name.should == 'ErrorJob'
     end
-
+    
     it "should be the method that will be called if its a performable method object" do
-      @job = Story.delay.create
-      @job.name.should == "Story.create"
+      job = @backend.new(:payload_object => NamedJob.new)
+      job.name.should == 'named_job'
     end
 
     it "should be the instance method that will be called if its a performable method object" do

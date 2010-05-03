@@ -1,22 +1,7 @@
 require 'dm-core'
 require 'dm-observer'
 require 'dm-aggregates'
-
-module DataMapper
-  module Resource
-    module ClassMethods
-      def load_for_delayed_job(id)
-        find!(id)
-      end
-    end
-
-    module InstanceMethods
-      def dump_for_delayed_job
-        "#{self.class};#{id}"
-      end
-    end
-  end
-end
+require 'dm-serializer'
 
 module Delayed
   module Backend

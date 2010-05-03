@@ -1,18 +1,20 @@
 require 'mongo_mapper'
 
-module ::MongoMapper
-  module Document
-    module ClassMethods
-      def load_for_delayed_job(id)
-        find!(id)
-      end
-    end
+YAML.add_domain_type("MongoMapper,2010", "") do |type, val|
+  begin
+    type.split(':', 3).last.constantize.find!(val['_id'])
+  rescue MongoMapper::DocumentNotFound
+    nil
+  end
+end
 
-    module InstanceMethods
-      def dump_for_delayed_job
-        "#{self.class};#{id}"
-      end
-    end
+module MongoMapper::Document
+  def to_yaml_type
+    "!MongoMapper,2010/#{self.class}"
+  end
+
+  def to_yaml_properties
+    ['@_id']
   end
 end
 
