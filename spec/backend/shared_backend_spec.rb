@@ -270,4 +270,22 @@ shared_examples_for 'a backend' do
       @job.id.should_not be_nil
     end
   end
+
+  describe "yaml serialization" do
+    it "should reload changed attributes" do
+      job = @backend.enqueue SimpleJob.new
+      yaml = job.to_yaml
+      job.priority = 99
+      job.save
+      YAML.load(yaml).priority.should == 99
+    end
+
+    it "should ignore destroyed records" do
+      job = @backend.enqueue SimpleJob.new
+      yaml = job.to_yaml
+      job.destroy
+      lambda { YAML.load(yaml).should be_nil }.should_not raise_error
+    end
+  end
+
 end

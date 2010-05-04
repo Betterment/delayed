@@ -4,9 +4,7 @@ MongoMapper::Document.class_eval do
   yaml_as "tag:ruby.yaml.org,2002:MongoMapper"
   
   def self.yaml_new(klass, tag, val)
-    klass.find!(val['_id'])
-  rescue MongoMapper::DocumentNotFound
-    nil
+    klass.find(val['_id'])
   end
 
   def to_yaml_properties
