@@ -6,14 +6,16 @@ describe Delayed::Worker do
   end
 
   describe "backend=" do
-    it "should set the Delayed::Job constant to the backend" do
+    before do
       @clazz = Class.new
       Delayed::Worker.backend = @clazz
+    end
+
+    it "should set the Delayed::Job constant to the backend" do
       Delayed::Job.should == @clazz
     end
     
     it "should set backend with a symbol" do
-      Delayed::Worker.backend = Class.new
       Delayed::Worker.backend = :active_record
       Delayed::Worker.backend.should == Delayed::Backend::ActiveRecord::Job
     end
@@ -51,8 +53,6 @@ describe Delayed::Worker do
         end
 
         it "should only work_off jobs that are >= min_priority" do
-          SimpleJob.runs.should == 0
-
           job_create(:priority => -10)
           job_create(:priority => 0)
           @worker.work_off
@@ -61,8 +61,6 @@ describe Delayed::Worker do
         end
 
         it "should only work_off jobs that are <= max_priority" do
-          SimpleJob.runs.should == 0
-
           job_create(:priority => 10)
           job_create(:priority => 0)
 

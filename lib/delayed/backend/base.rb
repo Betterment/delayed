@@ -49,11 +49,7 @@ module Delayed
       def name
         @name ||= begin
           payload = payload_object
-          if payload.respond_to?(:display_name)
-            payload.display_name
-          else
-            payload.class.name
-          end
+          payload.respond_to?(:display_name) ? payload.display_name : payload.class.name
         end
       end
 

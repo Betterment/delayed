@@ -1,42 +1,30 @@
 require 'spec_helper'
 
-class StoryReader
-  def read(story)
-    "Epilog: #{story.tell}"
-  end
-end
-
 describe Delayed::PerformableMethod do
-  
-  it "should ignore ActiveRecord::RecordNotFound errors because they are permanent" do
-    story = Story.create :text => 'Once upon...'
-    p = Delayed::PerformableMethod.new(story, :tell, [])
-    story.destroy
-    lambda { p.perform }.should_not raise_error
+  describe "perform" do
+    before do
+      @method = Delayed::PerformableMethod.new("foo", :count, ['o'])
+    end
+    
+    context "with the persisted record cannot be found" do
+      before do
+        @method.object = nil
+      end
+    
+      it "should be a no-op if object is nil" do
+        lambda { @method.perform }.should_not raise_error
+      end
+    end
+    
+    it "should call the method on the object" do
+      @method.object.should_receive(:count).with('o')
+      @method.perform
+    end
   end
-  
-  it "should store the object as string if its an active record" do
-    story = Story.create :text => 'Once upon...'
-    p = Delayed::PerformableMethod.new(story, :tell, [])
-    p.class.should   == Delayed::PerformableMethod
-    p.object.should  == story
-    p.method.should  == :tell
-    p.args.should    == []
-    p.perform.should == 'Once upon...'
+
+  it "should raise a ArgumentError if target method doesn't exist" do
+    lambda {
+      Delayed::PerformableMethod.new(Object, :method_that_does_not_exist, [])
+    }.should raise_error(NoMethodError)
   end
-  
-  it "should allow class methods to be called on ActiveRecord models" do
-    p = Delayed::PerformableMethod.new(Story, :count, [])
-    lambda { p.perform.should be_kind_of(Fixnum) }.should_not raise_error
-  end
-  
-  it "should store arguments as string if they are active record objects" do
-    story = Story.create :text => 'Once upon...'
-    reader = StoryReader.new
-    p = Delayed::PerformableMethod.new(reader, :read, [story])
-    p.class.should   == Delayed::PerformableMethod
-    p.method.should  == :read
-    p.args.should    == [story]
-    p.perform.should == 'Epilog: Once upon...'
-  end                 
 end
