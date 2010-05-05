@@ -8,7 +8,7 @@ describe Delayed::Backend::CouchRest::Job do
   end
   
   before(:each) do
-    CouchRest.recreate!('delayed_job_spec')
+    @backend.delete_all
   end
   
   it_should_behave_like 'a backend'
