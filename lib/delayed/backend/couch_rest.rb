@@ -2,15 +2,15 @@ require 'couchrest'
 
 #extent couchrest to handle delayed_job serialization.
 class CouchRest::ExtendedDocument
-  def self.load_for_delayed_job(id)
-    (id)? get(id) : super 
+  def self.find(id)
+    get id
   end  
   def dump_for_delayed_job
     "#{self.class};#{id}"
   end
-  def self.find(id)
-    get id
-  end
+  def self.load_for_delayed_job(id)
+    (id)? get(id) : super 
+  end  
   def ==(other)
     if other.is_a? ::CouchRest::ExtendedDocument
       self['_id'] == other['_id']
@@ -27,15 +27,15 @@ module Delayed
       class Job < ::CouchRest::ExtendedDocument
         include Delayed::Backend::Base
         use_database ::CouchRest::Server.new.database('delayed_job')
-        
+
+        property :handler        
         property :priority
         property :attempts
-        property :handler
+        property :locked_by
+        property :last_error        
         property :run_at, :cast_as => 'Time'
         property :locked_at, :cast_as => 'Time'
-        property :locked_by
         property :failed_at, :cast_as => 'Time'
-        property :last_error
         timestamps!
 
         view_by(:failed_at, :locked_by, :run_at,
@@ -50,17 +50,17 @@ module Delayed
                 "        }")        
         
         set_callback :save, :before, :set_default_run_at
+        set_callback :save, :before, :set_default_priority        
         set_callback :save, :before, :set_default_attempts
-        set_callback :save, :before, :set_default_priority
         set_callback :save, :before, :set_default_locked_by
         set_callback :save, :before, :set_default_failed_at
         set_callback :save, :before, :set_default_locked_at        
 
         def self.db_time_now; Time.now; end    
         def self.find_available(worker_name, limit = 5, max_run_time = ::Delayed::Worker.max_run_time)
-          ready = ready_jobs worker_name, limit, max_run_time
-          mine = my_jobs worker_name, limit, max_run_time
-          expire = expired_jobs worker_name, limit, max_run_time
+          ready = ready_jobs
+          mine = my_jobs worker_name
+          expire = expired_jobs max_run_time
           jobs = (ready + mine + expire)[0..limit-1].sort_by { |j| j.priority }
           jobs = jobs.find_all { |j| j.priority >= Worker.min_priority } if Worker.min_priority
           jobs = jobs.find_all { |j| j.priority <= Worker.max_priority } if Worker.max_priority
@@ -108,15 +108,15 @@ module Delayed
         def reload; end
         
         private
-        def self.ready_jobs(worker_name, limit, max_run_time)
+        def self.ready_jobs
           options = {:startkey => ['', ''], :endkey => ['', '', db_time_now]}
           by_failed_at_and_locked_by_and_run_at options
         end
-        def self.my_jobs(worker_name, limit, max_run_time)
+        def self.my_jobs(worker_name)
           options = {:startkey => ['', worker_name], :endkey => ['', worker_name, {}]}
           by_failed_at_and_locked_by_and_run_at options
         end
-        def self.expired_jobs(worker_name, limit, max_run_time)
+        def self.expired_jobs(max_run_time)
           options = {:startkey => ['','0'], :endkey => ['', db_time_now - max_run_time, db_time_now]}
           by_failed_at_and_locked_at_and_run_at options
         end
