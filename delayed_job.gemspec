@@ -35,6 +35,7 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
      "lib/delayed/backend/base.rb",
      "lib/delayed/backend/data_mapper.rb",
      "lib/delayed/backend/mongo_mapper.rb",
+     "lib/delayed/class_to_yaml.rb",
      "lib/delayed/command.rb",
      "lib/delayed/message_sending.rb",
      "lib/delayed/performable_method.rb",
@@ -43,20 +44,22 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
      "lib/delayed/tasks.rb",
      "lib/delayed/worker.rb",
      "lib/delayed_job.rb",
+     "lib/generators/delayed_job/delayed_job_generator.rb",
+     "lib/generators/delayed_job/templates/migration.rb",
+     "lib/generators/delayed_job/templates/script",
      "rails/init.rb",
      "recipes/delayed_job.rb",
      "spec/backend/active_record_job_spec.rb",
      "spec/backend/data_mapper_job_spec.rb",
      "spec/backend/mongo_mapper_job_spec.rb",
      "spec/backend/shared_backend_spec.rb",
-     "spec/delayed_method_spec.rb",
+     "spec/message_sending_spec.rb",
      "spec/performable_method_spec.rb",
      "spec/sample_jobs.rb",
      "spec/setup/active_record.rb",
      "spec/setup/data_mapper.rb",
      "spec/setup/mongo_mapper.rb",
      "spec/spec_helper.rb",
-     "spec/story_spec.rb",
      "spec/worker_spec.rb",
      "tasks/jobs.rake"
   ]
@@ -66,9 +69,8 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
   s.rubygems_version = %q{1.3.6}
   s.summary = %q{Database-backed asynchronous priority queue system -- Extracted from Shopify}
   s.test_files = [
-    "spec/delayed_method_spec.rb",
+    "spec/message_sending_spec.rb",
      "spec/performable_method_spec.rb",
-     "spec/story_spec.rb",
      "spec/worker_spec.rb"
   ]
 
