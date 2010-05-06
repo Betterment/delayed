@@ -46,12 +46,12 @@ module Delayed
         view_by(:failed_at, :locked_by, :run_at,
                 :map => "function(doc){" +
                 "          if(doc['couchrest-type'] == 'Delayed::Backend::CouchRest::Job') {" +
-                "            emit([doc.failed_at, doc.locked_by, doc.run_at], null);}" +
+                "            emit([doc.failed_at || null, doc.locked_by || null, doc.run_at || null], null);}" +
                 "        }")
         view_by(:failed_at, :locked_at, :run_at,
                 :map => "function(doc){" +
                 "          if(doc['couchrest-type'] == 'Delayed::Backend::CouchRest::Job') {" +
-                "            emit([doc.failed_at, doc.locked_at, doc.run_at], null);}" +
+                "            emit([doc.failed_at || null, doc.locked_at || null, doc.run_at || null], null);}" +
                 "        }")        
 
         def self.db_time_now; Time.now; end    
