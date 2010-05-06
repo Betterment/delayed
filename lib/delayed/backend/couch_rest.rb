@@ -70,9 +70,6 @@ module Delayed
         def self.delete_all
           database.bulk_save all.each { |doc| doc['_deleted'] = true }
         end
-        def self.db=(db_to_use)
-          use_database ::CouchRest::Server.new.database(db_to_use)
-        end
         
         def lock_exclusively!(max_run_time, worker = worker_name)
           return false if locked_by_other?(worker) and not expired?(max_run_time)
