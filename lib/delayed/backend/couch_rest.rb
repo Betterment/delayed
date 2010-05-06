@@ -2,15 +2,17 @@ require 'couchrest'
 
 #extent couchrest to handle delayed_job serialization.
 class CouchRest::ExtendedDocument
-  def reload; end
+  yaml_as "tag:ruby.yaml.org,2002:CouchRest"
+  
+  def reload
+    job = self.class.get self['_id']
+    job.each {|k,v| self[k] = v}
+  end
   def self.find(id)
     get id
-  end  
-  def dump_for_delayed_job
-    "#{self.class};#{id}"
   end
-  def self.load_for_delayed_job(id)
-    (id)? get(id) : super 
+  def self.yaml_new(klass, tag, val)
+    klass.get(val['_id'])
   end  
   def ==(other)
     if other.is_a? ::CouchRest::ExtendedDocument
@@ -18,7 +20,7 @@ class CouchRest::ExtendedDocument
     else
       super
     end
-  end  
+  end
 end
 
 #couchrest adapter
@@ -30,13 +32,13 @@ module Delayed
         use_database ::CouchRest::Server.new.database('delayed_job')
 
         property :handler
-        property :last_error                
+        property :last_error
+        property :locked_by        
         property :priority, :default => 0
         property :attempts, :default => 0
-        property :locked_by, :default => ''
         property :run_at, :cast_as => 'Time'
-        property :locked_at, :cast_as => 'Time', :default => ''
-        property :failed_at, :cast_as => 'Time', :default => ''
+        property :locked_at, :cast_as => 'Time'
+        property :failed_at, :cast_as => 'Time'
         timestamps!
 
         set_callback :save, :before, :set_default_run_at
@@ -64,7 +66,7 @@ module Delayed
         end
         def self.clear_locks!(worker_name)
           jobs = my_jobs worker_name
-          jobs.each { |j| j.locked_by, j.locked_at = '', ''; }
+          jobs.each { |j| j.locked_by, j.locked_at = nil, nil; }
           database.bulk_save jobs
         end
         def self.delete_all
@@ -86,21 +88,21 @@ module Delayed
         
         private
         def self.ready_jobs
-          options = {:startkey => ['', ''], :endkey => ['', '', db_time_now]}
+          options = {:startkey => [nil, nil], :endkey => [nil, nil, db_time_now]}
           by_failed_at_and_locked_by_and_run_at options
         end
         def self.my_jobs(worker_name)
-          options = {:startkey => ['', worker_name], :endkey => ['', worker_name, {}]}
+          options = {:startkey => [nil, worker_name], :endkey => [nil, worker_name, {}]}
           by_failed_at_and_locked_by_and_run_at options
         end
         def self.expired_jobs(max_run_time)
-          options = {:startkey => ['','0'], :endkey => ['', db_time_now - max_run_time, db_time_now]}
+          options = {:startkey => [nil,'0'], :endkey => [nil, db_time_now - max_run_time, db_time_now]}
           by_failed_at_and_locked_at_and_run_at options
         end
-        def unlocked?; locked_by == ''; end
+        def unlocked?; locked_by.nil?; end
         def expired?(time); locked_at < self.class.db_time_now - time; end
-        def locked_by_me?(worker); locked_by != '' and locked_by == worker; end        
-        def locked_by_other?(worker); locked_by != '' and locked_by != worker; end
+        def locked_by_me?(worker); not locked_by.nil? and locked_by == worker; end        
+        def locked_by_other?(worker); not locked_by.nil? and locked_by != worker; end
       end
     end
   end
