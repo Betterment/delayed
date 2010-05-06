@@ -2,6 +2,7 @@ require 'couchrest'
 
 #extent couchrest to handle delayed_job serialization.
 class CouchRest::ExtendedDocument
+  def reload; end
   def self.find(id)
     get id
   end  
@@ -28,15 +29,17 @@ module Delayed
         include Delayed::Backend::Base
         use_database ::CouchRest::Server.new.database('delayed_job')
 
-        property :handler        
-        property :priority
-        property :attempts
-        property :locked_by
-        property :last_error        
+        property :handler
+        property :last_error                
+        property :priority, :default => 0
+        property :attempts, :default => 0
+        property :locked_by, :default => ''
         property :run_at, :cast_as => 'Time'
-        property :locked_at, :cast_as => 'Time'
-        property :failed_at, :cast_as => 'Time'
+        property :locked_at, :cast_as => 'Time', :default => ''
+        property :failed_at, :cast_as => 'Time', :default => ''
         timestamps!
+
+        set_callback :save, :before, :set_default_run_at
 
         view_by(:failed_at, :locked_by, :run_at,
                 :map => "function(doc){" +
@@ -48,13 +51,6 @@ module Delayed
                 "          if(doc['couchrest-type'] == 'Delayed::Backend::CouchRest::Job') {" +
                 "            emit([doc.failed_at, doc.locked_at, doc.run_at], null);}" +
                 "        }")        
-        
-        set_callback :save, :before, :set_default_run_at
-        set_callback :save, :before, :set_default_priority        
-        set_callback :save, :before, :set_default_attempts
-        set_callback :save, :before, :set_default_locked_by
-        set_callback :save, :before, :set_default_failed_at
-        set_callback :save, :before, :set_default_locked_at        
 
         def self.db_time_now; Time.now; end    
         def self.find_available(worker_name, limit = 5, max_run_time = ::Delayed::Worker.max_run_time)
@@ -90,22 +86,6 @@ module Delayed
         rescue RestClient::Conflict
           false
         end
-        def set_default_priority
-          self.priority = 0 if priority.nil?
-        end
-        def set_default_attempts
-          self.attempts = 0 if attempts.nil?
-        end
-        def set_default_locked_by
-          self.locked_by = '' if locked_by.nil?
-        end
-        def set_default_failed_at
-          self.failed_at = '' if failed_at.nil?
-        end
-        def set_default_locked_at
-          self.locked_at = '' if locked_at.nil?
-        end        
-        def reload; end
         
         private
         def self.ready_jobs
