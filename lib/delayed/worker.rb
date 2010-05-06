@@ -68,7 +68,7 @@ module Delayed
     end
 
     def start
-      say "*** Starting job worker #{name}"
+      say "Starting job worker"
 
       trap('TERM') { say 'Exiting...'; $exit = true }
       trap('INT')  { say 'Exiting...'; $exit = true }
@@ -122,8 +122,7 @@ module Delayed
         Timeout.timeout(self.class.max_run_time.to_i) { job.invoke_job }
         job.destroy
       end
-      # TODO: warn if runtime > max_run_time ?
-      say "* [JOB] #{name} completed after %.4f" % runtime
+      say "#{job.name} completed after %.4f" % runtime
       return true  # did work
     rescue Exception => e
       handle_failed_job(job, e)
@@ -139,10 +138,10 @@ module Delayed
         job.unlock
         job.save!
       else
-        say "* [JOB] PERMANENTLY removing #{job.name} because of #{job.attempts} consecutive failures.", Logger::INFO
+        say "PERMANENTLY removing #{job.name} because of #{job.attempts} consecutive failures.", Logger::INFO
 
         if job.payload_object.respond_to? :on_permanent_failure
-          say "* [JOB] Running on_permanent_failure hook"
+          say "Running on_permanent_failure hook"
           job.payload_object.on_permanent_failure
         end
 
@@ -151,6 +150,7 @@ module Delayed
     end
 
     def say(text, level = Logger::INFO)
+      text = "[Worker(#{name})] #{text}"
       puts text unless @quiet
       logger.add level, "#{Time.now.strftime('%FT%T%z')}: #{text}" if logger
     end
@@ -159,7 +159,7 @@ module Delayed
     
     def handle_failed_job(job, error)
       job.last_error = error.message + "\n" + error.backtrace.join("\n")
-      say "* [JOB] #{name} failed with #{error.class.name}: #{error.message} - #{job.attempts} failed attempts", Logger::ERROR
+      say "#{job.name} failed with #{error.class.name}: #{error.message} - #{job.attempts} failed attempts", Logger::ERROR
       reschedule(job)
     end
     
@@ -171,10 +171,10 @@ module Delayed
       # this leads to a more even distribution of jobs across the worker processes
       job = Delayed::Job.find_available(name, 5, self.class.max_run_time).detect do |job|
         if job.lock_exclusively!(self.class.max_run_time, name)
-          say "* [Worker(#{name})] acquired lock on #{job.name}"
+          say "acquired lock on #{job.name}"
           true
         else
-          say "* [Worker(#{name})] failed to acquire exclusive lock for #{job.name}", Logger::WARN
+          say "failed to acquire exclusive lock for #{job.name}", Logger::WARN
           false
         end
       end
