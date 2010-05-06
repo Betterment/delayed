@@ -67,9 +67,9 @@ module Delayed
           jobs
         end
         def self.clear_locks!(worker_name)
-          docs = by_failed_at_and_locked_by_and_run_at :startkey => ['', worker_name], :endkey => ['', worker_name, {}]
-          docs.each { |doc| doc.locked_by, doc.locked_at = '', ''; }
-          database.bulk_save docs
+          jobs = my_jobs worker_name
+          jobs.each { |j| j.locked_by, j.locked_at = '', ''; }
+          database.bulk_save jobs
         end
         def self.delete_all
           database.bulk_save all.each { |doc| doc['_deleted'] = true }
