@@ -14,6 +14,7 @@ module Delayed
       }
       
       @worker_count = 1
+      @monitor = false
       
       opts = OptionParser.new do |opts|
         opts.banner = "Usage: #{File.basename($0)} [options] start|stop|restart|run"
@@ -40,6 +41,11 @@ module Delayed
         opts.on('-i', '--identifier=n', 'A numeric identifier for the worker.') do |n|
           @options[:identifier] = n
         end
+        opts.on('-m', '--monitor', 'Start monitor process.') do
+          @monitor = true
+        end
+        
+
       end
       @args = opts.parse!(args)
     end
@@ -68,7 +74,7 @@ module Delayed
     end
     
     def run_process(process_name, dir)
-      Daemons.run_proc(process_name, :dir => dir, :dir_mode => :normal, :ARGV => @args) do |*args|
+      Daemons.run_proc(process_name, :dir => dir, :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*args|
         run process_name
       end
     end
