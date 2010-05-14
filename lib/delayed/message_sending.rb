@@ -8,8 +8,8 @@ module Delayed
     end
     
     def method_missing(method, *args)
-      Delayed::Job.create @options.merge(
-        :payload_object => Delayed::PerformableMethod.new(@target, method.to_sym, args)
+      Job.create @options.merge(
+        :payload_object => PerformableMethod.new(@target, method.to_sym, args)
       )
     end
   end
