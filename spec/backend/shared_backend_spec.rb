@@ -53,31 +53,22 @@ shared_examples_for 'a backend' do
   describe "payload_object" do
     it "should raise a DeserializationError when the job class is totally unknown" do
       job = @backend.new :handler => "--- !ruby/object:JobThatDoesNotExist {}"
-      lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
+      lambda { job.payload_object }.should raise_error(Delayed::Backend::DeserializationError)
+    end
+
+    it "should raise a DeserializationError when the job struct is totally unknown" do
+      job = @backend.new :handler => "--- !ruby/struct:StructThatDoesNotExist {}"
+      lambda { job.payload_object }.should raise_error(Delayed::Backend::DeserializationError)
     end
     
-    it "should try to load the class when it is unknown at the time of the deserialization" do
-      job = @backend.new :handler => "--- !ruby/object:JobThatDoesNotExist {}"
-      job.should_receive(:attempt_to_load).with('JobThatDoesNotExist').and_return(true)
-      lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
+    it "should autoload classes that are unknown at runtime" do
+      job = @backend.new :handler => "--- !ruby/object:Autoloaded::Clazz {}"
+      lambda { job.payload_object }.should_not raise_error(Delayed::Backend::DeserializationError)
     end
 
-    it "should try include the namespace when loading unknown objects" do
-      job = @backend.new :handler => "--- !ruby/object:Delayed::JobThatDoesNotExist {}"
-      job.should_receive(:attempt_to_load).with('Delayed::JobThatDoesNotExist').and_return(true)
-      lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
-    end
-
-    it "should also try to load structs when they are unknown (raises TypeError)" do
-      job = @backend.new :handler => "--- !ruby/struct:JobThatDoesNotExist {}"
-      job.should_receive(:attempt_to_load).with('JobThatDoesNotExist').and_return(true)
-      lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
-    end
-
-    it "should try include the namespace when loading unknown structs" do
-      job = @backend.new :handler => "--- !ruby/struct:Delayed::JobThatDoesNotExist {}"
-      job.should_receive(:attempt_to_load).with('Delayed::JobThatDoesNotExist').and_return(true)
-      lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
+    it "should autoload structs that are unknown at runtime" do
+      job = @backend.new :handler => "--- !ruby/struct:Autoloaded::Struct {}"
+      lambda { job.payload_object }.should_not raise_error(Delayed::Backend::DeserializationError)
     end
   end
   

@@ -50,11 +50,14 @@ module Delayed
       end
 
       def payload_object=(object)
-        self['handler'] = object.to_yaml
+        self.handler = object.to_yaml
       end
       
       def payload_object
-        @payload_object ||= deserialize(self['handler'])
+        @payload_object ||= YAML.load(self.handler)
+      rescue TypeError, LoadError, NameError => e
+          raise DeserializationError,
+            "Job failed to load: #{e.message}. Try to manually require the required file. Handler: #{handler.inspect}"
       end
 
       # Moved into its own method so that new_relic can trace it.
@@ -68,34 +71,6 @@ module Delayed
         self.locked_by    = nil
       end
       
-    private
-
-      def deserialize(source)
-        handler = YAML.load(source) rescue nil
-
-        unless handler.respond_to?(:perform)
-          if handler.nil? && source =~ ParseObjectFromYaml
-            handler_class = $1
-          end
-          attempt_to_load(handler_class || handler.class)
-          handler = YAML.load(source)
-        end
-
-        return handler if handler.respond_to?(:perform)
-
-        raise DeserializationError,
-          'Job failed to load: Unknown handler. Try to manually require the appropriate file.'
-      rescue TypeError, LoadError, NameError => e
-        raise DeserializationError,
-          "Job failed to load: #{e.message}. Try to manually require the required file."
-      end
-
-      # Constantize the object so that ActiveSupport can attempt
-      # its auto loading magic. Will raise LoadError if not successful.
-      def attempt_to_load(klass)
-         klass.constantize
-      end
-
     protected
 
       def set_default_run_at
