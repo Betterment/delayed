@@ -42,10 +42,6 @@ module Delayed
       end
       alias_method :failed, :failed?
 
-      def payload_object
-        @payload_object ||= deserialize(self['handler'])
-      end
-
       def name
         @name ||= begin
           payload = payload_object
@@ -57,6 +53,10 @@ module Delayed
         self['handler'] = object.to_yaml
       end
       
+      def payload_object
+        @payload_object ||= deserialize(self['handler'])
+      end
+
       # Moved into its own method so that new_relic can trace it.
       def invoke_job
         payload_object.perform
