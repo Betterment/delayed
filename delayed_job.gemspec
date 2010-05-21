@@ -5,9 +5,9 @@
 
 Gem::Specification.new do |s|
   s.name = %q{delayed_job}
-  s.version = "2.0.3"
+  s.version = "2.1.0.pre"
 
-  s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
+  s.required_rubygems_version = Gem::Requirement.new("> 1.3.1") if s.respond_to? :required_rubygems_version=
   s.authors = ["Brandon Keepers", "Tobias L\303\274tke"]
   s.date = %q{2010-05-21}
   s.description = %q{Delayed_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. It is a direct extraction from Shopify where the job table is responsible for a multitude of core tasks.
