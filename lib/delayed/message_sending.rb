@@ -18,15 +18,16 @@ module Delayed
     def delay(options = {})
       DelayProxy.new(self, options)
     end
+    alias __delay__ delay
     
     def send_later(method, *args)
       warn "[DEPRECATION] `object.send_later(:method)` is deprecated. Use `object.delay.method"
-      delay.__send__(method, *args)
+      __delay__.__send__(method, *args)
     end
 
     def send_at(time, method, *args)
       warn "[DEPRECATION] `object.send_at(time, :method)` is deprecated. Use `object.delay(:run_at => time).method"
-      delay(:run_at => time).__send__(method, *args)
+      __delay__(:run_at => time).__send__(method, *args)
     end
     
     module ClassMethods
