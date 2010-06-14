@@ -65,10 +65,12 @@ module Delayed
         payload_object.before(self) if payload_object.respond_to?(:before)
         begin
           payload_object.perform
-          payload_object.after(self) if payload_object.respond_to?(:after)
+          payload_object.success(self) if payload_object.respond_to?(:success)
         rescue Exception => e
-          payload_object.after(self, e) if payload_object.respond_to?(:after)
+          payload_object.failure(self, e) if payload_object.respond_to?(:failure)
           raise e
+        ensure
+          payload_object.after(self) if payload_object.respond_to?(:after)
         end
       end
       

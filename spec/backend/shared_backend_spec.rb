@@ -17,6 +17,14 @@ class SuccessfulCallbackJob
     SuccessfulCallbackJob.messages << 'after perform'
   end
   
+  def success(job)
+    SuccessfulCallbackJob.messages << 'success!'
+  end
+  
+  def failure(job, error)
+    SuccessfulCallbackJob.messages << 'oops!'
+  end
+  
   class << self
     attr_accessor :messages
   end
@@ -31,7 +39,15 @@ class FailureCallbackJob
      1 / nil
   end
   
-  def after(job, error = nil)
+  def after(job)
+    FailureCallbackJob.messages << "after perform"
+  end
+  
+  def success(job)
+    FailureCallbackJob.messages << 'success!'
+  end
+  
+  def failure(job, error)
     FailureCallbackJob.messages << "error during peform: #{error.message}"
   end
   
@@ -102,13 +118,13 @@ shared_examples_for 'a backend' do
     it "should call before and after callbacks" do
       job = @backend.enqueue(SuccessfulCallbackJob.new)
       job.invoke_job
-      SuccessfulCallbackJob.messages.should == ['before perform', 'perform', 'after perform']
+      SuccessfulCallbackJob.messages.should == ["before perform", "perform", "success!", "after perform"]
     end
 
     it "should call the after callback with an error" do
       job = @backend.enqueue(FailureCallbackJob.new)
       lambda {job.invoke_job}.should raise_error(TypeError)
-      FailureCallbackJob.messages.should == ["before perform", "error during peform: nil can't be coerced into Fixnum"]
+      FailureCallbackJob.messages.should == ["before perform", "error during peform: nil can't be coerced into Fixnum", "after perform"]
     end
     
   end
