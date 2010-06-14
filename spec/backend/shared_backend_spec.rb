@@ -4,6 +4,42 @@ class NamedJob < Struct.new(:perform)
   end
 end
 
+class SuccessfulCallbackJob
+  def before(job)
+    SuccessfulCallbackJob.messages << 'before perform'
+  end
+  
+  def perform
+    SuccessfulCallbackJob.messages << 'perform'
+  end
+  
+  def after(job, error = nil)
+    SuccessfulCallbackJob.messages << 'after perform'
+  end
+  
+  class << self
+    attr_accessor :messages
+  end
+end
+
+class FailureCallbackJob
+  def before(job)
+    FailureCallbackJob.messages << 'before perform'
+  end
+  
+  def perform
+     1 / nil
+  end
+  
+  def after(job, error = nil)
+    FailureCallbackJob.messages << "error during peform: #{error.message}"
+  end
+  
+  class << self
+    attr_accessor :messages
+  end
+end
+
 shared_examples_for 'a backend' do
   def create_job(opts = {})
     @backend.create(opts.merge(:payload_object => SimpleJob.new))
@@ -54,6 +90,27 @@ shared_examples_for 'a backend' do
     M::ModuleJob.runs = 0
     job = @backend.enqueue M::ModuleJob.new
     lambda { job.invoke_job }.should change { M::ModuleJob.runs }.from(0).to(1)
+  end
+  
+  describe "callbacks" do
+    
+    before(:each) do
+      SuccessfulCallbackJob.messages = []
+      FailureCallbackJob.messages = []
+    end
+    
+    it "should call before and after callbacks" do
+      job = @backend.enqueue(SuccessfulCallbackJob.new)
+      job.invoke_job
+      SuccessfulCallbackJob.messages.should == ['before perform', 'perform', 'after perform']
+    end
+
+    it "should call the after callback with an error" do
+      job = @backend.enqueue(FailureCallbackJob.new)
+      lambda {job.invoke_job}.should raise_error(TypeError)
+      FailureCallbackJob.messages.should == ["before perform", "error during peform: nil can't be coerced into Fixnum"]
+    end
+    
   end
   
   describe "payload_object" do
