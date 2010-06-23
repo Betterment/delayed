@@ -33,7 +33,14 @@ describe Delayed::MessageSending do
         job.payload_object.args.should    == ['l']
       }.should change { Delayed::Job.count }.by(1)
     end
-  
+
+    it "should set default priority" do
+      Delayed::Worker.default_priority = 99
+      job = Object.delay.to_s
+      job.priority.should == 99
+      Delayed::Worker.default_priority = 0
+    end
+
     it "should set job options" do
       run_at = Time.parse('2010-05-03 12:55 AM')
       job = Object.delay(:priority => 20, :run_at => run_at).to_s

@@ -12,6 +12,7 @@ shared_examples_for 'a backend' do
   before do
     Delayed::Worker.max_priority = nil
     Delayed::Worker.min_priority = nil
+    Delayed::Worker.default_priority = 99
     SimpleJob.runs = 0
   end
   
@@ -36,6 +37,11 @@ shared_examples_for 'a backend' do
   it "should be able to set priority when enqueuing items" do
     @job = @backend.enqueue SimpleJob.new, 5
     @job.priority.should == 5
+  end
+
+  it "should use default priority when it is not set" do
+    @job = @backend.enqueue SimpleJob.new
+    @job.priority.should == 99
   end
 
   it "should be able to set run_at when enqueuing items" do

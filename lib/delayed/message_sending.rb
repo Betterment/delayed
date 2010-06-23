@@ -6,14 +6,15 @@ module Delayed
       @target = target
       @options = options
     end
-    
+
     def method_missing(method, *args)
-      Job.create @options.merge(
-        :payload_object => PerformableMethod.new(@target, method.to_sym, args)
-      )
+      Job.create({
+        :payload_object => PerformableMethod.new(@target, method.to_sym, args),
+        :priority       => Delayed::Worker.default_priority
+      }.merge(@options))
     end
   end
-  
+
   module MessageSending
     def delay(options = {})
       DelayProxy.new(self, options)

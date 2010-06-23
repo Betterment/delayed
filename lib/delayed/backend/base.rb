@@ -16,7 +16,7 @@ module Delayed
             raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
           end
     
-          priority = args.first || 0
+          priority = args.first || Delayed::Worker.default_priority
           run_at   = args[1]
           self.create(:payload_object => object, :priority => priority.to_i, :run_at => run_at)
         end
