@@ -169,6 +169,8 @@ make sure your job doesn't exceed this time. You should set this to the longest 
 By default, it will delete failed jobs (and it always deletes successful jobs). If you want to keep failed jobs, set
 Delayed::Worker.destroy_failed_jobs = false. The failed jobs will be marked with non-null failed_at.
 
+By default all jobs are scheduled with priority = 0, which is top priority. You can change this by setting Delayed::Worker.default_priority to something else. Lower numbers have higher priority.
+
 Here is an example of changing job parameters in Rails:
 
 <pre>
