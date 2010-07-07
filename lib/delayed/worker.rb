@@ -142,7 +142,12 @@ module Delayed
 
         if job.payload_object.respond_to? :on_permanent_failure
           say "Running on_permanent_failure hook"
-          job.payload_object.on_permanent_failure
+          failure_method = job.payload_object.method(:on_permanent_failure)
+          if failure_method.arity == 1
+            failure_method.call(job)
+          else
+            failure_method.call
+          end
         end
 
         self.class.destroy_failed_jobs ? job.destroy : job.update_attributes(:failed_at => Delayed::Job.db_time_now)
