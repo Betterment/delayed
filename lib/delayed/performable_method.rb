@@ -1,7 +1,7 @@
 module Delayed
   class PerformableMethod < Struct.new(:object, :method, :args)
     def initialize(object, method, args)
-      raise NoMethodError, "undefined method `#{method}' for #{object.inspect}" unless object.respond_to?(method)
+      raise NoMethodError, "undefined method `#{method}' for #{object.inspect}" unless object.respond_to?(method, true)
 
       self.object = object
       self.args   = args

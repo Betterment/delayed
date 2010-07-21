@@ -22,9 +22,20 @@ describe Delayed::PerformableMethod do
     end
   end
 
-  it "should raise a ArgumentError if target method doesn't exist" do
+  it "should raise a NoMethodError if target method doesn't exist" do
     lambda {
       Delayed::PerformableMethod.new(Object, :method_that_does_not_exist, [])
     }.should raise_error(NoMethodError)
+  end
+  
+  it "should not raise NoMethodError if target method is private" do
+    clazz = Class.new do
+      def private_method
+      end
+      private :private_method
+    end
+    lambda {
+      Delayed::PerformableMethod.new(clazz.new, :private_method, [])
+    }.should_not raise_error(NoMethodError)
   end
 end
