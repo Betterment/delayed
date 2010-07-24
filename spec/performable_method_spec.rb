@@ -20,6 +20,13 @@ describe Delayed::PerformableMethod do
       @method.object.should_receive(:count).with('o')
       @method.perform
     end
+    
+    it "should respond to on_permanent_failure when implemented and target object is called via object.delay.do_something" do
+      @method = Delayed::PerformableMethod.new(OnPermanentFailureJob.new, :perform, [])
+      @method.respond_to?(:on_permanent_failure).should be_true
+      @method.object.should_receive(:on_permanent_failure)
+      @method.on_permanent_failure
+    end    
   end
 
   it "should raise a NoMethodError if target method doesn't exist" do

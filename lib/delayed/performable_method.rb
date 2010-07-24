@@ -15,5 +15,13 @@ module Delayed
     def perform
       object.send(method, *args) if object
     end
+    
+    def method_missing(symbol, *args)
+      object.respond_to?(symbol) ? object.send(symbol, *args) : super
+    end
+       
+    def respond_to?(symbol, include_private=false)
+      object.respond_to?(symbol, include_private) || super
+    end    
   end
 end
