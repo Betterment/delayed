@@ -85,7 +85,7 @@ module Delayed
       # Re-open file handles
       @files_to_reopen.each do |file|
         begin
-          file.reopen file.path
+          file.reopen file.path, "a+"
           file.sync = true
         rescue ::Exception
         end
