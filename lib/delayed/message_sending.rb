@@ -3,14 +3,15 @@ require 'active_support/core_ext/module/aliasing'
 
 module Delayed
   class DelayProxy < ActiveSupport::BasicObject
-    def initialize(target, options)
+    def initialize(payload_class, target, options)
+      @payload_class = payload_class
       @target = target
       @options = options
     end
 
     def method_missing(method, *args)
       Job.create({
-        :payload_object => PerformableMethod.new(@target, method.to_sym, args),
+        :payload_object => @payload_class.new(@target, method.to_sym, args),
         :priority       => ::Delayed::Worker.default_priority
       }.merge(@options))
     end
@@ -18,7 +19,7 @@ module Delayed
 
   module MessageSending
     def delay(options = {})
-      DelayProxy.new(self, options)
+      DelayProxy.new(PerformableMethod, self, options)
     end
     alias __delay__ delay
     
