@@ -65,6 +65,7 @@ Delayed::Worker.backend = :mongo_mapper
 h3. Mongoid
 
 You need to create your DelayedJob mongoid model:
+
 <pre>
 # app/models/delayed_job.rb
 class DelayedJob
@@ -83,6 +84,7 @@ end
 </pre>
 
 And set the backend in the initializer:
+
 <pre>
 # config/initializers/delayed_job.rb
 Delayed::Worker.backend = :mongoid
