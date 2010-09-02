@@ -62,6 +62,32 @@ MongoMapper.setup(config, Rails.env)
 Delayed::Worker.backend = :mongo_mapper
 </pre>
 
+h3. Mongoid
+
+You need to create your DelayedJob mongoid model:
+<pre>
+# app/models/delayed_job.rb
+class DelayedJob
+  include Mongoid::Document
+  include Mongoid::Timestamps
+
+  field :priority, :type => Integer, :default => 0      # Allows some jobs to jump to the front of the queue
+  field :attempts, :type => Integer, :default => 0      # Provides for retries, but still fail eventually.
+  field :handler                      # YAML-encoded string of the object that will do work
+  field :last_error                   # reason for last failure (See Note below)
+  field :run_at, :type => DateTime                       # When to run. Could be Time.zone.now for immediately, or sometime in the future.
+  field :locked_at, :type => DateTime                    # Set when a client is working on this object
+  field :failed_at, :type => DateTime                    # Set when all retries have failed (actually, by default, the record is deleted instead)
+  field :locked_by                    # Who is working on this object (if locked)
+end
+</pre>
+
+And set the backend in the initializer:
+<pre>
+# config/initializers/delayed_job.rb
+Delayed::Worker.backend = :mongoid
+</pre>
+
 h3. DataMapper
 
 <pre>

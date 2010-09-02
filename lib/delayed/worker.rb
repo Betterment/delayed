@@ -43,6 +43,8 @@ module Delayed
         :active_record
       elsif defined?(MongoMapper)
         :mongo_mapper
+      elsif defined?(Mongoid)
+        :mongoid
       else
         logger.warn "Could not decide on a backend, defaulting to active_record"
         :active_record
