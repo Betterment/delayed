@@ -1,8 +1,4 @@
-class NamedJob < Struct.new(:perform)
-  def display_name
-    'named_job'
-  end
-end
+require File.expand_path('../../../../spec/sample_jobs', __FILE__)
 
 class SuccessfulCallbackJob
   def before(job)
@@ -56,7 +52,7 @@ class FailureCallbackJob
   end
 end
 
-shared_examples_for 'a backend' do
+shared_examples_for 'a delayed_job backend' do
   def create_job(opts = {})
     @backend.create(opts.merge(:payload_object => SimpleJob.new))
   end
@@ -138,16 +134,6 @@ shared_examples_for 'a backend' do
     it "should raise a DeserializationError when the job struct is totally unknown" do
       job = @backend.new :handler => "--- !ruby/struct:StructThatDoesNotExist {}"
       lambda { job.payload_object }.should raise_error(Delayed::Backend::DeserializationError)
-    end
-    
-    it "should autoload classes that are unknown at runtime" do
-      job = @backend.new :handler => "--- !ruby/object:Autoloaded::Clazz {}"
-      lambda { job.payload_object }.should_not raise_error(Delayed::Backend::DeserializationError)
-    end
-
-    it "should autoload structs that are unknown at runtime" do
-      job = @backend.new :handler => "--- !ruby/struct:Autoloaded::Struct {}"
-      lambda { job.payload_object }.should_not raise_error(Delayed::Backend::DeserializationError)
     end
   end
   
