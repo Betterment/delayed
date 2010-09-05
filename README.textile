@@ -51,17 +51,6 @@ $ script/generate delayed_job
 $ rake db:migrate
 </pre>
 
-h3. MongoMapper
-
-You must use @MongoMapper.setup@ in the initializer:
-
-<pre>
-config = YAML::load(File.read(Rails.root.join('config/mongo.yml')))
-MongoMapper.setup(config, Rails.env)
-
-Delayed::Worker.backend = :mongo_mapper
-</pre>
-
 h3. DataMapper
 
 <pre>

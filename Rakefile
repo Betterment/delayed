@@ -24,7 +24,6 @@ Jeweler::Tasks.new do |s|
   s.add_development_dependency "rspec"
   s.add_development_dependency "sqlite3-ruby"
   s.add_development_dependency "activerecord"
-  s.add_development_dependency "mongo_mapper"
   s.add_development_dependency "dm-core"
   s.add_development_dependency "dm-observer"
   s.add_development_dependency "dm-aggregates"

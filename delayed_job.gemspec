@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new("> 1.3.1") if s.respond_to? :required_rubygems_version=
   s.authors = ["Brandon Keepers", "Tobias L\303\274tke"]
-  s.date = %q{2010-05-21}
+  s.date = %q{2010-09-04}
   s.description = %q{Delayed_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. It is a direct extraction from Shopify where the job table is responsible for a multitude of core tasks.
 
 This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job).}
@@ -35,7 +35,7 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
      "lib/delayed/backend/base.rb",
      "lib/delayed/backend/couch_rest.rb",
      "lib/delayed/backend/data_mapper.rb",
-     "lib/delayed/backend/mongo_mapper.rb",
+     "lib/delayed/backend/shared_spec.rb",
      "lib/delayed/command.rb",
      "lib/delayed/message_sending.rb",
      "lib/delayed/performable_method.rb",
@@ -55,17 +55,15 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
      "spec/backend/active_record_job_spec.rb",
      "spec/backend/couch_rest_job_spec.rb",
      "spec/backend/data_mapper_job_spec.rb",
-     "spec/backend/mongo_mapper_job_spec.rb",
-     "spec/backend/shared_backend_spec.rb",
      "spec/message_sending_spec.rb",
      "spec/performable_method_spec.rb",
      "spec/sample_jobs.rb",
      "spec/setup/active_record.rb",
      "spec/setup/couch_rest.rb",
      "spec/setup/data_mapper.rb",
-     "spec/setup/mongo_mapper.rb",
      "spec/spec_helper.rb",
      "spec/worker_spec.rb",
+     "spec/yaml_ext_spec.rb",
      "tasks/jobs.rake"
   ]
   s.homepage = %q{http://github.com/collectiveidea/delayed_job}
@@ -76,7 +74,8 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
   s.test_files = [
     "spec/message_sending_spec.rb",
      "spec/performable_method_spec.rb",
-     "spec/worker_spec.rb"
+     "spec/worker_spec.rb",
+     "spec/yaml_ext_spec.rb"
   ]
 
   if s.respond_to? :specification_version then
@@ -88,7 +87,6 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
       s.add_development_dependency(%q<rspec>, [">= 0"])
       s.add_development_dependency(%q<sqlite3-ruby>, [">= 0"])
       s.add_development_dependency(%q<activerecord>, [">= 0"])
-      s.add_development_dependency(%q<mongo_mapper>, [">= 0"])
       s.add_development_dependency(%q<dm-core>, [">= 0"])
       s.add_development_dependency(%q<dm-observer>, [">= 0"])
       s.add_development_dependency(%q<dm-aggregates>, [">= 0"])
@@ -100,7 +98,6 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
       s.add_dependency(%q<rspec>, [">= 0"])
       s.add_dependency(%q<sqlite3-ruby>, [">= 0"])
       s.add_dependency(%q<activerecord>, [">= 0"])
-      s.add_dependency(%q<mongo_mapper>, [">= 0"])
       s.add_dependency(%q<dm-core>, [">= 0"])
       s.add_dependency(%q<dm-observer>, [">= 0"])
       s.add_dependency(%q<dm-aggregates>, [">= 0"])
@@ -113,7 +110,6 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
     s.add_dependency(%q<rspec>, [">= 0"])
     s.add_dependency(%q<sqlite3-ruby>, [">= 0"])
     s.add_dependency(%q<activerecord>, [">= 0"])
-    s.add_dependency(%q<mongo_mapper>, [">= 0"])
     s.add_dependency(%q<dm-core>, [">= 0"])
     s.add_dependency(%q<dm-observer>, [">= 0"])
     s.add_dependency(%q<dm-aggregates>, [">= 0"])
