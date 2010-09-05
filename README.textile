@@ -51,14 +51,6 @@ $ script/generate delayed_job
 $ rake db:migrate
 </pre>
 
-h3. DataMapper
-
-<pre>
-# config/initializers/delayed_job.rb
-Delayed::Worker.backend = :data_mapper
-Delayed::Worker.backend.auto_upgrade!
-</pre>
-
 h2. Queuing Jobs
 
 Call @.delay.method(params)@ on any object and it will be processed in the background.

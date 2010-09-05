@@ -34,7 +34,6 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
      "lib/delayed/backend/active_record.rb",
      "lib/delayed/backend/base.rb",
      "lib/delayed/backend/couch_rest.rb",
-     "lib/delayed/backend/data_mapper.rb",
      "lib/delayed/backend/shared_spec.rb",
      "lib/delayed/command.rb",
      "lib/delayed/message_sending.rb",
@@ -54,13 +53,11 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
      "spec/autoloaded/struct.rb",
      "spec/backend/active_record_job_spec.rb",
      "spec/backend/couch_rest_job_spec.rb",
-     "spec/backend/data_mapper_job_spec.rb",
      "spec/message_sending_spec.rb",
      "spec/performable_method_spec.rb",
      "spec/sample_jobs.rb",
      "spec/setup/active_record.rb",
      "spec/setup/couch_rest.rb",
-     "spec/setup/data_mapper.rb",
      "spec/spec_helper.rb",
      "spec/worker_spec.rb",
      "spec/yaml_ext_spec.rb",
@@ -84,37 +81,25 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
 
     if Gem::Version.new(Gem::RubyGemsVersion) >= Gem::Version.new('1.2.0') then
       s.add_runtime_dependency(%q<daemons>, [">= 0"])
+      s.add_runtime_dependency(%q<activesupport>, [">= 0"])
       s.add_development_dependency(%q<rspec>, [">= 0"])
       s.add_development_dependency(%q<sqlite3-ruby>, [">= 0"])
       s.add_development_dependency(%q<activerecord>, [">= 0"])
-      s.add_development_dependency(%q<dm-core>, [">= 0"])
-      s.add_development_dependency(%q<dm-observer>, [">= 0"])
-      s.add_development_dependency(%q<dm-aggregates>, [">= 0"])
-      s.add_development_dependency(%q<dm-validations>, [">= 0"])
-      s.add_development_dependency(%q<do_sqlite3>, [">= 0"])
       s.add_development_dependency(%q<couchrest>, [">= 0"])
     else
       s.add_dependency(%q<daemons>, [">= 0"])
+      s.add_dependency(%q<activesupport>, [">= 0"])
       s.add_dependency(%q<rspec>, [">= 0"])
       s.add_dependency(%q<sqlite3-ruby>, [">= 0"])
       s.add_dependency(%q<activerecord>, [">= 0"])
-      s.add_dependency(%q<dm-core>, [">= 0"])
-      s.add_dependency(%q<dm-observer>, [">= 0"])
-      s.add_dependency(%q<dm-aggregates>, [">= 0"])
-      s.add_dependency(%q<dm-validations>, [">= 0"])
-      s.add_dependency(%q<do_sqlite3>, [">= 0"])
       s.add_dependency(%q<couchrest>, [">= 0"])
     end
   else
     s.add_dependency(%q<daemons>, [">= 0"])
+    s.add_dependency(%q<activesupport>, [">= 0"])
     s.add_dependency(%q<rspec>, [">= 0"])
     s.add_dependency(%q<sqlite3-ruby>, [">= 0"])
     s.add_dependency(%q<activerecord>, [">= 0"])
-    s.add_dependency(%q<dm-core>, [">= 0"])
-    s.add_dependency(%q<dm-observer>, [">= 0"])
-    s.add_dependency(%q<dm-aggregates>, [">= 0"])
-    s.add_dependency(%q<dm-validations>, [">= 0"])
-    s.add_dependency(%q<do_sqlite3>, [">= 0"])
     s.add_dependency(%q<couchrest>, [">= 0"])
   end
 end

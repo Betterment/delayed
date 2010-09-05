@@ -1,4 +1,5 @@
 require 'active_support/basic_object'
+require 'active_support/core_ext/module/aliasing'
 
 module Delayed
   class DelayProxy < ActiveSupport::BasicObject

@@ -189,13 +189,13 @@ shared_examples_for 'a delayed_job backend' do
     end      
     
     it "should be able to get access to the task if it was started more then max_age ago" do
-      @job.locked_at = 5.hours.ago
+      @job.locked_at = @backend.db_time_now - 5.hours
       @job.save
 
       @job.lock_exclusively! 4.hours, 'worker2'
       @job.reload
       @job.locked_by.should == 'worker2'
-      @job.locked_at.should > 1.minute.ago
+      @job.locked_at.should > (@backend.db_time_now - 1.minute)
     end
 
     it "should not be found by another worker" do
@@ -226,7 +226,7 @@ shared_examples_for 'a delayed_job backend' do
     end
 
     it "should not allow a second worker to get exclusive access if failed to be processed by worker1 and run_at time is now in future (due to backing off behaviour)" do
-      @job.update_attributes(:attempts => 1, :run_at => 1.day.from_now)
+      @job.update_attributes(:attempts => 1, :run_at => @backend.db_time_now + 1.day)
       @job_copy_for_worker_2.lock_exclusively!(4.hours, 'worker2').should == false
     end
   end
