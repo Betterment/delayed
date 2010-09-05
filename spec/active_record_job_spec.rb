@@ -1,17 +1,7 @@
 require 'spec_helper'
-require 'delayed/backend/shared_spec'
 require 'delayed/backend/active_record'
 
 describe Delayed::Backend::ActiveRecord::Job do
-  before(:all) do
-    @backend = Delayed::Backend::ActiveRecord::Job
-  end
-  
-  before(:each) do
-    Delayed::Backend::ActiveRecord::Job.delete_all
-    SimpleJob.runs = 0
-  end
-  
   after do
     Time.zone = nil
   end
