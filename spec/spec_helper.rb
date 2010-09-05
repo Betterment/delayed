@@ -7,7 +7,6 @@ require 'logger'
 gem 'activerecord', ENV['RAILS_VERSION'] if ENV['RAILS_VERSION']
 
 require 'delayed_job'
-require 'sample_jobs'
 
 Delayed::Worker.logger = Logger.new('/tmp/dj.log')
 RAILS_ENV = 'test'
@@ -28,4 +27,4 @@ end
 Delayed::Worker.backend = BACKENDS.first
 
 # Add this directory so the ActiveSupport autoloading works
-ActiveSupport::Dependencies.load_paths << File.dirname(__FILE__)
+ActiveSupport::Dependencies.autoload_paths << File.dirname(__FILE__)

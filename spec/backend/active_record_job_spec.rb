@@ -1,5 +1,5 @@
 require 'spec_helper'
-require 'backend/shared_backend_spec'
+require 'delayed/backend/shared_spec'
 require 'delayed/backend/active_record'
 
 describe Delayed::Backend::ActiveRecord::Job do
@@ -16,7 +16,7 @@ describe Delayed::Backend::ActiveRecord::Job do
     Time.zone = nil
   end
   
-  it_should_behave_like 'a backend'
+  it_should_behave_like 'a delayed_job backend'
 
   context "db_time_now" do
     it "should return time in current time zone if set" do

@@ -121,7 +121,7 @@ describe Delayed::Worker do
           @worker.run(@job)
           @job.reload
           @job.last_error.should =~ /did not work/
-          @job.last_error.should =~ /sample_jobs.rb:8:in `perform'/
+          @job.last_error.should =~ /sample_jobs.rb:\d+:in `perform'/
           @job.attempts.should == 1
           @job.run_at.should > Delayed::Job.db_time_now - 10.minutes
           @job.run_at.should < Delayed::Job.db_time_now + 10.minutes
