@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
 This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)."
   s.email             = 'brandon@collectiveidea.com'
   s.extra_rdoc_files  = 'README.textile'
-  s.files             = Dir.glob('{contrib,generators,lib,rails,recipes,spec,tasks}/**/*') +
+  s.files             = Dir.glob('{contrib,lib,recipes,spec}/**/*') +
                         %w(init.rb MIT-LICENSE README.textile)
   s.homepage          = 'http://github.com/collectiveidea/delayed_job'
   s.rdoc_options      = ["--main", "README.textile", "--inline-source", "--line-numbers"]
