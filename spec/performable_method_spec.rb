@@ -21,11 +21,11 @@ describe Delayed::PerformableMethod do
       @method.perform
     end
     
-    it "should respond to on_permanent_failure when implemented and target object is called via object.delay.do_something" do
+    it "should respond to failure when implemented and target object is called via object.delay.do_something" do
       @method = Delayed::PerformableMethod.new(OnPermanentFailureJob.new, :perform, [])
-      @method.respond_to?(:on_permanent_failure).should be_true
-      @method.object.should_receive(:on_permanent_failure)
-      @method.on_permanent_failure
+      @method.respond_to?(:failure).should be_true
+      @method.object.should_receive(:failure)
+      @method.failure
     end    
   end
 

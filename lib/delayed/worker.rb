@@ -134,17 +134,10 @@ module Delayed
         job.save!
       else
         say "PERMANENTLY removing #{job.name} because of #{job.attempts} consecutive failures.", Logger::INFO
-
-        if job.payload_object.respond_to? :on_permanent_failure
-          say "Running on_permanent_failure hook"
-          failure_method = job.payload_object.method(:on_permanent_failure)
-          if failure_method.arity == 1
-            failure_method.call(job)
-          else
-            failure_method.call
-          end
+        if job.respond_to?(:on_permanent_failure)
+          warn "[DEPRECATION] The #on_permanent_failure hook has been renamed to #failure."
         end
-
+        job.hook(:failure)
         self.class.destroy_failed_jobs ? job.destroy : job.update_attributes(:failed_at => Delayed::Job.db_time_now)
       end
     end

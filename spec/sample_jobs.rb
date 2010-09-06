@@ -19,7 +19,7 @@ class LongRunningJob
 end
 
 class OnPermanentFailureJob < SimpleJob
-  def on_permanent_failure
+  def failure
   end
 end
 
@@ -30,32 +30,30 @@ module M
   end
 end
 
-class SuccessfulCallbackJob
+class CallbackJob
   cattr_accessor :messages
 
   def before(job)
-    SuccessfulCallbackJob.messages << 'before perform'
+    self.class.messages << 'before'
   end
   
   def perform
-    SuccessfulCallbackJob.messages << 'perform'
+    self.class.messages << 'perform'
   end
   
   def after(job, error = nil)
-    SuccessfulCallbackJob.messages << 'after perform'
+    self.class.messages << 'after'
   end
   
   def success(job)
-    SuccessfulCallbackJob.messages << 'success!'
+    self.class.messages << 'success'
   end
-  
-  def failure(job, error)
-    SuccessfulCallbackJob.messages << "error: #{error.class}"
-  end
-end
 
-class FailureCallbackJob < SuccessfulCallbackJob
-  def perform
-     raise "failure job"
+  def error(job, error)
+    self.class.messages << "error: #{error.class}"
+  end
+
+  def failure(job)
+    self.class.messages << 'failure'
   end
 end
