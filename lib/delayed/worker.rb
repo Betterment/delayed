@@ -42,7 +42,7 @@ module Delayed
     end
 
     def initialize(options={})
-      @quiet = options[:quiet]
+      @quiet = options.has_key?(:quiet) ? options[:quiet] : true
       self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
       self.class.max_priority = options[:max_priority] if options.has_key?(:max_priority)
     end
