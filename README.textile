@@ -108,15 +108,33 @@ end
 Delayed::Job.enqueue NewsletterJob.new('lorem ipsum...', Customers.find(:all).collect(&:email))
 </pre>
 
-You can also add an optional on_permanent_failure method which will run if the job has failed too many times to be retried:
+h2. Hooks
+
+You can define hooks on your job that will be called at different stages in the process:
 
 <pre>
 class ParanoidNewsletterJob < NewsletterJob
   def perform
     emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
-  end    
+  end
 
-  def on_permanent_failure
+  def before(job)
+    record_stat 'newsletter_job/start'
+  end
+
+  def after(job)
+    record_stat 'newsletter_job/after'
+  end
+
+  def success(job)
+    record_stat 'newsletter_job/success'
+  end
+
+  def error(job, exception)
+    notify_hoptoad(exception)
+  end
+
+  def failure
     page_sysadmin_in_the_middle_of_the_night
   end
 end  
