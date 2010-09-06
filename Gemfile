@@ -5,6 +5,6 @@ gem 'daemons'
 group :development do
   gem 'rspec'
   gem 'rake'
-  gem 'activerecord', '~>3'
+  gem 'rails', '~>3'
   gem 'sqlite3-ruby'
 end
