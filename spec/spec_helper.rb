@@ -5,13 +5,14 @@ require 'bundler/setup'
 require 'spec'
 require 'logger'
 
+require 'active_record'
+require 'action_mailer'
+
 require 'delayed_job'
 require 'delayed/backend/shared_spec'
 
 Delayed::Worker.logger = Logger.new('/tmp/dj.log')
 ENV['RAILS_ENV'] = 'test'
-
-require 'active_record'
 
 ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
 ActiveRecord::Base.logger = Delayed::Worker.logger
