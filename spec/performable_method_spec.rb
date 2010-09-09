@@ -20,13 +20,6 @@ describe Delayed::PerformableMethod do
       @method.object.should_receive(:count).with('o')
       @method.perform
     end
-
-    it "should respond to failure when implemented and target object is called via object.delay.do_something" do
-      @method = Delayed::PerformableMethod.new(OnPermanentFailureJob.new, :perform, [])
-      @method.respond_to?(:failure).should be_true
-      @method.object.should_receive(:failure)
-      @method.failure
-    end
   end
 
   it "should raise a NoMethodError if target method doesn't exist" do
@@ -60,6 +53,12 @@ describe Delayed::PerformableMethod do
       story.should_receive(:error).with(an_instance_of(Delayed::Job), an_instance_of(RuntimeError))
       story.should_receive(:tell).and_raise(RuntimeError)
       lambda { story.delay.tell.invoke_job }.should raise_error
+    end
+
+    it "should delegate failure hook to object" do
+      method = Delayed::PerformableMethod.new("object", :size, [])
+      method.object.should_receive(:failure)
+      method.failure
     end
   end
 end
