@@ -1,6 +1,6 @@
 h1. Delayed::Job
 
-Delated_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. 
+Delated_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background.
 
 It is a direct extraction from Shopify where the job table is responsible for a multitude of core tasks. Amongst those tasks are:
 
@@ -9,8 +9,8 @@ It is a direct extraction from Shopify where the job table is responsible for a 
 * http downloads
 * updating smart collections
 * updating solr, our search server, after product changes
-* batch imports 
-* spam checks 
+* batch imports
+* spam checks
 
 h2. Installation
 
@@ -92,19 +92,19 @@ $ RAILS_ENV=production script/delayed_job stop
 
 Workers can be running on any computer, as long as they have access to the database and their clock is in sync. Keep in mind that each worker will check the database at least every 5 seconds.
 
-You can also invoke @rake jobs:work@ which will start working off jobs. You can cancel the rake task with @CTRL-C@. 
+You can also invoke @rake jobs:work@ which will start working off jobs. You can cancel the rake task with @CTRL-C@.
 
 h2. Custom Jobs
 
-Jobs are simple ruby objects with a method called perform. Any object which responds to perform can be stuffed into the jobs table. Job objects are serialized to yaml so that they can later be resurrected by the job runner. 
+Jobs are simple ruby objects with a method called perform. Any object which responds to perform can be stuffed into the jobs table. Job objects are serialized to yaml so that they can later be resurrected by the job runner.
 
 <pre>
 class NewsletterJob < Struct.new(:text, :emails)
   def perform
     emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
-  end    
-end  
-  
+  end
+end
+
 Delayed::Job.enqueue NewsletterJob.new('lorem ipsum...', Customers.find(:all).collect(&:email))
 </pre>
 
@@ -114,6 +114,10 @@ You can define hooks on your job that will be called at different stages in the 
 
 <pre>
 class ParanoidNewsletterJob < NewsletterJob
+  def enqueue(job)
+    record_stat 'newsletter_job/enqueue'
+  end
+
   def perform
     emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
   end
@@ -137,12 +141,12 @@ class ParanoidNewsletterJob < NewsletterJob
   def failure
     page_sysadmin_in_the_middle_of_the_night
   end
-end  
+end
 </pre>
 
 h2. Gory Details
 
-The library evolves around a delayed_jobs table which looks as follows: 
+The library evolves around a delayed_jobs table which looks as follows:
 
 <pre>
 create_table :delayed_jobs, :force => true do |table|

@@ -18,7 +18,9 @@ module Delayed
 
           priority = args.first || Delayed::Worker.default_priority
           run_at   = args[1]
-          self.create(:payload_object => object, :priority => priority.to_i, :run_at => run_at)
+          self.create(:payload_object => object, :priority => priority.to_i, :run_at => run_at).tap do |job|
+            job.hook(:enqueue)
+          end
         end
 
         # Hook method that is called before a new worker is forked

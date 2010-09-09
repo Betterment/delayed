@@ -62,8 +62,9 @@ shared_examples_for 'a delayed_job backend' do
     
     it "should call before and after callbacks" do
       job = described_class.enqueue(CallbackJob.new)
+      CallbackJob.messages.should == ["enqueue"]
       job.invoke_job
-      CallbackJob.messages.should == ["before", "perform", "success", "after"]
+      CallbackJob.messages.should == ["enqueue", "before", "perform", "success", "after"]
     end
 
     it "should call the after callback with an error" do
@@ -71,14 +72,14 @@ shared_examples_for 'a delayed_job backend' do
       job.payload_object.should_receive(:perform).and_raise(RuntimeError.new("fail"))
       
       lambda { job.invoke_job }.should raise_error
-      CallbackJob.messages.should == ["before", "error: RuntimeError", "after"]
+      CallbackJob.messages.should == ["enqueue", "before", "error: RuntimeError", "after"]
     end
     
     it "should call error when before raises an error" do
       job = described_class.enqueue(CallbackJob.new)
       job.payload_object.should_receive(:before).and_raise(RuntimeError.new("fail"))
       lambda { job.invoke_job }.should raise_error(RuntimeError)
-      CallbackJob.messages.should == ["error: RuntimeError", "after"]
+      CallbackJob.messages.should == ["enqueue", "error: RuntimeError", "after"]
     end
   end
   
