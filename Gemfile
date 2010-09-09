@@ -7,4 +7,5 @@ group :development do
   gem 'rake'
   gem 'rails', '~>3'
   gem 'sqlite3-ruby'
+  gem 'ruby-debug'
 end
