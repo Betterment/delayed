@@ -82,8 +82,7 @@ module Delayed
       def hook(name, *args)
         if payload_object.respond_to?(name)
           method = payload_object.method(name)
-          args.unshift(self)
-          method.call(*args.slice(0, method.arity))
+          method.arity == 0 ? method.call : method.call(self, *args)
         end
       end
 
