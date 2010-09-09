@@ -1,27 +1,29 @@
 module Delayed
-  class PerformableMethod < Struct.new(:object, :method, :args)
-    def initialize(object, method, args)
-      raise NoMethodError, "undefined method `#{method}' for #{object.inspect}" unless object.respond_to?(method, true)
+  class PerformableMethod < Struct.new(:object, :method_name, :args)
+    delegate :method, :to => :object
 
-      self.object = object
-      self.args   = args
-      self.method = method.to_sym
+    def initialize(object, method_name, args)
+      raise NoMethodError, "undefined method `#{method_name}' for #{object.inspect}" unless object.respond_to?(method_name, true)
+
+      self.object       = object
+      self.args         = args
+      self.method_name  = method_name.to_sym
     end
-    
+
     def display_name
-      "#{object.class}##{method}"
+      "#{object.class}##{method_name}"
     end
-    
+
     def perform
-      object.send(method, *args) if object
+      object.send(method_name, *args) if object
     end
-    
+
     def method_missing(symbol, *args)
-      object.respond_to?(symbol) ? object.send(symbol, *args) : super
+      object.send(symbol, *args)
     end
-       
+
     def respond_to?(symbol, include_private=false)
-      object.respond_to?(symbol, include_private) || super
-    end    
+      super || object.respond_to?(symbol, include_private)
+    end
   end
 end

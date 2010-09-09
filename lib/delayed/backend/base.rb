@@ -61,6 +61,7 @@ module Delayed
       end
 
       def payload_object=(object)
+        @payload_object = object
         self.handler = object.to_yaml
       end
 

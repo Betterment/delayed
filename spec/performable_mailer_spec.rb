@@ -13,12 +13,12 @@ describe ActionMailer::Base do
       lambda {
         job = MyMailer.delay.signup('john@example.com')
         job.payload_object.class.should   == Delayed::PerformableMailer
-        job.payload_object.method.should  == :signup
+        job.payload_object.method_name.should  == :signup
         job.payload_object.args.should    == ['john@example.com']
       }.should change { Delayed::Job.count }.by(1)
     end
   end
-  
+
   describe "delay on a mail object" do
     it "should raise an exception" do
       lambda {
@@ -26,7 +26,7 @@ describe ActionMailer::Base do
       }.should raise_error(RuntimeError)
     end
   end
-  
+
   describe Delayed::PerformableMailer do
     describe "perform" do
       before do
@@ -42,5 +42,5 @@ describe ActionMailer::Base do
       end
     end
   end
-  
+
 end
