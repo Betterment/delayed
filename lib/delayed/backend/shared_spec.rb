@@ -23,35 +23,59 @@ shared_examples_for 'a delayed_job backend' do
   end
 
   describe "enqueue" do
-    it "should raise ArgumentError when handler doesn't respond_to :perform" do
-      lambda { described_class.enqueue(Object.new) }.should raise_error(ArgumentError)
+    context "with a hash" do
+      it "should raise ArgumentError when handler doesn't respond_to :perform" do
+        lambda { described_class.enqueue(:payload_object => Object.new) }.should raise_error(ArgumentError)
+      end
+
+      it "should be able to set priority" do
+        job = described_class.enqueue :payload_object => SimpleJob.new, :priority => 5
+        job.priority.should == 5
+      end
+
+      it "should use default priority" do
+        job = described_class.enqueue :payload_object => SimpleJob.new
+        job.priority.should == 99
+      end
+
+      it "should be able to set run_at" do
+        later = described_class.db_time_now + 5.minutes
+        job = described_class.enqueue :payload_object => SimpleJob.new, :run_at => later
+        job.run_at.should be_close(later, 1)
+      end
     end
 
-    it "should increase count after enqueuing items" do
-      described_class.enqueue SimpleJob.new
-      described_class.count.should == 1
-    end
+    context "with multiple arguments" do
+      it "should raise ArgumentError when handler doesn't respond_to :perform" do
+        lambda { described_class.enqueue(Object.new) }.should raise_error(ArgumentError)
+      end
 
-    it "should be able to set priority" do
-      @job = described_class.enqueue SimpleJob.new, 5
-      @job.priority.should == 5
-    end
+      it "should increase count after enqueuing items" do
+        described_class.enqueue SimpleJob.new
+        described_class.count.should == 1
+      end
 
-    it "should use default priority when it is not set" do
-      @job = described_class.enqueue SimpleJob.new
-      @job.priority.should == 99
-    end
+      it "should be able to set priority" do
+        @job = described_class.enqueue SimpleJob.new, 5
+        @job.priority.should == 5
+      end
 
-    it "should be able to set run_at" do
-      later = described_class.db_time_now + 5.minutes
-      @job = described_class.enqueue SimpleJob.new, 5, later
-      @job.run_at.should be_close(later, 1)
-    end
+      it "should use default priority when it is not set" do
+        @job = described_class.enqueue SimpleJob.new
+        @job.priority.should == 99
+      end
 
-    it "should work with jobs in modules" do
-      M::ModuleJob.runs = 0
-      job = described_class.enqueue M::ModuleJob.new
-      lambda { job.invoke_job }.should change { M::ModuleJob.runs }.from(0).to(1)
+      it "should be able to set run_at" do
+        later = described_class.db_time_now + 5.minutes
+        @job = described_class.enqueue SimpleJob.new, 5, later
+        @job.run_at.should be_close(later, 1)
+      end
+
+      it "should work with jobs in modules" do
+        M::ModuleJob.runs = 0
+        job = described_class.enqueue M::ModuleJob.new
+        lambda { job.invoke_job }.should change { M::ModuleJob.runs }.from(0).to(1)
+      end
     end
   end
 
