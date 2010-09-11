@@ -16,11 +16,13 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
   s.rdoc_options      = ["--main", "README.textile", "--inline-source", "--line-numbers"]
   s.require_paths     = ["lib"]
   s.test_files        = Dir.glob('spec/**/*')
-  
+
   s.add_runtime_dependency      'daemons'
-  s.add_runtime_dependency      'activesupport', '~>3.0'
+  s.add_runtime_dependency      'activesupport',  '~>3.0'
   s.add_development_dependency  'rspec'
+  s.add_development_dependency  'rake'
+  s.add_development_dependency  'rails',          '~>3.0'
   s.add_development_dependency  'sqlite3-ruby'
-  s.add_development_dependency  'activerecord'
+  s.add_development_dependency  'ruby-debug'
 end
 
