@@ -164,7 +164,7 @@ shared_examples_for 'a delayed_job backend' do
     end
   end
 
-  context "when another worker is already performing an task, it" do
+  context "when another worker is already performing a task, it" do
     before :each do
       @job = described_class.create :payload_object => SimpleJob.new, :locked_by => 'worker1', :locked_at => described_class.db_time_now - 5.minutes
     end
@@ -181,10 +181,9 @@ shared_examples_for 'a delayed_job backend' do
       @job.locked_at = described_class.db_time_now - 5.hours
       @job.save
 
-      @job.lock_exclusively! 4.hours, 'worker2'
-      @job.reload
-      @job.locked_by.should == 'worker2'
-      @job.locked_at.should > (described_class.db_time_now - 1.minute)
+      @job.lock_exclusively!(4.hours, 'worker2').should be_true
+
+      described_class.find_available('worker2').should_not be_empty
     end
 
     it "should not be found by another worker" do
