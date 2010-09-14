@@ -38,6 +38,13 @@ script/plugin install git://github.com/collectiveidea/delayed_job.git
 
 After delayed_job is installed, you will need to setup the backend.
 
+h2. Rails
+
+As of delayed_job 2.1 it only supports Rails 3.0+.
+
+The 2.0.x gems work great with older versions of Rails, so check those out if you need them.
+
+
 h2. Backends
 
 delayed_job supports multiple backends for storing the job queue. "See the wiki for other backends":http://wiki.github.com/collectiveidea/delayed_job/backends besides Active Record.
