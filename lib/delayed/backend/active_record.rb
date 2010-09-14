@@ -2,7 +2,7 @@ require 'active_record'
 
 class ActiveRecord::Base
   yaml_as "tag:ruby.yaml.org,2002:ActiveRecord"
-  
+
   def self.yaml_new(klass, tag, val)
     klass.find(val['attributes']['id'])
   rescue ActiveRecord::RecordNotFound
@@ -22,7 +22,7 @@ module Delayed
       class Job < ::ActiveRecord::Base
         include Delayed::Backend::Base
         set_table_name :delayed_jobs
-        
+
         before_save :set_default_run_at
 
         scope :ready_to_run, lambda {|worker_name, max_run_time|
@@ -31,7 +31,7 @@ module Delayed
         scope :by_priority, order('priority ASC, run_at ASC')
 
         def self.after_fork
-          ::ActiveRecord::Base.connection.reconnect!
+          ::ActiveRecord::Base.establish_connection
         end
 
         # When a worker is exiting, make sure we don't have any locked jobs.
@@ -44,7 +44,7 @@ module Delayed
           scope = self.ready_to_run(worker_name, max_run_time)
           scope = scope.scoped(:conditions => ['priority >= ?', Worker.min_priority]) if Worker.min_priority
           scope = scope.scoped(:conditions => ['priority <= ?', Worker.max_priority]) if Worker.max_priority
-      
+
           ::ActiveRecord::Base.silence do
             scope.by_priority.all(:limit => limit)
           end
