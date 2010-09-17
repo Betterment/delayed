@@ -32,6 +32,12 @@ module Delayed
           end
         end
 
+        def reserve(worker, max_run_time = Worker.max_run_time)
+          find_available(worker, 5, max_run_time).detect do |job|
+            job.lock_exclusively!(max_run_time, worker)
+          end
+        end
+
         # Hook method that is called before a new worker is forked
         def before_fork
         end
