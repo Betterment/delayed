@@ -1,0 +1,4 @@
+mysql:
+  adapter: mysql
+  database: delayed_job
+  username: root

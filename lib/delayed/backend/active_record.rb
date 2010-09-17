@@ -30,6 +30,10 @@ module Delayed
         }
         scope :by_priority, order('priority ASC, run_at ASC')
 
+        def self.before_fork
+          ::ActiveRecord::Base.clear_all_connections!
+        end
+
         def self.after_fork
           ::ActiveRecord::Base.establish_connection
         end

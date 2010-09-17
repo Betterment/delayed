@@ -24,5 +24,6 @@ This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)
   s.add_development_dependency  'rails',          '~>3.0'
   s.add_development_dependency  'sqlite3-ruby'
   s.add_development_dependency  'ruby-debug'
+  s.add_development_dependency  'mysql'
 end
 

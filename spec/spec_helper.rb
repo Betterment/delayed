@@ -13,8 +13,11 @@ require 'delayed/backend/shared_spec'
 
 Delayed::Worker.logger = Logger.new('/tmp/dj.log')
 ENV['RAILS_ENV'] = 'test'
+require 'rails'
 
-ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
+config = YAML.load(File.read('spec/database.yml'))
+ActiveRecord::Base.configurations = {'test' => config['mysql']}
+ActiveRecord::Base.establish_connection
 ActiveRecord::Base.logger = Delayed::Worker.logger
 ActiveRecord::Migration.verbose = false
 
