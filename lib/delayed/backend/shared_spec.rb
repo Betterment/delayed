@@ -294,7 +294,7 @@ shared_examples_for 'a delayed_job backend' do
       @job.locked_at.should be_nil
     end
   end
-
+  
   context "large handler" do
     before do
       text = "Lorem ipsum dolor sit amet. " * 1000
@@ -402,8 +402,8 @@ shared_examples_for 'a delayed_job backend' do
         # reset defaults
         Delayed::Worker.destroy_failed_jobs = true
         Delayed::Worker.max_attempts = 25
-
-        @job = Delayed::Job.enqueue ErrorJob.new
+        
+        @job = Delayed::Job.enqueue(ErrorJob.new)
       end
 
       it "should record last_error when destroy_failed_jobs = false, max_attempts = 1" do
@@ -424,6 +424,14 @@ shared_examples_for 'a delayed_job backend' do
         @job.attempts.should == 1
         @job.run_at.should > Delayed::Job.db_time_now - 10.minutes
         @job.run_at.should < Delayed::Job.db_time_now + 10.minutes
+      end
+      
+      it 'should re-schedule with handler provided time if present' do
+        @job = Delayed::Job.enqueue(CustomRescheduleJob.new(99.minutes))
+        @worker.run(@job)
+        @job.reload
+        
+        (Delayed::Job.db_time_now + 99.minutes - @job.run_at).abs.should < 1
       end
     end
 
