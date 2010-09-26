@@ -31,11 +31,21 @@ module Delayed
     end
 
     module ClassMethods
-      def handle_asynchronously(method)
+      def handle_asynchronously(method, opts = {})
         aliased_method, punctuation = method.to_s.sub(/([?!=])$/, ''), $1
         with_method, without_method = "#{aliased_method}_with_delay#{punctuation}", "#{aliased_method}_without_delay#{punctuation}"
         define_method(with_method) do |*args|
-          delay.__send__(without_method, *args)
+          curr_opts = opts.clone
+          curr_opts.each_key do |key|
+            if (val = curr_opts[key]).is_a?(Proc)
+              curr_opts[key] = if val.arity == 1
+                val.call(self)
+              else
+                val.call
+              end
+            end
+          end
+          delay(curr_opts).__send__(without_method, *args)
         end
         alias_method_chain method, :delay
       end

@@ -22,6 +22,44 @@ describe Delayed::MessageSending do
         job.payload_object.args.should    == [1]
       }.should change { Delayed::Job.count }
     end
+
+    describe 'with options' do
+      class Fable
+        class << self
+          attr_accessor :importance
+        end
+        def tell
+        end
+        handle_asynchronously :tell, :priority => Proc.new { self.importance }
+      end
+
+      it 'should set the priority based on the Fable importance' do
+        Fable.importance = 10
+        job = Fable.new.tell
+        job.priority.should == 10
+
+        Fable.importance = 20
+        job = Fable.new.tell
+        job.priority.should == 20
+      end
+
+      describe 'using a proc with parament' do
+        class Yarn
+          attr_accessor :importance
+          def spin
+          end
+          handle_asynchronously :spin, :priority => Proc.new {|y| y.importance }
+        end
+
+        it 'should set the priority based on the Fable importance' do
+          job = Yarn.new.tap {|y| y.importance = 10 }.spin
+          job.priority.should == 10
+
+          job = Yarn.new.tap {|y| y.importance = 20 }.spin
+          job.priority.should == 20
+        end
+      end
+    end
   end
 
   context "delay" do

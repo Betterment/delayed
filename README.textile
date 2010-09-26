@@ -84,6 +84,39 @@ device = Device.new
 device.deliver
 </pre>
 
+handle_asynchronously can take as options anything you can pass to delay. In addition the values can be Proc objects allowing call time evaluation of the value. For some examples:
+
+<pre>
+class LongTasks
+  def send_mailer
+    # Some other code
+  end
+  handle_asynchronously :send_mailer, :priority => 20
+
+  def in_the_future
+    # Some other code
+  end
+  # 5.minutes.from_now will be evaluated when in_the_future is called
+  handle_asynchronously :in_the_future, :run_at => Proc.new { 5.minutes.from_now }
+
+  def self.when_to_run
+    2.hours.from_now
+  end
+
+  def call_a_class_method
+    # Some other code
+  end
+  handle_asynchronously :call_a_class_method, :run_at => Proc.new { when_to_run }
+
+  attr_reader :how_important
+
+  def call_an_instance_method
+    # Some other code
+  end
+  handle_asynchronously :call_an_instance_method, :priority => Proc.new {|i| i.how_important }
+end
+</pre>
+
 h2. Running Jobs
 
 @script/delayed_job@ can be used to manage a background process which will start working off jobs.  Make sure you've run `script/generate delayed_job`.
