@@ -96,12 +96,17 @@ module Delayed
         end
       end
 
+      def reschedule_at
+        payload_object.respond_to?(:reschedule_at) ? 
+          payload_object.reschedule_at(self.class.db_time_now, attempts) :
+          self.class.db_time_now + (attempts ** 4) + 5
+      end
+      
     protected
 
       def set_default_run_at
         self.run_at ||= self.class.db_time_now
       end
-
     end
   end
 end
