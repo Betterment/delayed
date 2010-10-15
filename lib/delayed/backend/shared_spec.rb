@@ -345,6 +345,7 @@ shared_examples_for 'a delayed_job backend' do
           Delayed::Worker.max_run_time = old_max_run_time
         end
       end
+      
     end
 
     context "worker prioritization" do
@@ -432,6 +433,13 @@ shared_examples_for 'a delayed_job backend' do
         @job.reload
         
         (Delayed::Job.db_time_now + 99.minutes - @job.run_at).abs.should < 1
+      end
+      
+      it "should not fail when the triggered error doesn't have a message" do
+        error_with_nil_message = StandardError.new
+        error_with_nil_message.stub!(:message).and_return nil
+        @job.stub!(:invoke_job).and_raise error_with_nil_message
+        lambda{@worker.run(@job)}.should_not raise_error
       end
     end
 
