@@ -182,9 +182,10 @@ module Delayed
 
       run(job) if job
     end
-  end
   
-  def find_available_jobs
-    Delayed::Job.find_available(name, 5, self.class.max_run_time)
+    def find_available_jobs
+      Delayed::Job.find_available(name, 5, self.class.max_run_time)
+    end
   end
+
 end
