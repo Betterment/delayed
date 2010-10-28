@@ -6,11 +6,12 @@ require 'logger'
 
 module Delayed
   class Worker
-    cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time, :default_priority, :sleep_delay, :logger
+    cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time, :default_priority, :sleep_delay, :logger, :log_queries
     self.sleep_delay = 5
     self.max_attempts = 25
     self.max_run_time = 4.hours
     self.default_priority = 0
+    self.log_queries = true
     
     # By default failed jobs are destroyed after too many attempts. If you want to keep them around
     # (perhaps to inspect the reason for the failure), set this to false.
@@ -163,7 +164,13 @@ module Delayed
 
       # We get up to 5 jobs from the db. In case we cannot get exclusive access to a job we try the next.
       # this leads to a more even distribution of jobs across the worker processes
-      job = Delayed::Job.find_available(name, 5, self.class.max_run_time).detect do |job|
+      if self.class.log_queries || !logger
+        available_jobs = find_available_jobs
+      else
+        logger.silence { available_jobs = find_available_jobs}
+      end
+      
+      job = available_jobs.detect do |job|
         if job.lock_exclusively!(self.class.max_run_time, name)
           say "acquired lock on #{job.name}"
           true
