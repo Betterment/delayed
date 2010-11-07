@@ -223,7 +223,7 @@ Delayed::Worker.destroy_failed_jobs = false
 Delayed::Worker.sleep_delay = 60
 Delayed::Worker.max_attempts = 3
 Delayed::Worker.max_run_time = 5.minutes
-Delayed::Worker.loq_queries = false # if you don't want the sql query to show up in your log every 5 secs
+Delayed::Worker.log_queries = false # if you don't want the sql query to show up in your log every 5 secs
 </pre>
 
 h3. Cleaning up
