@@ -13,6 +13,10 @@ Capistrano::Configuration.instance.load do
       fetch(:rails_env, false) ? "RAILS_ENV=#{fetch(:rails_env)}" : ''
     end
     
+    def args
+      fetch(:delayed_job_args, "")
+    end
+    
     desc "Stop the delayed_job process"
     task :stop, :roles => :app do
       run "cd #{current_path};#{rails_env} script/delayed_job stop"
@@ -20,12 +24,12 @@ Capistrano::Configuration.instance.load do
 
     desc "Start the delayed_job process"
     task :start, :roles => :app do
-      run "cd #{current_path};#{rails_env} script/delayed_job start"
+      run "cd #{current_path};#{rails_env} script/delayed_job start #{args}"
     end
 
     desc "Restart the delayed_job process"
     task :restart, :roles => :app do
-      run "cd #{current_path};#{rails_env} script/delayed_job restart"
+      run "cd #{current_path};#{rails_env} script/delayed_job restart #{args}"
     end
   end
 end
