@@ -125,6 +125,12 @@ shared_examples_for 'a delayed_job backend' do
       job = described_class.new :handler => "--- !ruby/struct:StructThatDoesNotExist {}"
       lambda { job.payload_object }.should raise_error(Delayed::Backend::DeserializationError)
     end
+
+    it "should raise a DeserializationError when the YAML.load raises argument error" do
+      job = described_class.find(create_job.id)
+      YAML.should_receive(:load).and_raise(ArgumentError)
+      lambda { job.payload_object }.should raise_error(Delayed::Backend::DeserializationError)
+    end
   end
 
   describe "find_available" do
@@ -294,7 +300,7 @@ shared_examples_for 'a delayed_job backend' do
       @job.locked_at.should be_nil
     end
   end
-  
+
   context "large handler" do
     before do
       text = "Lorem ipsum dolor sit amet. " * 1000
@@ -345,7 +351,7 @@ shared_examples_for 'a delayed_job backend' do
           Delayed::Worker.max_run_time = old_max_run_time
         end
       end
-      
+
     end
 
     context "worker prioritization" do
@@ -403,7 +409,7 @@ shared_examples_for 'a delayed_job backend' do
         # reset defaults
         Delayed::Worker.destroy_failed_jobs = true
         Delayed::Worker.max_attempts = 25
-        
+
         @job = Delayed::Job.enqueue(ErrorJob.new)
       end
 
@@ -426,15 +432,15 @@ shared_examples_for 'a delayed_job backend' do
         @job.run_at.should > Delayed::Job.db_time_now - 10.minutes
         @job.run_at.should < Delayed::Job.db_time_now + 10.minutes
       end
-      
+
       it 'should re-schedule with handler provided time if present' do
         @job = Delayed::Job.enqueue(CustomRescheduleJob.new(99.minutes))
         @worker.run(@job)
         @job.reload
-        
+
         (Delayed::Job.db_time_now + 99.minutes - @job.run_at).abs.should < 1
       end
-      
+
       it "should not fail when the triggered error doesn't have a message" do
         error_with_nil_message = StandardError.new
         error_with_nil_message.stub!(:message).and_return nil
