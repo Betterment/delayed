@@ -296,7 +296,7 @@ shared_examples_for 'a delayed_job backend' do
   describe "yaml serialization" do
     it "should reload changed attributes" do
       job = described_class.enqueue SimpleJob.new
-      yaml = job.to_yaml
+      yaml = job.to_delayed_yaml
       job.priority = 99
       job.save
       YAML.load(yaml).priority.should == 99
@@ -304,7 +304,7 @@ shared_examples_for 'a delayed_job backend' do
 
     it "should raise deserialization error for destroyed records" do
       job = described_class.enqueue SimpleJob.new
-      yaml = job.to_yaml
+      yaml = job.to_delayed_yaml
       job.destroy
       lambda { YAML.load(yaml) }.should raise_error(Delayed::DeserializationError)
     end

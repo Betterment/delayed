@@ -15,14 +15,14 @@ class Module
       out.scalar(taguri, self.name, :plain)
     }
   end
-  
+
   def yaml_tag_read_class(name)
     # Constantize the object so that ActiveSupport can attempt
     # its auto loading magic. Will raise LoadError if not successful.
     name.constantize
     name
   end
-  
+
 end
 
 class Class
@@ -36,5 +36,11 @@ class Struct
     # its auto loading magic. Will raise LoadError if not successful.
     name.constantize
     "Struct::#{ name }"
+  end
+end
+
+class Object
+  def to_delayed_yaml
+    to_yaml
   end
 end
