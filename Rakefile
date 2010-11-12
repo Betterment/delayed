@@ -7,7 +7,7 @@ desc 'Run the specs'
 Spec::Rake::SpecTask.new(:spec) do |t|
   t.libs << 'lib'
   t.pattern = 'spec/*_spec.rb'
-  t.verbose = true
+  t.verbose = false
 end
 
 task :default => :spec
