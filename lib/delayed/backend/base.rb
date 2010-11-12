@@ -1,8 +1,5 @@
 module Delayed
   module Backend
-    class DeserializationError < StandardError
-    end
-
     module Base
       def self.included(base)
         base.extend ClassMethods
@@ -54,18 +51,19 @@ module Delayed
         end
       end
 
-      ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/
-
       def failed?
         failed_at
       end
       alias_method :failed, :failed?
 
+      ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/
+
       def name
-        @name ||= begin
-          payload = payload_object
-          payload.respond_to?(:display_name) ? payload.display_name : payload.class.name
-        end
+        @name ||= payload_object.respond_to?(:display_name) ?
+                    payload_object.display_name :
+                    payload_object.class.name
+      rescue DeserializationError
+        ParseObjectFromYaml.match(handler)[1]
       end
 
       def payload_object=(object)
@@ -76,8 +74,8 @@ module Delayed
       def payload_object
         @payload_object ||= YAML.load(self.handler)
       rescue TypeError, LoadError, NameError, ArgumentError => e
-          raise DeserializationError,
-            "Job failed to load: #{e.message}. Try to manually require the required file. Handler: #{handler.inspect}"
+        raise DeserializationError,
+          "Job failed to load: #{e.message}. Handler: #{handler.inspect}"
       end
 
       def invoke_job

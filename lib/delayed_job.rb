@@ -6,7 +6,8 @@ require File.dirname(__FILE__) + '/delayed/performable_mailer' if defined?(Actio
 require File.dirname(__FILE__) + '/delayed/yaml_ext'
 require File.dirname(__FILE__) + '/delayed/backend/base'
 require File.dirname(__FILE__) + '/delayed/worker'
+require File.dirname(__FILE__) + '/delayed/deserialization_error'
 require File.dirname(__FILE__) + '/delayed/railtie' if defined?(Rails::Railtie)
 
-Object.send(:include, Delayed::MessageSending)   
+Object.send(:include, Delayed::MessageSending)
 Module.send(:include, Delayed::MessageSending::ClassMethods)

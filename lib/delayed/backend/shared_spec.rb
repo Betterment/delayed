@@ -119,18 +119,18 @@ shared_examples_for 'a delayed_job backend' do
   describe "payload_object" do
     it "should raise a DeserializationError when the job class is totally unknown" do
       job = described_class.new :handler => "--- !ruby/object:JobThatDoesNotExist {}"
-      lambda { job.payload_object }.should raise_error(Delayed::Backend::DeserializationError)
+      lambda { job.payload_object }.should raise_error(Delayed::DeserializationError)
     end
 
     it "should raise a DeserializationError when the job struct is totally unknown" do
       job = described_class.new :handler => "--- !ruby/struct:StructThatDoesNotExist {}"
-      lambda { job.payload_object }.should raise_error(Delayed::Backend::DeserializationError)
+      lambda { job.payload_object }.should raise_error(Delayed::DeserializationError)
     end
 
     it "should raise a DeserializationError when the YAML.load raises argument error" do
       job = described_class.find(create_job.id)
       YAML.should_receive(:load).and_raise(ArgumentError)
-      lambda { job.payload_object }.should raise_error(Delayed::Backend::DeserializationError)
+      lambda { job.payload_object }.should raise_error(Delayed::DeserializationError)
     end
   end
 
