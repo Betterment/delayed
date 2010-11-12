@@ -2,7 +2,7 @@ $:.unshift(File.dirname(__FILE__) + '/../lib')
 
 require 'rubygems'
 require 'bundler/setup'
-require 'spec'
+require 'rspec'
 require 'logger'
 
 require 'active_record'
@@ -43,9 +43,9 @@ end
 
 # Purely useful for test cases...
 class Story < ActiveRecord::Base
-  def tell; text; end       
+  def tell; text; end
   def whatever(n, _); tell*n; end
-  
+
   handle_asynchronously :whatever
 end
 

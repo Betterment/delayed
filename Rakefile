@@ -2,12 +2,10 @@
 require 'rubygems'
 require 'bundler/setup'
 
-require 'spec/rake/spectask'
+require 'rspec/core/rake_task'
 desc 'Run the specs'
-Spec::Rake::SpecTask.new(:spec) do |t|
-  t.libs << 'lib'
-  t.pattern = 'spec/*_spec.rb'
-  t.verbose = false
+RSpec::Core::RakeTask.new do |r|
+  r.verbose = false
 end
 
 task :default => :spec
