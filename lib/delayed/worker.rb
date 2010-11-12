@@ -121,8 +121,11 @@ module Delayed
       end
       say "#{job.name} completed after %.4f" % runtime
       return true  # did work
-    rescue Exception => e
-      handle_failed_job(job, e)
+    rescue DeserializationError => error
+      job.last_error = "{#{error.message}\n#{error.backtrace.join('\n')}"
+      failed(job)
+    rescue Exception => error
+      handle_failed_job(job, error)
       return false  # work failed
     end
 
@@ -136,12 +139,16 @@ module Delayed
         job.save!
       else
         say "PERMANENTLY removing #{job.name} because of #{job.attempts} consecutive failures.", Logger::INFO
-        if job.respond_to?(:on_permanent_failure)
-          warn "[DEPRECATION] The #on_permanent_failure hook has been renamed to #failure."
-        end
-        job.hook(:failure)
-        self.class.destroy_failed_jobs ? job.destroy : job.update_attributes(:failed_at => Delayed::Job.db_time_now)
+        failed(job)
       end
+    end
+
+    def failed(job)
+      job.hook(:failure)
+      if job.respond_to?(:on_permanent_failure)
+        warn "[DEPRECATION] The #on_permanent_failure hook has been renamed to #failure."
+      end
+      self.class.destroy_failed_jobs ? job.destroy : job.update_attributes(:failed_at => Delayed::Job.db_time_now)
     end
 
     def say(text, level = Logger::INFO)
@@ -161,7 +168,7 @@ module Delayed
     # Run the next job we can get an exclusive lock on.
     # If no jobs are left we return nil
     def reserve_and_run_one_job
-      job = Delayed::Job.reserve(worker, self.class.max_run_time)
+      job = Delayed::Job.reserve(self, self.class.max_run_time)
       run(job) if job
     end
   end

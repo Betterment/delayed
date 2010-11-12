@@ -100,6 +100,8 @@ module Delayed
           method = payload_object.method(name)
           method.arity == 0 ? method.call : method.call(self, *args)
         end
+      rescue DeserializationError
+        # do nothing
       end
 
       def reschedule_at

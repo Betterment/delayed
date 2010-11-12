@@ -333,6 +333,15 @@ shared_examples_for 'a delayed_job backend' do
         end
       end
 
+      context "when the job raises a deserialization error" do
+        it "should mark the job as failed" do
+          Delayed::Worker.destroy_failed_jobs = false
+          job = described_class.create! :handler => "--- !ruby/object:JobThatDoesNotExist {}"
+          @worker.work_off
+          job.reload
+          job.failed_at.should_not be_nil
+        end
+      end
     end
 
     describe "failed jobs" do
