@@ -4,7 +4,7 @@ class ActiveRecord::Base
   def self.yaml_new(klass, tag, val)
     klass.find(val['attributes']['id'])
   rescue ActiveRecord::RecordNotFound
-    nil
+    raise Delayed::DeserializationError
   end
 
   def to_yaml_properties

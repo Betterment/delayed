@@ -213,6 +213,13 @@ shared_examples_for 'a delayed_job backend' do
       @job = Story.create(:text => "...").delay.save
       @job.name.should == 'Story#save'
     end
+
+    it "should parse from handler on deserialization error" do
+      job = Story.create(:text => "...").delay.text
+      job.payload_object.object.destroy
+      job = described_class.find(job.id)
+      job.name.should == 'Delayed::PerformableMethod'
+    end
   end
 
   context "worker prioritization" do
@@ -295,11 +302,11 @@ shared_examples_for 'a delayed_job backend' do
       YAML.load(yaml).priority.should == 99
     end
 
-    it "should ignore destroyed records" do
+    it "should raise deserialization error for destroyed records" do
       job = described_class.enqueue SimpleJob.new
       yaml = job.to_yaml
       job.destroy
-      lambda { YAML.load(yaml).should be_nil }.should_not raise_error
+      lambda { YAML.load(yaml) }.should raise_error(Delayed::DeserializationError)
     end
   end
 
