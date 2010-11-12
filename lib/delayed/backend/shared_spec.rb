@@ -19,7 +19,8 @@ shared_examples_for 'a delayed_job backend' do
 
   it "should not set run_at automatically if already set" do
     later = described_class.db_time_now + 5.minutes
-    described_class.create(:payload_object => ErrorJob.new, :run_at => later).run_at.should be_close(later, 1)
+    job = described_class.create(:payload_object => ErrorJob.new, :run_at => later)
+    job.run_at.should be_within(1).of(later)
   end
 
   describe "enqueue" do
@@ -41,7 +42,7 @@ shared_examples_for 'a delayed_job backend' do
       it "should be able to set run_at" do
         later = described_class.db_time_now + 5.minutes
         job = described_class.enqueue :payload_object => SimpleJob.new, :run_at => later
-        job.run_at.should be_close(later, 1)
+        job.run_at.should be_within(1).of(later)
       end
     end
 
@@ -68,7 +69,7 @@ shared_examples_for 'a delayed_job backend' do
       it "should be able to set run_at" do
         later = described_class.db_time_now + 5.minutes
         @job = described_class.enqueue SimpleJob.new, 5, later
-        @job.run_at.should be_close(later, 1)
+        @job.run_at.should be_within(1).of(later)
       end
 
       it "should work with jobs in modules" do
