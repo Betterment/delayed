@@ -14,36 +14,15 @@ It is a direct extraction from Shopify where the job table is responsible for a 
 
 h2. Installation
 
-To install as a gem, add the following to @config/environment.rb@:
+delayed_job 2.1 only supports Rails 3.0+. See the "2.0 branch":https://github.com/collectiveidea/delayed_job/tree/2.0 for Rails 2.
+
+To install as a gem, add delayed_job to your @Gemfile@:
 
 <pre>
-config.gem 'delayed_job'
-</pre>
-
-Rake tasks are not automatically loaded from gems, so you'll need to add the following to your Rakefile:
-
-<pre>
-begin
-  require 'delayed/tasks'
-rescue LoadError
-  STDERR.puts "Run `rake gems:install` to install delayed_job"
-end
-</pre>
-
-To install as a plugin:
-
-<pre>
-script/plugin install git://github.com/collectiveidea/delayed_job.git
+gem 'delayed_job'
 </pre>
 
 After delayed_job is installed, you will need to setup the backend.
-
-h2. Rails
-
-As of delayed_job 2.1 it only supports Rails 3.0+.
-
-The 2.0.x gems work great with older versions of Rails, so check those out if you need them.
-
 
 h2. Backends
 
@@ -54,7 +33,7 @@ h3. Active Record
 The default is Active Record, which requires a jobs table.
 
 <pre>
-$ script/generate delayed_job
+$ script/rails generate delayed_job
 $ rake db:migrate
 </pre>
 
@@ -67,7 +46,7 @@ Call @.delay.method(params)@ on any object and it will be processed in the backg
 Notifier.deliver_signup(@user)
 
 # with delayed_job
-Notifier.delay.deliver_signup @user
+Notifier.delay.signup(@user)
 </pre>
 
 If a method should always be run in the background, you can call @#handle_asynchronously@ after the method declaration:
@@ -237,19 +216,13 @@ h2. How to contribute
 
 If you find what looks like a bug:
 
-# Check the GitHub issue tracker to see if anyone else has had the same issue.
-   http://github.com/collectiveidea/delayed_job/issues/
+# Search the "mailing list":http://groups.google.com/group/delayed_job to see if anyone else had the same issue.
+# Check the "GitHub issue tracker":http://github.com/collectiveidea/delayed_job/issues/ to see if anyone else has reported issue.
 # If you don't see anything, create an issue with information on how to reproduce it.
 
 If you want to contribute an enhancement or a fix:
 
 # Fork the project on github.
-   http://github.com/collectiveidea/delayed_job/
 # Make your changes with tests.
-# Commit the changes without making changes to the Rakefile, VERSION, or any other files that aren't related to your enhancement or fix
+# Commit the changes without making changes to the Rakefile or any other files that aren't related to your enhancement or fix
 # Send a pull request.
-
-h3. Changelog
-
-See http://wiki.github.com/collectiveidea/delayed_job/changelog for a list of changes.
-
