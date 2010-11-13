@@ -53,8 +53,10 @@ module Delayed
             self.class.update_all(["locked_at = ?", now], ["id = ? and locked_by = ?", id, worker])
           end
           if affected_rows == 1
-            self.locked_at    = now
-            self.locked_by    = worker
+            self.locked_at = now
+            self.locked_by = worker
+            self.locked_at_will_change!
+            self.locked_by_will_change!
             return true
           else
             return false

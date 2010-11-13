@@ -364,13 +364,15 @@ shared_examples_for 'a delayed_job backend' do
       end
 
       it "should re-schedule jobs after failing" do
-        @worker.run(@job)
+        @worker.work_off
         @job.reload
         @job.last_error.should =~ /did not work/
         @job.last_error.should =~ /sample_jobs.rb:\d+:in `perform'/
         @job.attempts.should == 1
         @job.run_at.should > Delayed::Job.db_time_now - 10.minutes
         @job.run_at.should < Delayed::Job.db_time_now + 10.minutes
+        @job.locked_by.should be_nil
+        @job.locked_at.should be_nil
       end
 
       it 'should re-schedule with handler provided time if present' do
