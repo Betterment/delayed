@@ -14,7 +14,7 @@ It is a direct extraction from Shopify where the job table is responsible for a 
 
 h2. Installation
 
-delayed_job 2.1 only supports Rails 3.0+. See the "2.0 branch":https://github.com/collectiveidea/delayed_job/tree/2.0 for Rails 2.
+delayed_job 2.1 only supports Rails 3.0+. See the "2.0 branch":https://github.com/collectiveidea/delayed_job/tree/v2.0 for Rails 2.
 
 To install, add delayed_job to your @Gemfile@ and run `bundle install`:
 
