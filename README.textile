@@ -16,7 +16,7 @@ h2. Installation
 
 delayed_job 2.1 only supports Rails 3.0+. See the "2.0 branch":https://github.com/collectiveidea/delayed_job/tree/2.0 for Rails 2.
 
-To install as a gem, add delayed_job to your @Gemfile@:
+To install, add delayed_job to your @Gemfile@ and run `bundle install`:
 
 <pre>
 gem 'delayed_job'
@@ -27,8 +27,6 @@ After delayed_job is installed, you will need to setup the backend.
 h2. Backends
 
 delayed_job supports multiple backends for storing the job queue. "See the wiki for other backends":http://wiki.github.com/collectiveidea/delayed_job/backends besides Active Record.
-
-h3. Active Record
 
 The default is Active Record, which requires a jobs table.
 
