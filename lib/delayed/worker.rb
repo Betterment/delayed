@@ -168,7 +168,7 @@ module Delayed
     # Run the next job we can get an exclusive lock on.
     # If no jobs are left we return nil
     def reserve_and_run_one_job
-      job = Delayed::Job.reserve(self, self.class.max_run_time)
+      job = Delayed::Job.reserve(self)
       run(job) if job
     end
   end

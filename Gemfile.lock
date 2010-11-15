@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    delayed_job (2.1.0.pre2)
+    delayed_job (2.1.0)
       activesupport (~> 3.0)
       daemons
 
