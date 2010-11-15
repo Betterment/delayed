@@ -1,20 +1,26 @@
-2.1 - unreleased
+2.1 - 2010-11-14
 * Added enqueue, before, after, success, error, and failure. See the README
 * Remove Merb support
 * Remove all non Active Record backends into separate gems. See https://github.com/collectiveidea/delayed_job/wiki/Backends
 * remove rails 2 support. delayed_job 2.1 will only support Rails 3
-* Added Delayed::Worker.default_priority
-* Normalize logging messages
 * New pure-YAML serialization
 * Added Rails 3 railtie and generator
-* Deprecated @#send_later@ and @#send_at@
-* Added @#delay@ to Object that allows you to delay any method and pass options:
-    options = {:priority => 19, :run_at => 5.minutes.from_now}
-    UserMailer.delay(options).deliver_confirmation(@user)</pre>
 * Changed @@sleep_delay to self.class.sleep_delay to be consistent with other class variable usage
 * Added --sleep-delay command line option
-* Added -m command line option to start a monitor process
+
+2.0.4 - 2010-11-14
+* Fix issue where dirty tracking prevented job from being properly unlocked
+* Add delayed_job_args variable for Capistrano recipe to allow configuration of started workers (e.g. "-n 2 --max-priority 10")
 * Added options to handle_asynchronously
+* Added Delayed::Worker.default_priority
+* Allow private methods to be delayed
+* Fixes for Ruby 1.9
+* Added -m command line option to start a monitor process
+* normalize logging in worker
+* Deprecate #send_later and #send_at in favor of new #delay method
+* Added @#delay@ to Object that allows you to delay any method and pass options:
+    options = {:priority => 19, :run_at => 5.minutes.from_now}
+    UserMailer.delay(options).deliver_confirmation(@user)
 
 2.0.3 - 2010-04-16
 
