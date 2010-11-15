@@ -1,4 +1,8 @@
-2.1 - 2010-11-14
+2.1.1 - 2010-11-14
+* Fix issue with worker name not getting properly set when locking a job
+* Fixes for YAML serialization
+
+2.1.0 - 2010-11-14
 * Added enqueue, before, after, success, error, and failure. See the README
 * Remove Merb support
 * Remove all non Active Record backends into separate gems. See https://github.com/collectiveidea/delayed_job/wiki/Backends
