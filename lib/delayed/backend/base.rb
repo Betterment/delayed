@@ -10,14 +10,14 @@ module Delayed
         def enqueue(*args)
           options = {
             :priority => Delayed::Worker.default_priority
-          }
+          }.merge!(args.extract_options!)
 
-          if args.size == 1 && args.first.is_a?(Hash)
-            options.merge!(args.first)
-          else
-            options[:payload_object]  = args.shift
-            options[:priority]        = args.first || options[:priority]
-            options[:run_at]          = args[1]
+          options[:payload_object] ||= args.shift
+
+          if args.size > 0
+            warn "[DEPRECATION] Passing multiple arguments to `#enqueue` is deprecated. Pass a hash with :priority and :run_at."
+            options[:priority] = args.first || options[:priority]
+            options[:run_at]   = args[1]
           end
 
           unless options[:payload_object].respond_to?(:perform)

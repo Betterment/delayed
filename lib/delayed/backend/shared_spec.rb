@@ -58,9 +58,11 @@ shared_examples_for 'a delayed_job backend' do
         described_class.count.should == 1
       end
 
-      it "should be able to set priority" do
-        @job = described_class.enqueue SimpleJob.new, 5
-        @job.priority.should == 5
+      it "should be able to set priority [DEPRECATED]" do
+        silence_warnings do
+          job = described_class.enqueue SimpleJob.new, 5
+          job.priority.should == 5
+        end
       end
 
       it "should use default priority when it is not set" do
@@ -68,10 +70,12 @@ shared_examples_for 'a delayed_job backend' do
         @job.priority.should == 99
       end
 
-      it "should be able to set run_at" do
-        later = described_class.db_time_now + 5.minutes
-        @job = described_class.enqueue SimpleJob.new, 5, later
-        @job.run_at.should be_within(1).of(later)
+      it "should be able to set run_at [DEPRECATED]" do
+        silence_warnings do
+          later = described_class.db_time_now + 5.minutes
+          @job = described_class.enqueue SimpleJob.new, 5, later
+          @job.run_at.should be_within(1).of(later)
+        end
       end
 
       it "should work with jobs in modules" do
@@ -205,7 +209,7 @@ shared_examples_for 'a delayed_job backend' do
     end
 
     it "should fetch jobs ordered by priority" do
-      10.times { described_class.enqueue SimpleJob.new, rand(10) }
+      10.times { described_class.enqueue SimpleJob.new, :priority => rand(10) }
       jobs = []
       10.times { jobs << described_class.reserve(worker) }
       jobs.size.should == 10
@@ -217,14 +221,14 @@ shared_examples_for 'a delayed_job backend' do
     it "should only find jobs greater than or equal to min priority" do
       min = 5
       Delayed::Worker.min_priority = min
-      10.times {|i| described_class.enqueue SimpleJob.new, i }
+      10.times {|i| described_class.enqueue SimpleJob.new, :priority => i }
       5.times { described_class.reserve(worker).priority.should >= min }
     end
 
     it "should only find jobs less than or equal to max priority" do
       max = 5
       Delayed::Worker.max_priority = max
-      10.times {|i| described_class.enqueue SimpleJob.new, i }
+      10.times {|i| described_class.enqueue SimpleJob.new, :priority => i }
       5.times { described_class.reserve(worker).priority.should <= max }
     end
   end
