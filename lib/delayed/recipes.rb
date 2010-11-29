@@ -6,6 +6,17 @@
 #   after "deploy:stop",    "delayed_job:stop"
 #   after "deploy:start",   "delayed_job:start"
 #   after "deploy:restart", "delayed_job:restart"
+#
+# If you want to use command line options, for example to start multiple workers,
+# define a Capistrano variable delayed_job_args:
+#
+#   set :delayed_jobs_args, "-n 2"
+#
+# If you've got delayed_job workers running on a servers, you can also specify
+# which servers have delayed_job running and should be restarted after deploy.
+#
+#   set :delayed_job_server_role, :worker
+#
 
 Capistrano::Configuration.instance.load do
   namespace :delayed_job do
@@ -17,18 +28,22 @@ Capistrano::Configuration.instance.load do
       fetch(:delayed_job_args, "")
     end
     
+    def roles
+      fetch(:delayed_job_server_role, :app)
+    end
+    
     desc "Stop the delayed_job process"
-    task :stop, :roles => :app do
+    task :stop, :roles => lambda { roles } do
       run "cd #{current_path};#{rails_env} script/delayed_job stop"
     end
 
     desc "Start the delayed_job process"
-    task :start, :roles => :app do
+    task :start, :roles => lambda { roles } do
       run "cd #{current_path};#{rails_env} script/delayed_job start #{args}"
     end
 
     desc "Restart the delayed_job process"
-    task :restart, :roles => :app do
+    task :restart, :roles => lambda { roles } do
       run "cd #{current_path};#{rails_env} script/delayed_job restart #{args}"
     end
   end
