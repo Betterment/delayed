@@ -1,3 +1,6 @@
+2.1.2 - unreleased
+* Fix `rake jobs:work` so it outputs to the console
+
 2.1.1 - 2010-11-14
 * Fix issue with worker name not getting properly set when locking a job
 * Fixes for YAML serialization
