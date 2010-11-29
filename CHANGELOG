@@ -1,4 +1,6 @@
 2.1.2 - unreleased
+* Added 'delayed_job_server_role' Capistrano variable to allow delayed_job to run on its own worker server
+    set :delayed_job_server_role, :worker
 * Fix `rake jobs:work` so it outputs to the console
 
 2.1.1 - 2010-11-14
