@@ -1,4 +1,4 @@
-require 'action_mailer'
+require 'mail'
 
 module Delayed
   class PerformableMailer < PerformableMethod
@@ -6,11 +6,11 @@ module Delayed
       object.send(method_name, *args).deliver
     end
   end
-end
 
-ActionMailer::Base.class_eval do
-  def self.delay(options = {})
-    Delayed::DelayProxy.new(Delayed::PerformableMailer, self, options)
+  module DelayMail
+    def delay(options = {})
+      DelayProxy.new(PerformableMailer, self, options)
+    end
   end
 end
 
