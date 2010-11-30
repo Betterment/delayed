@@ -45,7 +45,7 @@ module Delayed
         def self.reserve(worker, max_run_time = Worker.max_run_time)
           affected_rows = 0
           ::ActiveRecord::Base.silence do
-            affected_rows = update_all(["locked_at = ?, locked_by = ?", db_time_now, worker.name], jobs_available_to_worker(worker.name, max_run_time).scope(:find)[:conditions], :limit => 1)
+            affected_rows = jobs_available_to_worker(worker.name, max_run_time).limit(1).update_all(["locked_at = ?, locked_by = ?", db_time_now, worker.name])
           end
           
           if affected_rows == 1
@@ -58,7 +58,7 @@ module Delayed
         # Find a few candidate jobs to run (in case some immediately get locked by others).
         def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
           ::ActiveRecord::Base.silence do
-            jobs_available_to_worker(worker_name, max_run_time).all(:limit => limit)
+            jobs_available_to_worker(worker_name, max_run_time).limit(limit).all
           end
         end
 
