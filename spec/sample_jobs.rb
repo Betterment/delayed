@@ -25,8 +25,8 @@ class LongRunningJob
 end
 
 class OnPermanentFailureJob < SimpleJob
-  def failure
-  end
+  def failure; end
+  def max_attempts; 1; end
 end
 
 module M

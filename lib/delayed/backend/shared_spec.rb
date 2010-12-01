@@ -271,6 +271,21 @@ shared_examples_for 'a delayed_job backend' do
       @job.id.should_not be_nil
     end
   end
+  
+  context "max_attempts" do
+    before(:each) do
+      @job = described_class.enqueue SimpleJob.new
+    end
+    
+    it 'should not be defined' do
+      @job.max_attempts.should be_nil
+    end
+    
+    it 'should use the max_retries value on the payload when defined' do
+      @job.payload_object.stub!(:max_attempts).and_return(99)
+      @job.max_attempts.should == 99
+    end 
+  end
 
   describe "yaml serialization" do
     it "should reload changed attributes" do
@@ -382,7 +397,7 @@ shared_examples_for 'a delayed_job backend' do
 
           it "should run that hook" do
             @job.payload_object.should_receive :failure
-            Delayed::Worker.max_attempts.times { worker.reschedule(@job) }
+            worker.reschedule(@job)
           end
         end
 
