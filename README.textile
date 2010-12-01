@@ -24,7 +24,7 @@ gem 'delayed_job'
 
 After delayed_job is installed, you will need to setup the backend.
 
-h2. Backends
+h3. Backends
 
 delayed_job supports multiple backends for storing the job queue. "See the wiki for other backends":http://wiki.github.com/collectiveidea/delayed_job/backends besides Active Record.
 
@@ -41,12 +41,11 @@ Call @.delay.method(params)@ on any object and it will be processed in the backg
 
 <pre>
 # without delayed_job
-Notifier.signup(@user).deliver
+@user.activate!(@device)
 
 # with delayed_job
-Notifier.delay.signup(@user)
+@user.delay.activate!(@device)
 </pre>
-Yes, you should remove .deliver method to make it work.
 
 If a method should always be run in the background, you can call @#handle_asynchronously@ after the method declaration:
 
@@ -94,6 +93,20 @@ class LongTasks
   handle_asynchronously :call_an_instance_method, :priority => Proc.new {|i| i.how_important }
 end
 </pre>
+
+h3. Rails 3 Mailers
+
+Due to how mailers are implemented in Rails 3, we had to do a little work around to get delayed_job to work.
+
+<pre>
+# without delayed_job
+Notifier.signup(@user).deliver
+
+# with delayed_job
+Notifier.delay.signup(@user)
+</pre>
+
+Remove the @.deliver@ method to make it work. It's not ideal, but it's the best we could do for now.
 
 h2. Running Jobs
 
