@@ -1,4 +1,7 @@
-2.1.2 - unreleased
+2.1.2 - 2010-12-01
+* Remove contention between multiple workers by performing an update to lock a job before fetching it
+* Job payloads may implement #max_attempts to control how many times it should be retried
+* Fix for loading ActionMailer extension
 * Added 'delayed_job_server_role' Capistrano variable to allow delayed_job to run on its own worker server
     set :delayed_job_server_role, :worker
 * Fix `rake jobs:work` so it outputs to the console
