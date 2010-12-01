@@ -5,6 +5,10 @@ module Delayed
   class Railtie < Rails::Railtie
     initializer :after_initialize do
       Delayed::Worker.guess_backend
+
+      ActiveSupport.on_load(:action_mailer) do
+        ActionMailer::Base.send(:extend, Delayed::DelayMail)
+      end
     end
 
     rake_tasks do
