@@ -41,11 +41,12 @@ Call @.delay.method(params)@ on any object and it will be processed in the backg
 
 <pre>
 # without delayed_job
-Notifier.deliver_signup(@user)
+Notifier.signup(@user).deliver
 
 # with delayed_job
 Notifier.delay.signup(@user)
 </pre>
+Yes, you should remove .deliver method to make it work.
 
 If a method should always be run in the background, you can call @#handle_asynchronously@ after the method declaration:
 
