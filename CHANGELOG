@@ -1,3 +1,6 @@
+2.1.3 - unreleased
+* Revert worker contention fix due to regressions
+
 2.1.2 - 2010-12-01
 * Remove contention between multiple workers by performing an update to lock a job before fetching it
 * Job payloads may implement #max_attempts to control how many times it should be retried
