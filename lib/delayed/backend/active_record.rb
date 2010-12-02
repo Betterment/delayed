@@ -16,10 +16,6 @@ module Delayed
         }
         scope :by_priority, order('priority ASC, run_at ASC')
 
-        scope :locked_by_worker, lambda{|worker_name, max_run_time|
-          where(['locked_by = ? AND locked_at > ?', worker_name, db_time_now - max_run_time])
-        }
-        
         def self.before_fork
           ::ActiveRecord::Base.clear_all_connections!
         end
@@ -32,33 +28,15 @@ module Delayed
         def self.clear_locks!(worker_name)
           update_all("locked_by = null, locked_at = null", ["locked_by = ?", worker_name])
         end
-        
-        def self.jobs_available_to_worker(worker_name, max_run_time)
+
+        # Find a few candidate jobs to run (in case some immediately get locked by others).
+        def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
           scope = self.ready_to_run(worker_name, max_run_time)
           scope = scope.scoped(:conditions => ['priority >= ?', Worker.min_priority]) if Worker.min_priority
           scope = scope.scoped(:conditions => ['priority <= ?', Worker.max_priority]) if Worker.max_priority
-          scope.by_priority
-        end
-                
-        # Reserve a single job in a single update query.  This causes workers to serialize on the 
-        # database and avoids contention.
-        def self.reserve(worker, max_run_time = Worker.max_run_time)
-          affected_rows = 0
+
           ::ActiveRecord::Base.silence do
-            affected_rows = jobs_available_to_worker(worker.name, max_run_time).limit(1).update_all(["locked_at = ?, locked_by = ?", db_time_now, worker.name])
-          end
-          
-          if affected_rows == 1
-            locked_by_worker(worker.name, max_run_time).first
-          else
-            nil
-          end
-        end
-        
-        # Find a few candidate jobs to run (in case some immediately get locked by others).
-        def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
-          ::ActiveRecord::Base.silence do
-            jobs_available_to_worker(worker_name, max_run_time).limit(limit).all
+            scope.by_priority.all(:limit => limit)
           end
         end
 
