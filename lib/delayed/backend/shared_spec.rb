@@ -155,6 +155,17 @@ shared_examples_for 'a delayed_job backend' do
       described_class.reserve(worker).should be_nil
     end
 
+    it "should reserve jobs scheduled for the past" do
+      job = create_job :run_at => described_class.db_time_now - 1.minute
+      described_class.reserve(worker).should == job
+    end
+
+    it "should reserve jobs scheduled for the past when time zones are involved" do
+      Time.zone = 'US/Eastern'
+      job = create_job :run_at => described_class.db_time_now - 1.minute.ago.in_time_zone
+      described_class.reserve(worker).should == job
+    end
+
     it "should not reserve jobs locked by other workers" do
       job = create_job
       other_worker = Delayed::Worker.new
