@@ -206,6 +206,8 @@ Delayed::Worker.destroy_failed_jobs = false. The failed jobs will be marked with
 
 By default all jobs are scheduled with priority = 0, which is top priority. You can change this by setting Delayed::Worker.default_priority to something else. Lower numbers have higher priority.
 
+It is possible to disable delayed jobs for testing purposes. Set Delayed::Worker.delay_jobs = false to execute all jobs realtime.
+
 Here is an example of changing job parameters in Rails:
 
 <pre>
@@ -214,6 +216,7 @@ Delayed::Worker.destroy_failed_jobs = false
 Delayed::Worker.sleep_delay = 60
 Delayed::Worker.max_attempts = 3
 Delayed::Worker.max_run_time = 5.minutes
+Delayed::Worker.delay_jobs = !Rails.env.test?
 </pre>
 
 h3. Cleaning up

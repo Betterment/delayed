@@ -85,5 +85,32 @@ describe Delayed::MessageSending do
       job.run_at.should == run_at
       job.priority.should == 20
     end
+    
+    class FairyTail
+      attr_accessor :happy_ending
+      def tell
+        @happy_ending = true
+      end
+    end
+    
+    it "should not delay the job when delay_jobs is false" do
+      Delayed::Worker.delay_jobs = false
+      fairy_tail = FairyTail.new
+      lambda {
+        lambda {
+          fairy_tail.delay.tell
+        }.should change(fairy_tail, :happy_ending).from(nil).to(true)
+      }.should_not change { Delayed::Job.count }
+    end
+    
+    it "should delay the job when delay_jobs is true" do
+      Delayed::Worker.delay_jobs = true
+      fairy_tail = FairyTail.new
+      lambda {
+        lambda {
+          fairy_tail.delay.tell
+        }.should_not change(fairy_tail, :happy_ending)
+      }.should change { Delayed::Job.count }.by(1)
+    end
   end
 end

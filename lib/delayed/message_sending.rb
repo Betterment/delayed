@@ -10,7 +10,12 @@ module Delayed
     end
 
     def method_missing(method, *args)
-      Job.enqueue({:payload_object => @payload_class.new(@target, method.to_sym, args)}.merge(@options))
+      payload_object = @payload_class.new(@target, method.to_sym, args)
+      if Delayed::Worker.delay_jobs
+        Job.enqueue({:payload_object => payload_object}.merge(@options))
+      else
+        payload_object.perform
+      end
     end
   end
 
