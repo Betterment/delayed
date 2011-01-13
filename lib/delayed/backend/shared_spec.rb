@@ -11,6 +11,7 @@ shared_examples_for 'a delayed_job backend' do
     Delayed::Worker.max_priority = nil
     Delayed::Worker.min_priority = nil
     Delayed::Worker.default_priority = 99
+    Delayed::Worker.delay_jobs = true
     SimpleJob.runs = 0
     described_class.delete_all
   end
@@ -56,6 +57,12 @@ shared_examples_for 'a delayed_job backend' do
       it "should increase count after enqueuing items" do
         described_class.enqueue SimpleJob.new
         described_class.count.should == 1
+      end
+      
+      it "should not increase count after enqueuing items when delay_jobs is false" do
+        Delayed::Worker.delay_jobs = false
+        described_class.enqueue SimpleJob.new
+        described_class.count.should == 0
       end
 
       it "should be able to set priority [DEPRECATED]" do

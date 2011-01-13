@@ -23,9 +23,13 @@ module Delayed
           unless options[:payload_object].respond_to?(:perform)
             raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
           end
-
-          self.create(options).tap do |job|
-            job.hook(:enqueue)
+          
+          if Delayed::Worker.delay_jobs
+            self.create(options).tap do |job|
+              job.hook(:enqueue)
+            end
+          else
+            options[:payload_object].perform
           end
         end
 
