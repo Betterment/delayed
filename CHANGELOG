@@ -27,6 +27,13 @@
 2.0.6 - 2011-01-20
 * Revert worker contention fix due to regressions
 
+2.0.5 - 2010-12-01
+* Added #reschedule_at hook on payload to determine when the job should be rescheduled [backported from 2.1]
+* Added --sleep-delay command line option [backported from 2.1]
+* Added 'delayed_job_server_role' Capistrano variable to allow delayed_job to run on its own worker server
+    set :delayed_job_server_role, :worker
+* Changed AR backend to reserve jobs using an UPDATE query to reduce worker contention [backported from 2.1]
+
 2.0.4 - 2010-11-14
 * Fix issue where dirty tracking prevented job from being properly unlocked
 * Add delayed_job_args variable for Capistrano recipe to allow configuration of started workers (e.g. "-n 2 --max-priority 10")
