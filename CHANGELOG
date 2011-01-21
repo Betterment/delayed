@@ -1,5 +1,6 @@
-2.1.3 - unreleased
+2.1.3 - 2011-01-20
 * Revert worker contention fix due to regressions
+* Added Delayed::Worker.delay_jobs flag to support running jobs immediately
 
 2.1.2 - 2010-12-01
 * Remove contention between multiple workers by performing an update to lock a job before fetching it
@@ -22,6 +23,9 @@
 * Added Rails 3 railtie and generator
 * Changed @@sleep_delay to self.class.sleep_delay to be consistent with other class variable usage
 * Added --sleep-delay command line option
+
+2.0.6 - 2011-01-20
+* Revert worker contention fix due to regressions
 
 2.0.4 - 2010-11-14
 * Fix issue where dirty tracking prevented job from being properly unlocked
