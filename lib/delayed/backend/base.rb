@@ -23,13 +23,14 @@ module Delayed
           unless options[:payload_object].respond_to?(:perform)
             raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
           end
-          
+
           if Delayed::Worker.delay_jobs
             self.create(options).tap do |job|
               job.hook(:enqueue)
             end
           else
-            options[:payload_object].perform
+            job = Delayed::Job.create :payload_object => options[:payload_object]
+            job.invoke_job
           end
         end
 
@@ -113,11 +114,11 @@ module Delayed
           payload_object.reschedule_at(self.class.db_time_now, attempts) :
           self.class.db_time_now + (attempts ** 4) + 5
       end
-      
+
       def max_attempts
         payload_object.max_attempts if payload_object.respond_to?(:max_attempts)
       end
-      
+
     protected
 
       def set_default_run_at
