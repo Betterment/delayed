@@ -29,7 +29,7 @@ module Delayed
               job.hook(:enqueue)
             end
           else
-            job = Delayed::Job.create :payload_object => options[:payload_object]
+            job = Delayed::Job.new :payload_object => options[:payload_object]
             job.invoke_job
           end
         end
