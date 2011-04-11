@@ -36,13 +36,14 @@ ActiveRecord::Schema.define do
 
   add_index :delayed_jobs, [:priority, :run_at], :name => 'delayed_jobs_priority'
 
-  create_table :stories, :force => true do |table|
+  create_table :stories, :primary_key => :story_id, :force => true do |table|
     table.string :text
   end
 end
 
 # Purely useful for test cases...
 class Story < ActiveRecord::Base
+  set_primary_key :story_id
   def tell; text; end
   def whatever(n, _); tell*n; end
 
