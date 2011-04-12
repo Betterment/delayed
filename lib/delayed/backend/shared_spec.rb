@@ -58,12 +58,6 @@ shared_examples_for 'a delayed_job backend' do
         described_class.enqueue SimpleJob.new
         described_class.count.should == 1
       end
-      
-      it "should not increase count after enqueuing items when delay_jobs is false" do
-        Delayed::Worker.delay_jobs = false
-        described_class.enqueue SimpleJob.new
-        described_class.count.should == 0
-      end
 
       it "should be able to set priority [DEPRECATED]" do
         silence_warnings do
@@ -89,6 +83,27 @@ shared_examples_for 'a delayed_job backend' do
         M::ModuleJob.runs = 0
         job = described_class.enqueue M::ModuleJob.new
         lambda { job.invoke_job }.should change { M::ModuleJob.runs }.from(0).to(1)
+      end
+    end
+    
+    context "with delay_jobs = false" do
+      before(:each) do
+        Delayed::Worker.delay_jobs = false
+      end
+      
+      it "should not increase count after enqueuing items" do
+        described_class.enqueue SimpleJob.new
+        described_class.count.should == 0
+      end
+      
+      it 'should invoke the enqueued job' do
+        job = SimpleJob.new
+        job.should_receive(:perform)
+        described_class.enqueue job
+      end
+      
+      it 'should return a job, not the result of invocation' do
+        described_class.enqueue(SimpleJob.new).should be_instance_of(described_class)
       end
     end
   end
