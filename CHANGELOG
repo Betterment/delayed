@@ -1,5 +1,6 @@
 2.1.5 - Unreleased
 * Fix problem deserializing models that use a custom primary key column
+* Fix deserializing AR models when the object isn't in the default scope
 
 2.1.4 - 2011-02-11
 * Working around issues when psych is loaded, fixes issues with bundler 1.0.10 and Rails 3.0.4
