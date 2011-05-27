@@ -12,6 +12,9 @@ It is a direct extraction from Shopify where the job table is responsible for a 
 * batch imports
 * spam checks
 
+Follow us on Twitter to get updates and notices about new releases: 
+https://twitter.com/delayedjob
+
 h2. Installation
 
 delayed_job 2.1 only supports Rails 3.0+. See the "2.0 branch":https://github.com/collectiveidea/delayed_job/tree/v2.0 for Rails 2.
