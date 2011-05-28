@@ -36,6 +36,9 @@
 * Changed @@sleep_delay to self.class.sleep_delay to be consistent with other class variable usage
 * Added --sleep-delay command line option
 
+2.0.8 - Unreleased
+* Backport fix for deserialization errors that bring down the daemon
+
 2.0.7 - 2011-02-10
 * Fixed missing generators and recipes for Rails 2.x
 
