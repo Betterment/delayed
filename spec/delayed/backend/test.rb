@@ -1,6 +1,6 @@
 require 'ostruct'
 
-# An in-memory backend suitable only for testing
+# An in-memory backend suitable only for testing. Tries to behave as if it were an ORM.
 module Delayed
   module Backend
     module Test
@@ -13,6 +13,7 @@ module Delayed
         attr_accessor :locked_at
         attr_accessor :locked_by
         attr_accessor :failed_at
+        attr_accessor :queue
         
         include Delayed::Backend::Base
 
@@ -22,31 +23,43 @@ module Delayed
           hash.each{|k,v| send(:"#{k}=", v)}
         end
         
-        @queue = []
-        def self.queue
-          @queue
+        @jobs = []
+        def self.all
+          @jobs
         end
         
         def self.count 
-          queue.size
+          all.size
         end
         
+        def self.delete_all
+          all.clear
+        end
+        
+        def self.create(attrs = {})
+          new(attrs).tap do |o|
+            o.save
+          end
+        end
+        
+        def self.create!(*args); create(*args); end
+        
         def self.clear_locks!(worker_name)
-          queue.select{|j| j.locked_by == worker_name}.each {|j| j.locked_by = nil; j.locked_at = nil}
+          all.select{|j| j.locked_by == worker_name}.each {|j| j.locked_by = nil; j.locked_at = nil}
         end
 
         # Find a few candidate jobs to run (in case some immediately get locked by others).
         def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time)
-          jobs = queue.select do |j| 
+          jobs = all.select do |j| 
             j.run_at <= db_time_now && 
             (j.locked_at.nil? || j.locked_at < db_time_now - max_run_time || j.locked_by == worker_name) &&
-            
             j.failed_at.nil?
           end
-          
+                    
+          jobs = jobs.select{|j| Worker.queues.include?(j.queue)}   if Worker.queues.any?
           jobs = jobs.select{|j| j.priority >= Worker.min_priority} if Worker.min_priority
-          jobs = jobs.select{|j| j.priority <= Worker.max_priority} if Worker.max_priority
-          job.sort_by{|j| [j.priority, j.run_at]}[0..limit-1]
+          jobs = jobs.select{|j| j.priority <= Worker.max_priority} if Worker.max_priority          
+          jobs.sort_by{|j| [j.priority, j.run_at]}[0..limit-1]
         end
 
         # Lock this job for this worker.
@@ -57,29 +70,37 @@ module Delayed
             # We don't own this job so we will update the locked_by name and the locked_at
             self.locked_at = now
             self.locked_by = worker
-            return true
           end
 
-          return false
+          return true
         end
 
         def self.db_time_now
           Time.current
         end
         
+        def update_attributes(attrs = {})
+          attrs.each{|k,v| send(:"#{k}=", v)}
+          save
+        end
+        
+        def destroy
+          self.class.all.delete(self)
+        end
+        
         def save
           self.run_at ||= Time.current
           
-          queue << self
+          self.class.all << self unless self.class.all.include?(self)
           true
         end
         
-        private
-        
-          def queue
-            self.class.queue
-          end
-
+        def save!; save; end
+               
+        def reload
+          @payload_object = nil
+          self
+        end
       end
     end
   end

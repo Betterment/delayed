@@ -1,5 +1,7 @@
 require File.expand_path('../../../../spec/sample_jobs', __FILE__)
 
+require 'active_support/core_ext'
+
 shared_examples_for 'a delayed_job backend' do
   let(:worker) { Delayed::Worker.new }
 
@@ -161,7 +163,7 @@ shared_examples_for 'a delayed_job backend' do
     end
 
     it "should raise a DeserializationError when the YAML.load raises argument error" do
-      job = described_class.find(create_job.id)
+      job = described_class.new :handler => "--- !ruby/struct:GoingToRaiseArgError {}"
       YAML.should_receive(:load).and_raise(ArgumentError)
       lambda { job.payload_object }.should raise_error(Delayed::DeserializationError)
     end
@@ -189,7 +191,7 @@ shared_examples_for 'a delayed_job backend' do
 
     it "should reserve jobs scheduled for the past when time zones are involved" do
       Time.zone = 'US/Eastern'
-      job = create_job :run_at => described_class.db_time_now - 1.minute.ago.in_time_zone
+      job = create_job :run_at => described_class.db_time_now - 1.minute
       described_class.reserve(worker).should == job
     end
 
@@ -207,7 +209,7 @@ shared_examples_for 'a delayed_job backend' do
     end
 
     it "should reserve expired jobs" do
-      job = create_job(:locked_by => worker.name, :locked_at => described_class.db_time_now - 3.minutes)
+      job = create_job(:locked_by => 'some other worker', :locked_at => described_class.db_time_now - Delayed::Worker.max_run_time - 1.minute)
       described_class.reserve(worker).should == job
     end
 
@@ -235,8 +237,7 @@ shared_examples_for 'a delayed_job backend' do
     it "should parse from handler on deserialization error" do
       job = Story.create(:text => "...").delay.text
       job.payload_object.object.destroy
-      job = described_class.find(job.id)
-      job.name.should == 'Delayed::PerformableMethod'
+      job.reload.name.should == 'Delayed::PerformableMethod'
     end
   end
 
@@ -383,7 +384,7 @@ shared_examples_for 'a delayed_job backend' do
       story = Story.create(:text => 'hello')
       job = story.delay.tell
       story.update_attributes :text => 'goodbye'
-      described_class.find(job.id).payload_object.object.text.should == 'goodbye'
+      job.reload.payload_object.object.text.should == 'goodbye'
     end
 
     it "should raise deserialization error for destroyed records" do
@@ -391,7 +392,7 @@ shared_examples_for 'a delayed_job backend' do
       job = story.delay.tell
       story.destroy
       lambda {
-        described_class.find(job.id).payload_object
+        job.reload.payload_object
       }.should raise_error(Delayed::DeserializationError)
     end
   end
