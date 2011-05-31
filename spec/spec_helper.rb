@@ -25,7 +25,7 @@ ActiveSupport::Dependencies.autoload_paths << File.dirname(__FILE__)
 ActionMailer::Base.send(:extend, Delayed::DelayMail)
 
 
-# Used to test interactions between AR and an ORM
+# Used to test interactions between DJ and an ORM
 ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => ':memory:'
 ActiveRecord::Base.logger = Delayed::Worker.logger
 ActiveRecord::Migration.verbose = false
