@@ -120,11 +120,16 @@ module Delayed
       def max_attempts
         payload_object.max_attempts if payload_object.respond_to?(:max_attempts)
       end
-
+      
     protected
 
       def set_default_run_at
         self.run_at ||= self.class.db_time_now
+      end
+      
+      # Call during reload operation to clear out internal state
+      def reset
+        @payload_object = nil
       end
     end
   end

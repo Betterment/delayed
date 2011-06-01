@@ -98,7 +98,7 @@ module Delayed
         def save!; save; end
                
         def reload
-          @payload_object = nil
+          reset
           self
         end
       end
