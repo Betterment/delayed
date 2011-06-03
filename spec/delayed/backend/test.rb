@@ -5,6 +5,7 @@ module Delayed
   module Backend
     module Test
       class Job
+        attr_accessor :id
         attr_accessor :priority
         attr_accessor :attempts
         attr_accessor :handler
@@ -17,9 +18,13 @@ module Delayed
         
         include Delayed::Backend::Base
 
+        cattr_accessor :id
+        self.id = 0
+        
         def initialize(hash = {})
           self.attempts = 0
           self.priority = 0
+          self.id = (self.class.id += 1)
           hash.each{|k,v| send(:"#{k}=", v)}
         end
         
