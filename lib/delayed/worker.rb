@@ -152,7 +152,7 @@ module Delayed
       if job.respond_to?(:on_permanent_failure)
         warn "[DEPRECATION] The #on_permanent_failure hook has been renamed to #failure."
       end
-      self.class.destroy_failed_jobs ? job.destroy : job.update_attributes(:failed_at => Delayed::Job.db_time_now)
+      self.class.destroy_failed_jobs ? job.destroy : job.fail!
     end
 
     def say(text, level = Logger::INFO)
