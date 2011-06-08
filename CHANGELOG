@@ -1,4 +1,6 @@
 3.0 - Unreleased
+* New: Named queues
+* Change: Active Record backend support is provided by a separate gem
 * Change: Enqueue hook is called before jobs are saved so that they may be modified
 
 2.1.5 - Unreleased
