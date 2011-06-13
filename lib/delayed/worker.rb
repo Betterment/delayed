@@ -7,6 +7,8 @@ require 'logger'
 
 module Delayed
   class Worker
+    include ActiveSupport::Callbacks
+    
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time, :default_priority, :sleep_delay, :logger, :delay_jobs, :queues
     self.sleep_delay = 5
     self.max_attempts = 25
@@ -45,6 +47,32 @@ module Delayed
       warn "[DEPRECATION] guess_backend is deprecated. Please remove it from your code."      
     end
 
+    def self.before_fork
+      unless @files_to_reopen
+        @files_to_reopen = []
+        ObjectSpace.each_object(File) do |file|
+          @files_to_reopen << file unless file.closed?
+        end
+      end
+      
+      backend.before_fork
+    end
+    
+    def self.after_fork      
+      # Re-open file handles
+      @files_to_reopen.each do |file|
+        begin
+          file.reopen file.path, "a+"
+          file.sync = true
+        rescue ::Exception
+        end
+      end
+      
+      backend.after_fork
+    end
+        
+    define_callbacks :execute, :loop, :perform, :error, :failure
+
     def initialize(options={})
       @quiet = options.has_key?(:quiet) ? options[:quiet] : true
       self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
@@ -68,36 +96,43 @@ module Delayed
       @name = val
     end
 
+    set_callback :execute, :around, :clear_locks
+    
     def start
       say "Starting job worker"
 
-      trap('TERM') { say 'Exiting...'; $exit = true }
-      trap('INT')  { say 'Exiting...'; $exit = true }
+      trap('TERM') { say 'Exiting...'; stop }
+      trap('INT')  { say 'Exiting...'; stop }
 
-      loop do
-        result = nil
+      run_callbacks(:execute) do
+        loop do
+          run_callbacks(:loop) do
+            result = nil
 
-        realtime = Benchmark.realtime do
-          result = work_off
+            realtime = Benchmark.realtime do
+              result = work_off
+            end
+
+            count = result.sum
+
+            break if @exit
+
+            if count.zero?
+              sleep(self.class.sleep_delay)
+            else
+              say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
+            end
+          end
+        
+          break if @exit
         end
-
-        count = result.sum
-
-        break if $exit
-
-        if count.zero?
-          sleep(self.class.sleep_delay)
-        else
-          say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
-        end
-
-        break if $exit
       end
-
-    ensure
-      Delayed::Job.clear_locks!(name)
     end
 
+    def stop
+      @exit = true
+    end
+    
     # Do num jobs and return stats on success/failure.
     # Exit early if interrupted.
     def work_off(num = 100)
@@ -129,7 +164,7 @@ module Delayed
       job.last_error = "{#{error.message}\n#{error.backtrace.join('\n')}"
       failed(job)
     rescue Exception => error
-      handle_failed_job(job, error)
+      run_callbacks(:error){ handle_failed_job(job, error) }
       return false  # work failed
     end
 
@@ -148,11 +183,10 @@ module Delayed
     end
 
     def failed(job)
-      job.hook(:failure)
-      if job.respond_to?(:on_permanent_failure)
-        warn "[DEPRECATION] The #on_permanent_failure hook has been renamed to #failure."
+      run_callbacks(:failure, job) do
+        job.hook(:failure)
+        self.class.destroy_failed_jobs ? job.destroy : job.fail!
       end
-      self.class.destroy_failed_jobs ? job.destroy : job.fail!
     end
 
     def say(text, level = Logger::INFO)
@@ -177,7 +211,15 @@ module Delayed
     # If no jobs are left we return nil
     def reserve_and_run_one_job
       job = Delayed::Job.reserve(self)
-      run(job) if job
+      result = nil
+      run_callbacks(:perform){ result = run(job) } if job
+      result
+    end
+    
+    def clear_locks
+      yield
+    ensure
+      Delayed::Job.clear_locks!(name)
     end
   end
 

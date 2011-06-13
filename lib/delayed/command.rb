@@ -7,7 +7,6 @@ module Delayed
     attr_accessor :worker_count
 
     def initialize(args)
-      @files_to_reopen = []
       @options = {
         :quiet => true,
         :pid_dir => "#{Rails.root}/tmp/pids"
@@ -63,10 +62,6 @@ module Delayed
     def daemonize
       Delayed::Worker.backend.before_fork
 
-      ObjectSpace.each_object(File) do |file|
-        @files_to_reopen << file unless file.closed?
-      end
-
       dir = @options[:pid_dir]
       Dir.mkdir(dir) unless File.exists?(dir)
 
@@ -84,6 +79,7 @@ module Delayed
     end
 
     def run_process(process_name, dir)
+      Delayed::Worker.before_fork
       Daemons.run_proc(process_name, :dir => dir, :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*args|
         $0 = File.join(@options[:prefix], process_name) if @options[:prefix]
         run process_name
@@ -93,17 +89,8 @@ module Delayed
     def run(worker_name = nil)
       Dir.chdir(Rails.root)
 
-      # Re-open file handles
-      @files_to_reopen.each do |file|
-        begin
-          file.reopen file.path, "a+"
-          file.sync = true
-        rescue ::Exception
-        end
-      end
-
+      Delayed::Worker.after_fork
       Delayed::Worker.logger = Logger.new(File.join(Rails.root, 'log', 'delayed_job.log'))
-      Delayed::Worker.backend.after_fork
 
       worker = Delayed::Worker.new(@options)
       worker.name_prefix = "#{worker_name} "
