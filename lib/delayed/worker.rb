@@ -101,8 +101,8 @@ module Delayed
     def start
       say "Starting job worker"
 
-      trap('TERM') { say 'Exiting...'; $exit = true }
-      trap('INT')  { say 'Exiting...'; $exit = true }
+      trap('TERM') { say 'Exiting...'; stop }
+      trap('INT')  { say 'Exiting...'; stop }
 
       run_callbacks(:execute) do
         loop do
@@ -115,7 +115,7 @@ module Delayed
 
             count = result.sum
 
-            break if $exit
+            break if @exit
 
             if count.zero?
               sleep(self.class.sleep_delay)
@@ -124,11 +124,15 @@ module Delayed
             end
           end
         
-          break if $exit
+          break if @exit
         end
       end
     end
 
+    def stop
+      @exit = true
+    end
+    
     # Do num jobs and return stats on success/failure.
     # Exit early if interrupted.
     def work_off(num = 100)
