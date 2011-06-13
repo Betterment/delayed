@@ -72,7 +72,7 @@ module Delayed
     end
         
     define_callbacks :execute, :loop, :perform, :error, :failure
-    
+
     def initialize(options={})
       @quiet = options.has_key?(:quiet) ? options[:quiet] : true
       self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
@@ -96,6 +96,8 @@ module Delayed
       @name = val
     end
 
+    set_callback :execute, :around, :clear_locks
+    
     def start
       say "Starting job worker"
 
@@ -125,8 +127,6 @@ module Delayed
           break if $exit
         end
       end
-    ensure
-      Delayed::Job.clear_locks!(name)
     end
 
     # Do num jobs and return stats on success/failure.
@@ -210,6 +210,12 @@ module Delayed
       result = nil
       run_callbacks(:perform){ result = run(job) } if job
       result
+    end
+    
+    def clear_locks
+      yield
+    ensure
+      Delayed::Job.clear_locks!(name)
     end
   end
 
