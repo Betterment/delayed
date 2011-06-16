@@ -5,7 +5,7 @@ module Delayed
         base.extend ClassMethods
         base.instance_eval do
           include ActiveSupport::Callbacks
-          define_callbacks :enqueue
+          define_callbacks :enqueue, :invoke_job
         end
       end
             
@@ -92,14 +92,18 @@ module Delayed
       end
 
       def invoke_job
-        hook :before
-        payload_object.perform
-        hook :success
-      rescue Exception => e
-        hook :error, e
-        raise e
-      ensure
-        hook :after
+        run_callbacks(:invoke_job) do
+          begin
+            hook :before
+            payload_object.perform
+            hook :success
+          rescue Exception => e
+            hook :error, e
+            raise e
+          ensure
+            hook :after
+          end
+        end
       end
 
       # Unlock this job (note: not saved to DB)
