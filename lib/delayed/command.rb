@@ -60,8 +60,6 @@ module Delayed
     end
 
     def daemonize
-      Delayed::Worker.before_fork
-
       dir = @options[:pid_dir]
       Dir.mkdir(dir) unless File.exists?(dir)
 
@@ -79,6 +77,7 @@ module Delayed
     end
 
     def run_process(process_name, dir)
+      Delayed::Worker.before_fork
       Daemons.run_proc(process_name, :dir => dir, :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*args|
         $0 = File.join(@options[:prefix], process_name) if @options[:prefix]
         run process_name
