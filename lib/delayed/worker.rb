@@ -96,11 +96,10 @@ module Delayed
       @name = val
     end
 
-    set_callback :execute, :around, :clear_locks
+    set_callback(:execute, :around, :clear_locks)
+    set_callback(:execute, :before) { |worker| worker.say "Starting job worker" }
     
     def start
-      say "Starting job worker"
-
       trap('TERM') { say 'Exiting...'; stop }
       trap('INT')  { say 'Exiting...'; stop }
 
