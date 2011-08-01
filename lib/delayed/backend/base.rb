@@ -3,10 +3,6 @@ module Delayed
     module Base
       def self.included(base)
         base.extend ClassMethods
-        base.instance_eval do
-          include ActiveSupport::Callbacks
-          define_callbacks :enqueue, :invoke_job
-        end
       end
             
       module ClassMethods
@@ -30,7 +26,7 @@ module Delayed
 
           if Delayed::Worker.delay_jobs
             self.new(options).tap do |job|
-              job.run_callbacks(:enqueue) do
+              Delayed::Worker.lifecycle.run_callbacks(:enqueue, job) do
                 job.hook(:enqueue)
                 job.save
               end
@@ -92,7 +88,7 @@ module Delayed
       end
 
       def invoke_job
-        run_callbacks(:invoke_job) do
+        Delayed::Worker.lifecycle.run_callbacks(:invoke_job, self) do
           begin
             hook :before
             payload_object.perform

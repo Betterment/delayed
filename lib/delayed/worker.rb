@@ -6,9 +6,7 @@ require 'active_support/core_ext/enumerable'
 require 'logger'
 
 module Delayed
-  class Worker
-    include ActiveSupport::Callbacks
-    
+  class Worker    
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time, :default_priority, :sleep_delay, :logger, :delay_jobs, :queues
     self.sleep_delay = 5
     self.max_attempts = 25
@@ -16,6 +14,10 @@ module Delayed
     self.default_priority = 0
     self.delay_jobs = true
     self.queues = []
+    
+    # Add or remove plugins in this list before the worker is instantiated
+    cattr_accessor :plugins
+    self.plugins = [Delayed::Plugins::ClearLocks]
 
     # By default failed jobs are destroyed after too many attempts. If you want to keep them around
     # (perhaps to inspect the reason for the failure), set this to false.
@@ -70,8 +72,10 @@ module Delayed
       
       backend.after_fork
     end
-        
-    define_callbacks :execute, :loop, :perform, :error, :failure
+    
+    def self.lifecycle
+      @lifecycle ||= Delayed::Lifecycle.new
+    end
 
     def initialize(options={})
       @quiet = options.has_key?(:quiet) ? options[:quiet] : true
@@ -79,6 +83,8 @@ module Delayed
       self.class.max_priority = options[:max_priority] if options.has_key?(:max_priority)
       self.class.sleep_delay = options[:sleep_delay] if options.has_key?(:sleep_delay)
       self.class.queues = options[:queues] if options.has_key?(:queues)
+      
+      self.plugins.each { |klass| klass.new }
     end
 
     # Every worker has a unique name which by default is the pid of the process. There are some
@@ -95,17 +101,16 @@ module Delayed
     def name=(val)
       @name = val
     end
-
-    set_callback(:execute, :around, :clear_locks)
-    set_callback(:execute, :before) { |worker| worker.say "Starting job worker" }
-    
+        
     def start
       trap('TERM') { say 'Exiting...'; stop }
       trap('INT')  { say 'Exiting...'; stop }
 
-      run_callbacks(:execute) do
+      say "Starting job worker"
+      
+      self.class.lifecycle.run_callbacks(:execute, self) do
         loop do
-          run_callbacks(:loop) do
+          self.class.lifecycle.run_callbacks(:loop, self) do
             result = nil
 
             realtime = Benchmark.realtime do
@@ -163,7 +168,7 @@ module Delayed
       job.last_error = "{#{error.message}\n#{error.backtrace.join('\n')}"
       failed(job)
     rescue Exception => error
-      run_callbacks(:error){ handle_failed_job(job, error) }
+      self.class.lifecycle.run_callbacks(:error, self, job){ handle_failed_job(job, error) }
       return false  # work failed
     end
 
@@ -182,7 +187,7 @@ module Delayed
     end
 
     def failed(job)
-      run_callbacks(:failure, job) do
+      self.class.lifecycle.run_callbacks(:failure, self, job) do
         job.hook(:failure)
         self.class.destroy_failed_jobs ? job.destroy : job.fail!
       end
@@ -210,15 +215,7 @@ module Delayed
     # If no jobs are left we return nil
     def reserve_and_run_one_job
       job = Delayed::Job.reserve(self)
-      result = nil
-      run_callbacks(:perform){ result = run(job) } if job
-      result
-    end
-    
-    def clear_locks
-      yield
-    ensure
-      Delayed::Job.clear_locks!(name)
+      self.class.lifecycle.run_callbacks(:perform, self, job){ result = run(job) } if job
     end
   end
 
