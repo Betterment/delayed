@@ -5,8 +5,8 @@ describe Delayed::Lifecycle do
   let(:callback) { lambda {|*args|} }
   let(:arguments) { [1] }
   let(:behavior) { mock(Object, :before! => nil, :after! => nil, :inside! => nil) }
-  let(:wrapped_block) { lambda{ behavior.inside! } }
-   
+  let(:wrapped_block) { Proc.new { behavior.inside! } }
+
   describe "before callbacks" do
     before(:each) do
       lifecycle.before(:execute, &callback)
