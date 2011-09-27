@@ -1,31 +1,31 @@
 require 'spec_helper'
 
-describe YAML do
+describe "YAML" do
   it "should autoload classes that are unknown at runtime" do
     lambda {
-      obj = YAML.load("--- !ruby/object:Autoloaded::Clazz {}")
-      obj.class.to_s.should == 'Autoloaded::Clazz'
+      yaml = "--- !ruby/class:Autoloaded::Clazz {}\n"
+      YAML.load(yaml).should == Autoloaded::Clazz
+    }.should_not raise_error
+  end
+
+  it "should autoload a struct" do
+    lambda {
+      yaml = "--- !ruby/class:Autoloaded::Struct {}\n"
+      YAML.load(yaml).should == Autoloaded::Struct
     }.should_not raise_error
   end
 
   it "should autoload structs that are unknown at runtime" do
     lambda {
-      obj = YAML.load("--- !ruby/struct:Autoloaded::Struct {}")
-      obj.class.to_s.should == 'Autoloaded::Struct'
+      yaml = "--- !ruby/struct:Autoloaded::InstanceStruct {}"
+      YAML.load(yaml).class.should == Autoloaded::InstanceStruct
     }.should_not raise_error
   end
 
-  # As we're overriding some of Yaml's internals it is best that our changes
-  # don't impact other places where Yaml is used. Or at least don't make it
-  # look like the exception is caused by DJ
-  it "should not raise exception on poorly formatted yaml" do
-    lambda do
-      YAML.load(<<-EOYAML
-default:
-  <<: *login
-EOYAML
-      )
-    end.should_not raise_error
+  it "should autoload the class for the instance" do
+    lambda {
+      yaml = "--- !ruby/object:Autoloaded::InstanceClazz {}\n"
+      YAML.load(yaml).class.should == Autoloaded::InstanceClazz
+    }.should_not raise_error
   end
-  
 end
