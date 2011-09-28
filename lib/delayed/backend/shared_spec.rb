@@ -27,14 +27,14 @@ shared_examples_for 'a delayed_job backend' do
     job = described_class.create(:payload_object => ErrorJob.new, :run_at => later)
     job.run_at.should be_within(1).of(later)
   end
-  
+
   describe "#reload" do
     it 'should cause the payload to be reloaded' do
       job = described_class.enqueue :payload_object => SimpleJob.new
       job.payload_object.object_id.should_not == job.reload.payload_object.object_id
     end
   end
-  
+
   describe "enqueue" do
     context "with a hash" do
       it "should raise ArgumentError when handler doesn't respond_to :perform" do

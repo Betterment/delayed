@@ -4,7 +4,7 @@ module Delayed
       def self.included(base)
         base.extend ClassMethods
       end
-            
+
       module ClassMethods
         # Add a job to the queue
         def enqueue(*args)
@@ -126,17 +126,17 @@ module Delayed
       def max_attempts
         payload_object.max_attempts if payload_object.respond_to?(:max_attempts)
       end
-      
+
       def fail!
         update_attributes(:failed_at => self.class.db_time_now)
       end
-      
+
     protected
 
       def set_default_run_at
         self.run_at ||= self.class.db_time_now
       end
-      
+
       # Call during reload operation to clear out internal state
       def reset
         @payload_object = nil
