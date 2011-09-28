@@ -1,8 +1,27 @@
+class ActiveRecord::Base
+  # serialize to YAML
+  def encode_with(coder)
+    coder["attributes"] = @attributes
+    coder.tag = ['!ruby/ActiveRecord', self.class.name].join(':')
+  end
+end
+
+class Delayed::PerformableMethod
+  # serialize to YAML
+  def encode_with(coder)
+    coder.map = {
+      "object" => object,
+      "method_name" => method_name,
+      "args" => args
+    }
+  end
+end
+
 module Psych
   module Visitors
     class YAMLTree
       def visit_Class(klass)
-        tag = ['!ruby/class', klass.name].compact.join(':')
+        tag = ['!ruby/class', klass.name].join(':')
         register(klass, @emitter.start_mapping(nil, tag, false, Nodes::Mapping::BLOCK))
         @emitter.end_mapping
       end
@@ -15,6 +34,19 @@ module Psych
         case object.tag
         when /^!ruby\/class:?(.*)?$/
           resolve_class $1
+        when /^!ruby\/ActiveRecord:(.+)$/
+          klass = resolve_class($1)
+          payload = Hash[*object.children.map { |c| accept c }]
+          id = payload["attributes"][klass.primary_key]
+          begin
+            if ActiveRecord::VERSION::MAJOR == 3
+              klass.unscoped.find(id)
+            else # Rails 2
+              klass.with_exclusive_scope { klass.find(id) }
+            end
+          rescue ActiveRecord::RecordNotFound
+            raise Delayed::DeserializationError
+          end
         else
           visit_Psych_Nodes_Mapping_without_class(object)
         end

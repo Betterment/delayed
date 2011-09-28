@@ -1,7 +1,9 @@
 require 'active_support/core_ext/module/delegation'
 
 module Delayed
-  class PerformableMethod < Struct.new(:object, :method_name, :args)
+  class PerformableMethod
+    attr_accessor :object, :method_name, :args
+
     delegate :method, :to => :object
 
     def initialize(object, method_name, args)
