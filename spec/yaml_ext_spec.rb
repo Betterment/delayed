@@ -28,4 +28,14 @@ describe "YAML" do
       YAML.load(yaml).class.should == Autoloaded::InstanceClazz
     }.should_not raise_error
   end
+
+  it "should not throw an uninitialized constant Syck::Syck when using YAML.load_file with poorly formed yaml" do
+    lambda {
+      YAML.load_file(File.expand_path('spec/fixtures/example.yml'))
+    }.should_not raise_error
+  end
+
+  it "should not throw an uninitialized constant Syck::Syck when using YAML.load with poorly formed yaml" do
+    lambda { YAML.load(YAML.dump("foo: *bar"))}.should_not raise_error
+  end
 end
