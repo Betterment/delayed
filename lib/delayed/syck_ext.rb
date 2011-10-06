@@ -14,12 +14,7 @@ class Module
   def yaml_tag_read_class(name)
     # Constantize the object so that ActiveSupport can attempt
     # its auto loading magic. Will raise LoadError if not successful.
-    #
-    # When requiring yaml, the parsers redefine the YAML constant. This causes an
-    # issue with poorly formatted yaml, specifically in the case of a Bad Alias.
-    # When you'd expect to see Syck::BadAlias, the name we're getting is
-    # YAML::Syck::BadAlias and trying to constantize this results in an uninitialized constant Syck::Syck.
-    name.gsub(/^YAML::/, '').constantize
+    name.constantize
     name
   end
 end
