@@ -1,3 +1,5 @@
+require 'active_support/core_ext/class/attribute'
+
 module Delayed
   class Plugin
     class_attribute :callback_block
