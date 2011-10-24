@@ -49,6 +49,14 @@ module Psych
           rescue ActiveRecord::RecordNotFound
             raise Delayed::DeserializationError
           end
+        when /^!ruby\/Mongoid:(.+)$/
+          klass = resolve_class($1)
+          payload = Hash[*object.children.map { |c| accept c }]
+          begin
+            klass.find(payload["attributes"]["_id"])
+          rescue Mongoid::Errors::DocumentNotFound
+            raise Delayed::DeserializationError
+          end
         else
           visit_Psych_Nodes_Mapping_without_class(object)
         end
