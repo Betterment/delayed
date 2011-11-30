@@ -37,7 +37,7 @@ module Delayed
 
     def self.backend=(backend)
       if backend.is_a? Symbol
-        require "delayed/serialization/#{backend}" if YAML.parser.class.name =~ /syck/i
+        require "delayed/serialization/#{backend}"
         require "delayed/backend/#{backend}"
         backend = "Delayed::Backend::#{backend.to_s.classify}::Job".constantize
       end
