@@ -230,6 +230,10 @@ h2. Mailing List
 
 Join us on the "mailing list":http://groups.google.com/group/delayed_job
 
+h2. Dependency Status
+
+!https://gemnasium.com/collectiveidea/delayed_job.png?travis!
+
 h2. How to contribute
 
 If you find what looks like a bug:
