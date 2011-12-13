@@ -119,7 +119,11 @@ Remove the @.deliver@ method to make it work. It's not ideal, but it's the best 
 
 h2. Running Jobs
 
-@script/delayed_job@ can be used to manage a background process which will start working off jobs.  Make sure you've run `script/generate delayed_job`.
+@script/delayed_job@ can be used to manage a background process which will start working off jobs.
+
+To do so, add @gem "daemons"@ to your @Gemfile@ and make sure you've run `script/generate delayed_job`.
+
+You can then do the following:
 
 <pre>
 $ RAILS_ENV=production script/delayed_job start
@@ -186,18 +190,19 @@ end
 
 h2. Gory Details
 
-The library evolves around a delayed_jobs table which looks as follows:
+The library revolves around a delayed_jobs table which looks as follows:
 
 <pre>
 create_table :delayed_jobs, :force => true do |table|
   table.integer  :priority, :default => 0      # Allows some jobs to jump to the front of the queue
   table.integer  :attempts, :default => 0      # Provides for retries, but still fail eventually.
   table.text     :handler                      # YAML-encoded string of the object that will do work
-  table.text   :last_error                   # reason for last failure (See Note below)
+  table.text     :last_error                   # reason for last failure (See Note below)
   table.datetime :run_at                       # When to run. Could be Time.zone.now for immediately, or sometime in the future.
   table.datetime :locked_at                    # Set when a client is working on this object
   table.datetime :failed_at                    # Set when all retries have failed (actually, by default, the record is deleted instead)
   table.string   :locked_by                    # Who is working on this object (if locked)
+  table.string   :queue                        # The name of the queue this job is in
   table.timestamps
 end
 </pre>
@@ -235,6 +240,10 @@ You can invoke @rake jobs:clear@ to delete all jobs in the queue.
 h2. Mailing List
 
 Join us on the "mailing list":http://groups.google.com/group/delayed_job
+
+h2. Build Status
+
+!http://travis-ci.org/collectiveidea/delayed_job.png!
 
 h2. Dependency Status
 
