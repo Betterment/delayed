@@ -1,4 +1,8 @@
-require 'daemons'
+begin
+  require 'daemons'
+rescue LoadError
+  raise "You need to add gem 'daemons' to your Gemfile if you wish to use it."
+end
 require 'optparse'
 
 module Delayed
