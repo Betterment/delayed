@@ -3,7 +3,7 @@ require 'spec_helper'
 require 'action_mailer'
 class MyMailer < ActionMailer::Base
   def signup(email)
-    mail :to => email, :subject => "Delaying Emails"
+    mail :to => email, :subject => "Delaying Emails", :from => "delayedjob@example.com"
   end
 end
 
