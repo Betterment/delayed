@@ -243,11 +243,11 @@ Join us on the "mailing list":http://groups.google.com/group/delayed_job
 
 h2. Build Status
 
-!http://travis-ci.org/collectiveidea/delayed_job.png!
+"!http://travis-ci.org/collectiveidea/delayed_job.png!":http://travis-ci.org/collectiveidea/delayed_job
 
 h2. Dependency Status
 
-!https://gemnasium.com/collectiveidea/delayed_job.png?travis!
+"!https://gemnasium.com/collectiveidea/delayed_job.png?travis!":https://gemnasium.com/collectiveidea/delayed_job
 
 h2. How to contribute
 
