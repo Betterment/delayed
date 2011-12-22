@@ -37,10 +37,10 @@ h3. Backends
 
 delayed_job supports multiple backends for storing the job queue. "See the wiki for other backends":http://wiki.github.com/collectiveidea/delayed_job/backends besides Active Record.
 
-The default is Active Record, which requires a jobs table.
+The default is Active Record, which requires a jobs table. You can create that table by running the following command:
 
 <pre>
-$ script/rails generate delayed_job
+$ script/rails generate delayed_job:active_record
 $ rake db:migrate
 </pre>
 
@@ -121,7 +121,7 @@ h2. Running Jobs
 
 @script/delayed_job@ can be used to manage a background process which will start working off jobs.
 
-To do so, add @gem "daemons"@ to your @Gemfile@ and make sure you've run `script/generate delayed_job`.
+To do so, add @gem "daemons"@ to your @Gemfile@ and make sure you've run `script/rails generate delayed_job`.
 
 You can then do the following:
 
