@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.description       = "Delayed_job (or DJ) encapsulates the common pattern of asynchronously executing longer tasks in the background. It is a direct extraction from Shopify where the job table is responsible for a multitude of core tasks.
 
 This gem is collectiveidea's fork (http://github.com/collectiveidea/delayed_job)."
-  s.email             = ['chris@collectiveidea.com', 'brandon@opensoul.org']
+  s.email             = ['brian@collectiveidea.com']
   s.extra_rdoc_files  = 'README.textile'
   s.files             = Dir.glob('{contrib,lib,recipes,spec}/**/*') +
                         %w(MIT-LICENSE README.textile)
