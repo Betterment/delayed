@@ -14,10 +14,9 @@ It is a direct extraction from Shopify where the job table is responsible for a 
 
 "Follow us on Twitter":https://twitter.com/delayedjob to get updates and notices about new releases.
 
-
 h2. Installation
 
-delayed_job 2.1 only supports Rails 3.0+. See the "2.0 branch":https://github.com/collectiveidea/delayed_job/tree/v2.0 for Rails 2.
+delayed_job 3.0.0 only supports Rails 3.0+. See the "2.0 branch":https://github.com/collectiveidea/delayed_job/tree/v2.0 for Rails 2.
 
 If you plan to use delayed_job with Active Record, add @delayed_job_active_record@ to your @Gemfile@.
 
@@ -41,6 +40,17 @@ The default is Active Record, which requires a jobs table. You can create that t
 
 <pre>
 $ script/rails generate delayed_job:active_record
+$ rake db:migrate
+</pre>
+
+h3. Upgrading from 2.x to 3.0.0 on Active Record
+
+Delayed Job 3.0.0 introduces a new column to the delayed_jobs table.
+
+If you're upgrading from Delayed Job 2.x, run the upgrade generator to create a migration to add the column.
+
+<pre>
+$ script/rails generate delayed_job:upgrade
 $ rake db:migrate
 </pre>
 
