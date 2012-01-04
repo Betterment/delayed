@@ -1,6 +1,7 @@
 3.0.0 - 2011-12-30
 * New: Named queues
 * New: Job/Worker lifecycle callbacks
+* Change: daemons is no longer a runtime dependency
 * Change: Active Record backend support is provided by a separate gem
 * Change: Enqueue hook is called before jobs are saved so that they may be modified
 * Fix problem deserializing models that use a custom primary key column
