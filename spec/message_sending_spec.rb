@@ -25,9 +25,7 @@ describe Delayed::MessageSending do
 
     describe 'with options' do
       class Fable
-        class << self
-          attr_accessor :importance
-        end
+        cattr_accessor :importance
         def tell
         end
         handle_asynchronously :tell, :priority => Proc.new { self.importance }
@@ -43,7 +41,7 @@ describe Delayed::MessageSending do
         job.priority.should == 20
       end
 
-      describe 'using a proc with parament' do
+      describe 'using a proc with parameters' do
         class Yarn
           attr_accessor :importance
           def spin
