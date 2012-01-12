@@ -3,8 +3,7 @@ require 'spec_helper'
 describe Delayed::MessageSending do
   describe "handle_asynchronously" do
     class Story
-      def tell!(arg)
-      end
+      def tell!(arg);end
       handle_asynchronously :tell!
     end
 
@@ -17,17 +16,16 @@ describe Delayed::MessageSending do
       story = Story.new
       lambda {
         job = story.tell!(1)
-        job.payload_object.class.should   == Delayed::PerformableMethod
-        job.payload_object.method_name.should  == :tell_without_delay!
-        job.payload_object.args.should    == [1]
+        job.payload_object.class.should == Delayed::PerformableMethod
+        job.payload_object.method_name.should == :tell_without_delay!
+        job.payload_object.args.should == [1]
       }.should change { Delayed::Job.count }
     end
 
     describe 'with options' do
       class Fable
         cattr_accessor :importance
-        def tell
-        end
+        def tell;end
         handle_asynchronously :tell, :priority => Proc.new { self.importance }
       end
 
@@ -61,34 +59,35 @@ describe Delayed::MessageSending do
   end
 
   context "delay" do
+    class FairyTail
+      attr_accessor :happy_ending
+      def self.princesses;end
+      def tell
+        @happy_ending = true
+      end
+    end
+
     it "should create a new PerformableMethod job" do
       lambda {
         job = "hello".delay.count('l')
-        job.payload_object.class.should   == Delayed::PerformableMethod
-        job.payload_object.method_name.should  == :count
-        job.payload_object.args.should    == ['l']
+        job.payload_object.class.should == Delayed::PerformableMethod
+        job.payload_object.method_name.should == :count
+        job.payload_object.args.should == ['l']
       }.should change { Delayed::Job.count }.by(1)
     end
 
     it "should set default priority" do
       Delayed::Worker.default_priority = 99
-      job = Object.delay.to_s
+      job = FairyTail.delay.to_s
       job.priority.should == 99
       Delayed::Worker.default_priority = 0
     end
 
     it "should set job options" do
       run_at = Time.parse('2010-05-03 12:55 AM')
-      job = Object.delay(:priority => 20, :run_at => run_at).to_s
+      job = FairyTail.delay(:priority => 20, :run_at => run_at).to_s
       job.run_at.should == run_at
       job.priority.should == 20
-    end
-    
-    class FairyTail
-      attr_accessor :happy_ending
-      def tell
-        @happy_ending = true
-      end
     end
     
     it "should not delay the job when delay_jobs is false" do
