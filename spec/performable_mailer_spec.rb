@@ -12,9 +12,9 @@ describe ActionMailer::Base do
     it "should enqueue a PerformableEmail job" do
       lambda {
         job = MyMailer.delay.signup('john@example.com')
-        job.payload_object.class.should   == Delayed::PerformableMailer
-        job.payload_object.method_name.should  == :signup
-        job.payload_object.args.should    == ['john@example.com']
+        job.payload_object.class.should == Delayed::PerformableMailer
+        job.payload_object.method_name.should == :signup
+        job.payload_object.args.should == ['john@example.com']
       }.should change { Delayed::Job.count }.by(1)
     end
   end
@@ -29,16 +29,14 @@ describe ActionMailer::Base do
 
   describe Delayed::PerformableMailer do
     describe "perform" do
-      before do
-        @email = mock('email', :deliver => true)
-        @mailer_class = mock('MailerClass', :signup => @email)
-        @mailer = Delayed::PerformableMailer.new(@mailer_class, :signup, ['john@example.com'])
-      end
-
       it "should call the method and #deliver on the mailer" do
-        @mailer_class.should_receive(:signup).with('john@example.com')
-        @email.should_receive(:deliver)
-        @mailer.perform
+        email = mock('email', :deliver => true)
+        mailer_class = mock('MailerClass', :signup => email)
+        mailer = Delayed::PerformableMailer.new(mailer_class, :signup, ['john@example.com'])
+
+        mailer_class.should_receive(:signup).with('john@example.com')
+        email.should_receive(:deliver)
+        mailer.perform
       end
     end
   end
