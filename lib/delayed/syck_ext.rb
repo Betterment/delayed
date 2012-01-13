@@ -2,7 +2,7 @@ class Module
   yaml_as "tag:ruby.yaml.org,2002:module"
 
   def self.yaml_new(klass, tag, val)
-    klass
+    val.constantize
   end
 
   def to_yaml(options = {})
