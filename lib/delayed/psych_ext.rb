@@ -23,19 +23,77 @@ module Psych
   module Visitors
     class YAMLTree
       def visit_Class(klass)
-        tag = ['!ruby/class', klass.name].join(':')
-        register(klass, @emitter.start_mapping(nil, tag, false, Nodes::Mapping::BLOCK))
-        @emitter.end_mapping
+        @emitter.scalar klass.name, nil, '!ruby/class', false, false, Nodes::Scalar::SINGLE_QUOTED
       end
     end
 
     class ToRuby
+      def visit_Psych_Nodes_Scalar(o)
+        @st[o.anchor] = o.value if o.anchor
+
+        if klass = Psych.load_tags[o.tag]
+          instance = klass.allocate
+
+          if instance.respond_to?(:init_with)
+            coder = Psych::Coder.new(o.tag)
+            coder.scalar = o.value
+            instance.init_with coder
+          end
+
+          return instance
+        end
+
+        return o.value if o.quoted
+        return @ss.tokenize(o.value) unless o.tag
+
+        case o.tag
+        when '!binary', 'tag:yaml.org,2002:binary'
+          o.value.unpack('m').first
+        when '!str', 'tag:yaml.org,2002:str'
+          o.value
+        when "!ruby/object:DateTime"
+          require 'date'
+          @ss.parse_time(o.value).to_datetime
+        when "!ruby/object:Complex"
+          Complex(o.value)
+        when "!ruby/object:Rational"
+          Rational(o.value)
+        when "!ruby/class", "!ruby/module"
+          resolve_class o.value
+        when "tag:yaml.org,2002:float", "!float"
+          Float(@ss.tokenize(o.value))
+        when "!ruby/regexp"
+          o.value =~ /^\/(.*)\/([mixn]*)$/
+          source  = $1
+          options = 0
+          lang    = nil
+          ($2 || '').split('').each do |option|
+            case option
+            when 'x' then options |= Regexp::EXTENDED
+            when 'i' then options |= Regexp::IGNORECASE
+            when 'm' then options |= Regexp::MULTILINE
+            when 'n' then options |= Regexp::NOENCODING
+            else lang = option
+            end
+          end
+          Regexp.new(*[source, options, lang].compact)
+        when "!ruby/range"
+          args = o.value.split(/([.]{2,3})/, 2).map { |s|
+            accept Nodes::Scalar.new(s)
+          }
+          args.push(args.delete_at(1) == '...')
+          Range.new(*args)
+        when /^!ruby\/sym(bol)?:?(.*)?$/
+          o.value.to_sym
+        else
+          @ss.tokenize o.value
+        end
+      end
+      
       def visit_Psych_Nodes_Mapping_with_class(object)
         return revive(Psych.load_tags[object.tag], object) if Psych.load_tags[object.tag]
 
         case object.tag
-        when /^!ruby\/class:?(.*)?$/
-          resolve_class $1
         when /^!ruby\/ActiveRecord:(.+)$/
           klass = resolve_class($1)
           payload = Hash[*object.children.map { |c| accept c }]
@@ -72,4 +130,3 @@ module Psych
     end
   end
 end
-
