@@ -38,7 +38,7 @@ The Active Record backend requires a jobs table. You can create that table by ru
 
 <pre>
 $ rails generate delayed_job:active_record
-$ bundle exec rake db:migrate
+$ rake db:migrate
 </pre>
 
 h3. Upgrading from 2.x to 3.0.0 on Active Record
@@ -48,7 +48,7 @@ Delayed Job 3.0.0 introduces a new column to the delayed_jobs table.
 If you're upgrading from Delayed Job 2.x, run the upgrade generator to create a migration to add the column.
 
 <pre>
-$ script/rails generate delayed_job:upgrade
+$ rails generate delayed_job:upgrade
 $ rake db:migrate
 </pre>
 
@@ -142,7 +142,7 @@ h2. Running Jobs
 
 @script/delayed_job@ can be used to manage a background process which will start working off jobs.
 
-To do so, add @gem "daemons"@ to your @Gemfile@ and make sure you've run `script/rails generate delayed_job`.
+To do so, add @gem "daemons"@ to your @Gemfile@ and make sure you've run `rails generate delayed_job`.
 
 You can then do the following:
 
