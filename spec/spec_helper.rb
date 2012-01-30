@@ -36,7 +36,7 @@ ActiveRecord::Schema.define do
 end
 
 class Story < ActiveRecord::Base
-  set_primary_key :story_id
+  self.primary_key = 'story_id'
   def tell; text; end
   def whatever(n, _); tell*n; end
   default_scope where(:scoped => true)
