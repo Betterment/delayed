@@ -83,6 +83,13 @@ describe Delayed::MessageSending do
       Delayed::Worker.default_priority = 0
     end
 
+    it "should set default queue name" do
+      Delayed::Worker.default_queue_name = 'abbazabba'
+      job = FairyTail.delay.to_s
+      job.queue.should == 'abbazabba'
+      Delayed::Worker.default_priority = nil
+    end
+
     it "should set job options" do
       run_at = Time.parse('2010-05-03 12:55 AM')
       job = FairyTail.delay(:priority => 20, :run_at => run_at).to_s

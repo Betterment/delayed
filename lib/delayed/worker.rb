@@ -20,6 +20,9 @@ module Delayed
       :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
       :read_ahead, :plugins, :destroy_failed_jobs
 
+    # Named queue into which jobs are enqueued by default
+    cattr_accessor :default_queue_name
+
     cattr_reader :backend
 
     # name_prefix is ignored if name is set directly
