@@ -61,7 +61,7 @@ module Delayed
       end
 
       def failed?
-        failed_at
+        !!failed_at
       end
       alias_method :failed, :failed?
 

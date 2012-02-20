@@ -459,7 +459,7 @@ shared_examples_for 'a delayed_job backend' do
           job = described_class.create! :handler => "--- !ruby/object:JobThatDoesNotExist {}"
           worker.work_off
           job.reload
-          job.failed_at.should_not be_nil
+          job.should be_failed
         end
       end
     end
@@ -480,7 +480,7 @@ shared_examples_for 'a delayed_job backend' do
         @job.reload
         @job.last_error.should =~ /did not work/
         @job.attempts.should == 1
-        @job.failed_at.should_not be_nil
+        @job.should be_failed
       end
 
       it "should re-schedule jobs after failing" do
@@ -580,14 +580,14 @@ shared_examples_for 'a delayed_job backend' do
         it_should_behave_like "any failure more than Worker.max_attempts times"
 
         it "should be failed if it failed more than Worker.max_attempts times" do
-          @job.reload.failed_at.should == nil
+          @job.reload.should_not be_failed
           Delayed::Worker.max_attempts.times { worker.reschedule(@job) }
-          @job.reload.failed_at.should_not == nil
+          @job.reload.should be_failed
         end
 
         it "should not be failed if it failed fewer than Worker.max_attempts times" do
           (Delayed::Worker.max_attempts - 1).times { worker.reschedule(@job) }
-          @job.reload.failed_at.should == nil
+          @job.reload.should_not be_failed
         end
       end
     end
