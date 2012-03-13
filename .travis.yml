@@ -1,3 +1,8 @@
+language: ruby
+notifications:
+  disabled: true
+only:
+  - master
 rvm:
   - 1.8.7
   - 1.9.2
@@ -5,7 +10,3 @@ rvm:
   - ruby-head
   - rbx-2.0
   - jruby
-only:
-  - master
-notifications:
-  disabled: true
