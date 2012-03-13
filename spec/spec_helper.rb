@@ -1,4 +1,7 @@
-$:.unshift(File.dirname(__FILE__) + '/../lib')
+unless ENV['CI']
+  require 'simplecov'
+  SimpleCov.start
+end
 
 require 'bundler/setup'
 require 'logger'
