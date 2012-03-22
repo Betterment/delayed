@@ -8,14 +8,27 @@ require 'benchmark'
 
 module Delayed
   class Worker
+    DEFAULT_SLEEP_DELAY      = 5
+    DEFAULT_MAX_ATTEMPTS     = 25
+    DEFAULT_MAX_RUN_TIME     = 4.hours
+    DEFAULT_DEFAULT_PRIORITY = 0
+    DEFAULT_DELAY_JOBS       = true
+    DEFAULT_QUEUES           = []
+    DEFAULT_READ_AHEAD       = 5
+
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time, :default_priority, :sleep_delay, :logger, :delay_jobs, :queues, :read_ahead
-    self.sleep_delay = 5
-    self.max_attempts = 25
-    self.max_run_time = 4.hours
-    self.default_priority = 0
-    self.delay_jobs = true
-    self.queues = []
-    self.read_ahead = 5
+
+    def self.reset
+      self.sleep_delay      = DEFAULT_SLEEP_DELAY
+      self.max_attempts     = DEFAULT_MAX_ATTEMPTS
+      self.max_run_time     = DEFAULT_MAX_RUN_TIME
+      self.default_priority = DEFAULT_DEFAULT_PRIORITY
+      self.delay_jobs       = DEFAULT_DELAY_JOBS
+      self.queues           = DEFAULT_QUEUES
+      self.read_ahead       = DEFAULT_READ_AHEAD
+    end
+
+    reset
 
     # Add or remove plugins in this list before the worker is instantiated
     cattr_accessor :plugins

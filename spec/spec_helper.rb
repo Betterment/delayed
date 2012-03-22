@@ -46,3 +46,9 @@ class Story < ActiveRecord::Base
 
   handle_asynchronously :whatever
 end
+
+RSpec.configure do |config|
+  config.after(:each) do
+    Delayed::Worker.reset
+  end
+end
