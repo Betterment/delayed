@@ -6,7 +6,6 @@ end
 require 'bundler/setup'
 require 'logger'
 
-require 'rails'
 require 'action_mailer'
 require 'active_support/dependencies'
 require 'active_record'
