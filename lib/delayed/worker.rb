@@ -96,9 +96,9 @@ module Delayed
       @quiet = options.has_key?(:quiet) ? options[:quiet] : true
       self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
       self.class.max_priority = options[:max_priority] if options.has_key?(:max_priority)
-      self.class.sleep_delay = options[:sleep_delay] if options.has_key?(:sleep_delay)
-      self.class.read_ahead = options[:read_ahead] if options.has_key?(:read_ahead)
-      self.class.queues = options[:queues] if options.has_key?(:queues)
+      self.class.sleep_delay  = options[:sleep_delay] if options.has_key?(:sleep_delay)
+      self.class.read_ahead   = options[:read_ahead] if options.has_key?(:read_ahead)
+      self.class.queues       = options[:queues] if options.has_key?(:queues)
 
       self.plugins.each { |klass| klass.new }
     end
