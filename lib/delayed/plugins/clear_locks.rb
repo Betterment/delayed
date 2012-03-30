@@ -5,10 +5,10 @@ module Delayed
         lifecycle.around(:execute) do |worker, &block|
           begin
             block.call(worker)
-          ensure            
+          ensure
             Delayed::Job.clear_locks!(worker.name)
           end
-        end 
+        end
       end
     end
   end

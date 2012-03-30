@@ -2,7 +2,7 @@ require 'spec_helper'
 
 describe Delayed::Backend::Test::Job do
   it_should_behave_like 'a delayed_job backend'
-  
+
   describe "#reload" do
     it 'should cause the payload object to be reloaded' do
       job = "foo".delay.length

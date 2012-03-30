@@ -89,7 +89,7 @@ module Psych
           @ss.tokenize o.value
         end
       end
-      
+
       def visit_Psych_Nodes_Mapping_with_class(object)
         return revive(Psych.load_tags[object.tag], object) if Psych.load_tags[object.tag]
 
