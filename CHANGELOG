@@ -1,3 +1,10 @@
+3.0.2 - 2012-04-02
+* Fix deprecation warnings
+* Raise ArgumentError if attempting to enqueue a performable method on an object that hasn't been persisted yet
+* Allow the number of jobs read at a time to be configured from the command line using --read-ahead
+* Allow custom logger to be configured through Delayed::Worker.logger
+* Various documentation improvements
+
 3.0.1 - 2012-01-24
 * Added RecordNotFound message to deserialization error
 * Direct JRuby's yecht parser to syck extensions
