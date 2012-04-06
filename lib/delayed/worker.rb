@@ -135,7 +135,7 @@ module Delayed
 
             count = result.sum
 
-            break if @exit
+            break if stop?
 
             if count.zero?
               sleep(self.class.sleep_delay)
@@ -144,13 +144,17 @@ module Delayed
             end
           end
 
-          break if @exit
+          break if stop?
         end
       end
     end
 
     def stop
       @exit = true
+    end
+
+    def stop?
+      !!@exit
     end
 
     # Do num jobs and return stats on success/failure.
@@ -167,7 +171,7 @@ module Delayed
         else
           break  # leave if no work could be done
         end
-        break if $exit # leave if we're exiting
+        break if stop? # leave if we're exiting
       end
 
       return [success, failure]
