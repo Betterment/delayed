@@ -16,7 +16,14 @@ module Delayed
     DEFAULT_QUEUES           = []
     DEFAULT_READ_AHEAD       = 5
 
-    cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time, :default_priority, :sleep_delay, :logger, :delay_jobs, :queues, :read_ahead
+    cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
+      :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
+      :read_ahead, :plugins, :destroy_failed_jobs
+
+    cattr_reader :backend
+
+    # name_prefix is ignored if name is set directly
+    attr_accessor :name_prefix
 
     def self.reset
       self.sleep_delay      = DEFAULT_SLEEP_DELAY
@@ -31,12 +38,10 @@ module Delayed
     reset
 
     # Add or remove plugins in this list before the worker is instantiated
-    cattr_accessor :plugins
     self.plugins = [Delayed::Plugins::ClearLocks]
 
     # By default failed jobs are destroyed after too many attempts. If you want to keep them around
     # (perhaps to inspect the reason for the failure), set this to false.
-    cattr_accessor :destroy_failed_jobs
     self.destroy_failed_jobs = true
 
     self.logger = if defined?(Rails)
@@ -44,11 +49,6 @@ module Delayed
     elsif defined?(RAILS_DEFAULT_LOGGER)
       RAILS_DEFAULT_LOGGER
     end
-
-    # name_prefix is ignored if name is set directly
-    attr_accessor :name_prefix
-
-    cattr_reader :backend
 
     def self.backend=(backend)
       if backend.is_a? Symbol
