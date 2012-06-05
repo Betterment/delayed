@@ -87,7 +87,7 @@ describe Delayed::MessageSending do
       Delayed::Worker.default_queue_name = 'abbazabba'
       job = FairyTail.delay.to_s
       job.queue.should == 'abbazabba'
-      Delayed::Worker.default_priority = nil
+      Delayed::Worker.default_queue_name = nil
     end
 
     it "should set job options" do
