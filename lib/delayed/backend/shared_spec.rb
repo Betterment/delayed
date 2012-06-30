@@ -447,6 +447,7 @@ shared_examples_for 'a delayed_job backend' do
           job = Delayed::Job.create :payload_object => LongRunningJob.new
           worker.run(job)
           job.reload.last_error.should =~ /expired/
+          job.reload.last_error.should =~ /(Delayed::Worker.max_run_time is only 1 second)/
           job.attempts.should == 1
         ensure
           Delayed::Worker.max_run_time = old_max_run_time
