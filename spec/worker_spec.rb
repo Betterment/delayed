@@ -7,13 +7,13 @@ describe Delayed::Worker do
       Delayed::Worker.backend = @clazz
     end
 
-    it "should set the Delayed::Job constant to the backend" do
-      Delayed::Job.should == @clazz
+    it "sets the Delayed::Job constant to the backend" do
+      expect(Delayed::Job).to eq(@clazz)
     end
 
-    it "should set backend with a symbol" do
+    it "sets backend with a symbol" do
       Delayed::Worker.backend = :test
-      Delayed::Worker.backend.should == Delayed::Backend::Test::Job
+      expect(Delayed::Worker.backend).to eq(Delayed::Backend::Test::Job)
     end
   end
 end
