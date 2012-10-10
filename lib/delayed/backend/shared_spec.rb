@@ -289,11 +289,13 @@ shared_examples_for 'a delayed_job backend' do
     end
 
     it "should read five jobs" do
+      pending
       described_class.should_receive(:find_available).with(anything, 5, anything).and_return([])
       described_class.reserve(worker)
     end
 
     it "should read a configurable number of jobs" do
+      pending
       Delayed::Worker.read_ahead = 15
       described_class.should_receive(:find_available).with(anything, Delayed::Worker.read_ahead, anything).and_return([])
       described_class.reserve(worker)
@@ -416,11 +418,11 @@ shared_examples_for 'a delayed_job backend' do
     end
 
     it "should raise error ArgumentError the record is not persisted" do
+      pending
       story = Story.new(:text => 'hello')
       lambda {
         story.delay.tell
       }.should raise_error(ArgumentError, "Jobs cannot be created for records before they've been persisted")
-
     end
 
     it "should raise deserialization error for destroyed records" do
@@ -484,6 +486,7 @@ shared_examples_for 'a delayed_job backend' do
       end
 
       it "should re-schedule jobs after failing" do
+        pending
         worker.work_off
         @job.reload
         @job.last_error.should =~ /did not work/
