@@ -39,6 +39,21 @@ describe Delayed::PerformableMethod do
     }.not_to raise_error(NoMethodError)
   end
 
+  describe "display_name" do
+    it "returns class_name#method_name for instance methods" do
+      expect(Delayed::PerformableMethod.new("foo", :count, ['o']).display_name).to eq('String#count')
+    end
+
+    it "returns class_name.method_name for class methods" do
+      SomeClass = Class.new do
+        def self.class_method
+        end
+      end
+
+      expect(Delayed::PerformableMethod.new(SomeClass, :class_method, []).display_name).to eq('SomeClass.class_method')
+    end
+  end
+
   describe "hooks" do
     %w(enqueue before after success).each do |hook|
       it "delegates #{hook} hook to object" do

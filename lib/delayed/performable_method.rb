@@ -19,7 +19,11 @@ module Delayed
     end
 
     def display_name
-      "#{object.class}##{method_name}"
+      if object.is_a?(Class)
+        "#{object}.#{method_name}"
+      else
+        "#{object.class}##{method_name}"
+      end
     end
 
     def perform
