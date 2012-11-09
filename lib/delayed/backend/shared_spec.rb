@@ -289,13 +289,11 @@ shared_examples_for "a delayed_job backend" do
     end
 
     it "reads five jobs" do
-      pending
       described_class.should_receive(:find_available).with(anything, 5, anything).and_return([])
       described_class.reserve(worker)
     end
 
     it "reads a configurable number of jobs" do
-      pending
       Delayed::Worker.read_ahead = 15
       described_class.should_receive(:find_available).with(anything, Delayed::Worker.read_ahead, anything).and_return([])
       described_class.reserve(worker)
@@ -418,7 +416,6 @@ shared_examples_for "a delayed_job backend" do
     end
 
     it "raises error ArgumentError the record is not persisted" do
-      pending
       story = Story.new(:text => 'hello')
       expect {
         story.delay.tell
@@ -486,7 +483,6 @@ shared_examples_for "a delayed_job backend" do
       end
 
       it "re-schedules jobs after failing" do
-        pending
         worker.work_off
         @job.reload
         expect(@job.last_error).to match(/did not work/)
