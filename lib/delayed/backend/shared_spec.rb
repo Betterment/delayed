@@ -396,9 +396,11 @@ shared_examples_for "a delayed_job backend" do
 
     it "raises error ArgumentError the record is not persisted" do
       story = Story.new(:text => 'hello')
-      expect {
-        story.delay.tell
-      }.to raise_error(ArgumentError, "Jobs cannot be created for records before they've been persisted")
+      if story.respond_to?(:new_record?)
+        expect {
+          story.delay.tell
+        }.to raise_error(ArgumentError, "Jobs cannot be created for records before they've been persisted")
+      end
     end
 
     it "raises deserialization error for destroyed records" do
