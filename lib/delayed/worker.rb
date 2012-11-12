@@ -182,11 +182,7 @@ module Delayed
 
     def run(job)
       runtime =  Benchmark.realtime do
-        begin
-          Timeout.timeout(self.class.max_run_time.to_i) { job.invoke_job }
-        rescue Timeout::Error => e
-          raise e.exception "#{e.message} (Delayed::Worker.max_run_time is only #{self.class.max_run_time.to_i} seconds)"
-        end
+        Timeout.timeout(self.class.max_run_time.to_i, WorkerTimeout) { job.invoke_job }
         job.destroy
       end
       say "#{job.name} completed after %.4f" % runtime
