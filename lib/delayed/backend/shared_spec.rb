@@ -18,6 +18,10 @@ shared_examples_for "a delayed_job backend" do
     described_class.delete_all
   end
 
+  after do
+    Delayed::Worker.reset
+  end
+
   it "sets run_at automatically if not set" do
     expect(described_class.create(:payload_object => ErrorJob.new ).run_at).not_to be_nil
   end
@@ -181,6 +185,10 @@ shared_examples_for "a delayed_job backend" do
       Delayed::Worker.max_run_time = 2.minutes
     end
 
+    after do
+      Time.zone = nil
+    end
+
     it "does not reserve failed jobs" do
       create_job :attempts => 50, :failed_at => described_class.db_time_now
       expect(described_class.reserve(worker)).to be_nil
@@ -249,7 +257,7 @@ shared_examples_for "a delayed_job backend" do
   end
 
   context "worker prioritization" do
-    before(:each) do
+    after do
       Delayed::Worker.max_priority = nil
       Delayed::Worker.min_priority = nil
     end
@@ -431,20 +439,19 @@ shared_examples_for "a delayed_job backend" do
 
     describe "running a job" do
       it "fails after Worker.max_run_time" do
-        begin
-          old_max_run_time = Delayed::Worker.max_run_time
-          Delayed::Worker.max_run_time = 1.second
-          job = Delayed::Job.create :payload_object => LongRunningJob.new
-          worker.run(job)
-          expect(job.reload.last_error).to match(/expired/)
-          expect(job.reload.last_error).to match(/Delayed::Worker.max_run_time is only 1 second/)
-          expect(job.attempts).to eq(1)
-        ensure
-          Delayed::Worker.max_run_time = old_max_run_time
-        end
+        Delayed::Worker.max_run_time = 1.second
+        job = Delayed::Job.create :payload_object => LongRunningJob.new
+        worker.run(job)
+        expect(job.reload.last_error).to match(/expired/)
+        expect(job.reload.last_error).to match(/Delayed::Worker.max_run_time is only 1 second/)
+        expect(job.attempts).to eq(1)
       end
 
       context "when the job raises a deserialization error" do
+        after do
+          Delayed::Worker.destroy_failed_jobs = true
+        end
+
         it "marks the job as failed" do
           Delayed::Worker.destroy_failed_jobs = false
           job = described_class.create! :handler => "--- !ruby/object:JobThatDoesNotExist {}"
@@ -457,11 +464,12 @@ shared_examples_for "a delayed_job backend" do
 
     describe "failed jobs" do
       before do
-        # reset defaults
-        Delayed::Worker.destroy_failed_jobs = true
-        Delayed::Worker.max_attempts = 25
+        @job = Delayed::Job.enqueue(ErrorJob.new, :run_at => described_class.db_time_now - 1)
+      end
 
-        @job = Delayed::Job.enqueue(ErrorJob.new)
+      after do
+        # reset default
+        Delayed::Worker.destroy_failed_jobs = true
       end
 
       it "records last_error when destroy_failed_jobs = false, max_attempts = 1" do
@@ -546,10 +554,6 @@ shared_examples_for "a delayed_job backend" do
       end
 
       context "and we want to destroy jobs" do
-        before do
-          Delayed::Worker.destroy_failed_jobs = true
-        end
-
         it_should_behave_like "any failure more than Worker.max_attempts times"
 
         it "is destroyed if it failed more than Worker.max_attempts times" do
@@ -566,6 +570,10 @@ shared_examples_for "a delayed_job backend" do
       context "and we don't want to destroy jobs" do
         before do
           Delayed::Worker.destroy_failed_jobs = false
+        end
+
+        after do
+          Delayed::Worker.destroy_failed_jobs = true
         end
 
         it_should_behave_like "any failure more than Worker.max_attempts times"
