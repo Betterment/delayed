@@ -267,15 +267,25 @@ shared_examples_for "a delayed_job backend" do
     it "only finds jobs greater than or equal to min priority" do
       min = 5
       Delayed::Worker.min_priority = min
-      10.times {|i| described_class.enqueue SimpleJob.new, :priority => i }
-      5.times { expect(described_class.reserve(worker).priority).to be >= min }
+      [4,5,6].sort_by {|i| rand }.each {|i| create_job :priority => i }
+      2.times do
+        job = described_class.reserve(worker)
+        expect(job.priority).to be >= min
+        job.destroy
+      end
+      expect(described_class.reserve(worker)).to be_nil
     end
 
     it "only finds jobs less than or equal to max priority" do
       max = 5
       Delayed::Worker.max_priority = max
-      10.times {|i| described_class.enqueue SimpleJob.new, :priority => i }
-      5.times { expect(described_class.reserve(worker).priority).to be <= max }
+      [4,5,6].sort_by {|i| rand }.each {|i| create_job :priority => i }
+      2.times do
+        job = described_class.reserve(worker)
+        expect(job.priority).to be <= max
+        job.destroy
+      end
+      expect(described_class.reserve(worker)).to be_nil
     end
   end
 
