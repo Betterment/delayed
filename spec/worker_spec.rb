@@ -7,6 +7,10 @@ describe Delayed::Worker do
       Delayed::Worker.backend = @clazz
     end
 
+    after do
+      Delayed::Worker.backend = :test
+    end
+
     it "sets the Delayed::Job constant to the backend" do
       expect(Delayed::Job).to eq(@clazz)
     end

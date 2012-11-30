@@ -67,6 +67,10 @@ describe Delayed::MessageSending do
       end
     end
 
+    after do
+      Delayed::Worker.default_queue_name = nil
+    end
+
     it "creates a new PerformableMethod job" do
       expect {
         job = "hello".delay.count('l')
@@ -80,14 +84,12 @@ describe Delayed::MessageSending do
       Delayed::Worker.default_priority = 99
       job = FairyTail.delay.to_s
       expect(job.priority).to eq(99)
-      Delayed::Worker.default_priority = 0
     end
 
     it "sets default queue name" do
       Delayed::Worker.default_queue_name = 'abbazabba'
       job = FairyTail.delay.to_s
       expect(job.queue).to eq('abbazabba')
-      Delayed::Worker.default_queue_name = nil
     end
 
     it "sets job options" do
