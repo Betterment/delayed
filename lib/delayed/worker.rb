@@ -47,12 +47,6 @@ module Delayed
     # (perhaps to inspect the reason for the failure), set this to false.
     self.destroy_failed_jobs = true
 
-    self.logger = if defined?(Rails)
-      Rails.logger
-    elsif defined?(RAILS_DEFAULT_LOGGER)
-      RAILS_DEFAULT_LOGGER
-    end
-
     def self.backend=(backend)
       if backend.is_a? Symbol
         require "delayed/serialization/#{backend}"
