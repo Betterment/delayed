@@ -129,27 +129,22 @@ module Delayed
       self.class.lifecycle.run_callbacks(:execute, self) do
         loop do
           self.class.lifecycle.run_callbacks(:loop, self) do
-            result = nil
-
-            realtime = Benchmark.realtime do
-              result = work_off
+            @realtime = Benchmark.realtime do
+              @result = work_off
             end
+          end
 
-            count = result.sum
+          count = @result.sum
 
-            break if stop?
-
-            if count.zero?
-              if self.class.exit_on_complete
-                say "No more jobs available. Exiting"
-                stop
-                break
-              else
-                sleep(self.class.sleep_delay)
-              end
+          if count.zero?
+            if self.class.exit_on_complete
+              say "No more jobs available. Exiting"
+              break
             else
-              say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
+              sleep(self.class.sleep_delay) unless stop?
             end
+          else
+            say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / @realtime, @result.last]
           end
 
           break if stop?
