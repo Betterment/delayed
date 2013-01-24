@@ -18,7 +18,7 @@ module Delayed
 
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
       :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
-      :read_ahead, :plugins, :destroy_failed_jobs, :exit_on_empty_queue
+      :read_ahead, :plugins, :destroy_failed_jobs, :exit_on_complete
 
     # Named queue into which jobs are enqueued by default
     cattr_accessor :default_queue_name
@@ -98,7 +98,7 @@ module Delayed
     def initialize(options={})
       @quiet = options.has_key?(:quiet) ? options[:quiet] : true
 
-      [:min_priority, :max_priority, :sleep_delay, :read_ahead, :queues, :exit_on_empty_queue].each do |option|
+      [:min_priority, :max_priority, :sleep_delay, :read_ahead, :queues, :exit_on_complete].each do |option|
         self.class.send("#{option}=", options[option]) if options.has_key?(option)
       end
 
@@ -140,7 +140,7 @@ module Delayed
             break if stop?
 
             if count.zero?
-              if self.class.exit_on_empty_queue
+              if self.class.exit_on_complete
                 say "No more jobs available. Exiting"
                 stop
                 break

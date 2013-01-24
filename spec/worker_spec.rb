@@ -44,11 +44,11 @@ describe Delayed::Worker do
 
   context "worker exit on complete" do
     before do
-      Delayed::Worker.exit_on_empty_queue = true
+      Delayed::Worker.exit_on_complete = true
     end
 
     after do
-      Delayed::Worker.exit_on_empty_queue = false
+      Delayed::Worker.exit_on_complete = false
     end
 
     it "exits the loop when no jobs are available" do
