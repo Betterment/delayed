@@ -1,3 +1,10 @@
+3.0.5 - 2013-01-28
+==================
+* Better job timeout error logging
+* psych support for delayed_job_data_mapper deserialization
+* User can configure the worker to raise a SignalException on TERM and/or INT
+* Add the ability to run all available jobs and exit when complete
+
 3.0.4 - 2012-11-09
 ==================
 * Allow the app to specify a default queue name

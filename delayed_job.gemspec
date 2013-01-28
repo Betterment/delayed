@@ -13,5 +13,5 @@ Gem::Specification.new do |spec|
   spec.require_paths  = ['lib']
   spec.summary        = 'Database-backed asynchronous priority queue system -- Extracted from Shopify'
   spec.test_files     = Dir.glob('spec/**/*')
-  spec.version        = '3.0.4'
+  spec.version        = '3.0.5'
 end
