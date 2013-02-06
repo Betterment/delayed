@@ -15,7 +15,7 @@ group :test do
   gem 'activerecord', '~> 3.0'
   gem 'actionmailer', '~> 3.0'
   gem 'rspec', '>= 2.11'
-  gem 'simplecov'
+  gem 'simplecov', :require => false
 end
 
 gemspec
