@@ -3,7 +3,8 @@ Delayed::Job
 [![Gem Version](https://badge.fury.io/rb/delayed_job.png)][gem]
 [![Build Status](https://secure.travis-ci.org/collectiveidea/delayed_job.png?branch=master)][travis]
 [![Dependency Status](https://gemnasium.com/collectiveidea/delayed_job.png?travis)][gemnasium]
-[![Code Climate](https://codeclimate.com/badge.png)][codeclimate]
+[![Code Climate](https://codeclimate.com/github/collectiveidea/delayed_job.png)][codeclimate]
+
 [gem]: https://rubygems.org/gems/delayed_job
 [travis]: http://travis-ci.org/collectiveidea/delayed_job
 [gemnasium]: https://gemnasium.com/collectiveidea/delayed_job
