@@ -82,7 +82,11 @@ module Delayed
       end
 
       def payload_object
-        @payload_object ||= YAML.load(self.handler)
+        if YAML::VERSION >= "1.3.4"
+          @payload_object = YAML.load(self.handler, :safe => false)
+        else
+          @payload_object ||= YAML.load(self.handler)
+        end
       rescue TypeError, LoadError, NameError, ArgumentError => e
         raise DeserializationError,
           "Job failed to load: #{e.message}. Handler: #{handler.inspect}"
