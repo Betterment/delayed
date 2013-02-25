@@ -83,7 +83,7 @@ module Delayed
 
       def payload_object
         if YAML::VERSION >= "1.3.4"
-          @payload_object = YAML.load(self.handler, :safe => false)
+          @payload_object ||= YAML.load(self.handler, :safe => false)
         else
           @payload_object ||= YAML.load(self.handler)
         end
