@@ -82,7 +82,9 @@ module Delayed
       end
 
       def payload_object
-        if YAML::VERSION >= "1.3.4"
+        if YAML.methods.include?(:unsafe_load)
+          #See https://github.com/dtao/safe_yaml
+          #When the method is there, we need to load our YAML like this...
           @payload_object ||= YAML.load(self.handler, :safe => false)
         else
           @payload_object ||= YAML.load(self.handler)
