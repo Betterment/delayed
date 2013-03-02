@@ -3,10 +3,9 @@ require 'delayed/exceptions'
 require 'delayed/message_sending'
 require 'delayed/performable_method'
 
-# PerformableMailer is compatible with ActionMailer 3 (and possibly 3.1)
 if defined?(ActionMailer)
   require 'action_mailer/version'
-  require 'delayed/performable_mailer' if ActionMailer::VERSION::MAJOR >= 3
+  require 'delayed/performable_mailer'
 end
 
 require 'delayed/yaml_ext'
