@@ -4,7 +4,7 @@
 # 1. copy to /var/www/apps/{app_name}/shared/delayed_job.monitrc
 # 2. replace {app_name} as appropriate
 #    you might also need to change the program strings to
-#           "/bin/su - {username} -c '/usr/bin/env ...'" 
+#           "/bin/su - {username} -c '/usr/bin/env ...'"
 #    to load your shell environment.
 #
 # 3. add this to your /etc/monit/monitrc

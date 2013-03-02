@@ -31,7 +31,7 @@ Capistrano::Configuration.instance.load do
     def roles
       fetch(:delayed_job_server_role, :app)
     end
-    
+
     def delayed_job_command
       fetch(:delayed_job_command, "script/delayed_job")
     end

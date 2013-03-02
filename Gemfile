@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem  'rake'
+gem 'rake'
 
 platforms :ruby do
   gem 'sqlite3'
@@ -12,11 +12,11 @@ platforms :jruby do
 end
 
 group :test do
-  gem 'activerecord', '>= 3.0'
-  gem 'actionmailer', '>= 3.0'
+  gem 'activerecord', ['>= 3.0', '< 4.1']
+  gem 'actionmailer', ['>= 3.0', '< 4.1']
+  gem 'coveralls', :require => false
   gem 'rspec', '>= 2.11'
   gem 'simplecov', :require => false
-  gem 'coveralls', :require => false
 end
 
 gemspec

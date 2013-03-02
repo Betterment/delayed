@@ -9,7 +9,7 @@ require 'active_support/core_ext/module/aliasing'
 module Delayed
   if ActiveSupport::VERSION::MAJOR == 4
     klass = ActiveSupport::ProxyObject
-  else 
+  else
     klass = ActiveSupport::BasicObject
   end
 
