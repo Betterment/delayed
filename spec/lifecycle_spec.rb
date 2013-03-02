@@ -1,4 +1,4 @@
-require 'spec_helper'
+require 'helper'
 
 describe Delayed::Lifecycle do
   let(:lifecycle) { Delayed::Lifecycle.new }

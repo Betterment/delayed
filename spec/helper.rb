@@ -7,8 +7,8 @@ SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter[
 ]
 SimpleCov.start
 
-require 'bundler/setup'
 require 'logger'
+require 'rspec'
 
 require 'action_mailer'
 require 'active_support/dependencies'

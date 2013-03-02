@@ -1,4 +1,4 @@
-require 'spec_helper'
+require 'helper'
 
 describe Delayed::MessageSending do
   describe "handle_asynchronously" do

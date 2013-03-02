@@ -1,4 +1,4 @@
-require 'spec/spec_helper'
+require 'spec/helper'
 require 'logger'
 require 'benchmark'
 

@@ -1,4 +1,4 @@
-require 'spec_helper'
+require 'helper'
 
 describe Delayed::Worker do
   describe "backend=" do

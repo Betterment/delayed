@@ -1,4 +1,4 @@
-require 'spec_helper'
+require 'helper'
 
 describe Delayed::Backend::Test::Job do
   it_should_behave_like 'a delayed_job backend'

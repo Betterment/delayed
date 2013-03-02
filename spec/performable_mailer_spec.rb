@@ -1,4 +1,4 @@
-require 'spec_helper'
+require 'helper'
 
 require 'action_mailer'
 class MyMailer < ActionMailer::Base
