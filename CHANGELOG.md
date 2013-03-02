@@ -1,3 +1,7 @@
+4.0.0.beta1 - 2013-03-02
+========================
+* Rails 4 compatibility
+
 3.0.5 - 2013-01-28
 ==================
 * Better job timeout error logging
