@@ -188,6 +188,8 @@ You can then do the following:
     # or to run in the foreground
     RAILS_ENV=production script/delayed_job run --exit-on-complete
 
+**Rails 4:** *replace script/delayed_job with bin/delayed_job*
+
 Workers can be running on any computer, as long as they have access to the
 database and their clock is in sync. Keep in mind that each worker will check
 the database at least every 5 seconds.
@@ -213,6 +215,7 @@ To restart multiple delayed_job workers:
 
     RAILS_ENV=production script/delayed_job -n2 restart
     
+**Rails 4:** *replace script/delayed_job with bin/delayed_job*
 
 
 
