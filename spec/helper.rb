@@ -1,12 +1,3 @@
-require 'simplecov'
-require 'coveralls'
-
-SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter[
-  SimpleCov::Formatter::HTMLFormatter,
-  Coveralls::SimpleCov::Formatter
-]
-SimpleCov.start
-
 require 'logger'
 require 'rspec'
 
@@ -16,6 +7,15 @@ require 'active_record'
 
 require 'delayed_job'
 require 'delayed/backend/shared_spec'
+
+require 'simplecov'
+require 'coveralls'
+
+SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter[
+  SimpleCov::Formatter::HTMLFormatter,
+  Coveralls::SimpleCov::Formatter
+]
+SimpleCov.start
 
 Delayed::Worker.logger = Logger.new('/tmp/dj.log')
 ENV['RAILS_ENV'] = 'test'
