@@ -207,7 +207,7 @@ Restarting delayed_job
 
 The following syntax will restart delayed jobs:
 
-    RAILS_ENV=production script/delayed_job start
+    RAILS_ENV=production script/delayed_job restart
 
 To restart multiple delayed_job workers:
 
