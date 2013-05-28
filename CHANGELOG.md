@@ -1,3 +1,10 @@
+4.0.0.beta2 - 2013-05-28
+========================
+* Rails 4 compatibility
+* Threaded startup script for faster multi-worker startup
+* YAML compatibility changes
+* Added jobs:check rake task
+
 4.0.0.beta1 - 2013-03-02
 ========================
 * Rails 4 compatibility
