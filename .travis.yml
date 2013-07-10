@@ -2,11 +2,8 @@ language: ruby
 only:
   - master
 rvm:
-  - jruby-18mode
   - jruby-19mode
-  - rbx-18mode
   - rbx-19mode
-  - 1.8.7
   - 1.9.2
   - 1.9.3
   - 2.0.0
@@ -18,16 +15,8 @@ env:
     - "RAILS_VERSION=\"~> 4.0.0\""
 matrix:
   exclude:
-    - rvm: jruby-18mode
-      env: "RAILS_VERSION=\"~> 4.0.0\""
-    - rvm: rbx-18mode
-      env: "RAILS_VERSION=\"~> 4.0.0\""
-    - rvm: 1.8.7
-      env: "RAILS_VERSION=\"~> 4.0.0\""
     - rvm: 1.9.2
       env: "RAILS_VERSION=\"~> 4.0.0\""
   allow_failures:
-    - rvm: jruby-18mode
     - rvm: jruby-19mode
-    - rvm: rbx-18mode
     - rvm: rbx-19mode
