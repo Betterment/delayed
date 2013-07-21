@@ -8,12 +8,15 @@ module Delayed
       module ClassMethods
         # Add a job to the queue
         def enqueue(*args)
-          options = {
-            :priority => Delayed::Worker.default_priority,
-            :queue => Delayed::Worker.default_queue_name
-          }.merge!(args.extract_options!)
-
+          options = args.extract_options!
           options[:payload_object] ||= args.shift
+
+          options.reverse_merge!(
+            :priority => Delayed::Worker.default_priority,
+            :queue => options[:payload_object].respond_to?(:queue_name) ?
+                        options[:payload_object].queue_name :
+                        Delayed::Worker.default_queue_name
+          )
 
           if args.size > 0
             warn "[DEPRECATION] Passing multiple arguments to `#enqueue` is deprecated. Pass a hash with :priority and :run_at."

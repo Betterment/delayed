@@ -243,6 +243,18 @@ class NewsletterJob < Struct.new(:text, :emails)
     return 3
   end
 end
+```
+To set a defalut queue name for a custom job that overrides Delayed::Worker.default_queue_name, you can define a queue_name method on the job
+```ruby
+class NewsletterJob < Struct.new(:text, :emails)
+  def perform
+    emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
+  end
+
+  def queue_name
+    return "newsletter_queue"
+  end
+end
 ````
 
 

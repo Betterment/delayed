@@ -14,6 +14,7 @@ shared_examples_for "a delayed_job backend" do
     Delayed::Worker.min_priority = nil
     Delayed::Worker.default_priority = 99
     Delayed::Worker.delay_jobs = true
+    Delayed::Worker.default_queue_name = "defalut_tracking"
     SimpleJob.runs = 0
     described_class.delete_all
   end
@@ -62,8 +63,18 @@ shared_examples_for "a delayed_job backend" do
       end
 
       it "is able to set queue" do
-        job = described_class.enqueue :payload_object => SimpleJob.new, :queue => 'tracking'
+        job = described_class.enqueue :payload_object => NamedQueueJob.new, :queue => 'tracking'
         expect(job.queue).to eq('tracking')
+      end
+
+      it "uses default queue" do
+        job = described_class.enqueue :payload_object => SimpleJob.new
+        expect(job.queue).to eq(Delayed::Worker.default_queue_name)
+      end
+
+      it "uses the payload object's queue" do
+        job = described_class.enqueue :payload_object => NamedQueueJob.new
+        expect(job.queue).to eq(NamedQueueJob.new.queue_name)
       end
     end
 

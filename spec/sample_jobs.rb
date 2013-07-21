@@ -9,6 +9,10 @@ class SimpleJob
   def perform; @@runs += 1; end
 end
 
+class NamedQueueJob < SimpleJob
+  def queue_name; 'job_tracking'; end
+end
+
 class ErrorJob
   cattr_accessor :runs; self.runs = 0
   def perform; raise 'did not work'; end
