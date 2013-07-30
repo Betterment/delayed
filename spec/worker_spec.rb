@@ -83,7 +83,7 @@ describe Delayed::Worker do
 
     it "handles error during job reservation" do
       Delayed::Job.should_receive(:reserve).and_raise(Exception)
-      Delayed::Worker.new.start
+      Delayed::Worker.new.work_off
     end
 
     it "gives up after 10 backend failures" do
@@ -91,6 +91,12 @@ describe Delayed::Worker do
       worker = Delayed::Worker.new
       9.times { worker.work_off }
       expect(lambda { worker.work_off }).to raise_exception
+    end
+
+    it "allows the backend to attempt recovery from reservation errors" do
+      Delayed::Job.should_receive(:reserve).and_raise(Exception)
+      Delayed::Job.should_receive(:recover_from).with(instance_of(Exception))
+      Delayed::Worker.new.work_off
     end
   end
 end

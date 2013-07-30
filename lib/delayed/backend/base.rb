@@ -47,6 +47,10 @@ module Delayed
           end
         end
 
+        # Allow the backend to attempt recovery from reserve errors
+        def recover_from(error)
+        end
+
         # Hook method that is called before a new worker is forked
         def before_fork
         end

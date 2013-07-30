@@ -273,6 +273,7 @@ module Delayed
       job
     rescue Exception => error
       say "Error while reserving job: #{error}"
+      Delayed::Job.recover_from(error)
       @failed_reserve_count += 1
       raise FatalBackendError if @failed_reserve_count >= 10
       nil
