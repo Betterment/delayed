@@ -1,3 +1,9 @@
+4.0.0 - 2013-07-30
+==================
+* Rails 4 compatibility
+* Reverted threaded startup due to daemons incompatibilities
+* Attempt to recover from job reservation errors
+
 4.0.0.beta2 - 2013-05-28
 ========================
 * Rails 4 compatibility
