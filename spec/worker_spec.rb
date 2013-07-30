@@ -85,5 +85,12 @@ describe Delayed::Worker do
       Delayed::Job.should_receive(:reserve).and_raise(Exception)
       Delayed::Worker.new.start
     end
+
+    it "gives up after 10 backend failures" do
+      Delayed::Job.stub(:reserve).and_raise(Exception)
+      worker = Delayed::Worker.new
+      9.times { worker.work_off }
+      expect(lambda { worker.work_off }).to raise_exception
+    end
   end
 end

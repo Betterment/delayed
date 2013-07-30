@@ -107,6 +107,7 @@ module Delayed
 
     def initialize(options={})
       @quiet = options.has_key?(:quiet) ? options[:quiet] : true
+      @failed_reserve_count = 0
 
       [:min_priority, :max_priority, :sleep_delay, :read_ahead, :queues, :exit_on_complete].each do |option|
         self.class.send("#{option}=", options[option]) if options.has_key?(option)
@@ -267,9 +268,13 @@ module Delayed
     end
 
     def reserve_job
-      Delayed::Job.reserve(self)
+      job = Delayed::Job.reserve(self)
+      @failed_reserve_count = 0
+      job
     rescue Exception => error
       say "Error while reserving job: #{error}"
+      @failed_reserve_count += 1
+      raise FatalBackendError if @failed_reserve_count >= 10
       nil
     end
   end
