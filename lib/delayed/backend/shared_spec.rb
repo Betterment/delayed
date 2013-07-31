@@ -14,7 +14,7 @@ shared_examples_for "a delayed_job backend" do
     Delayed::Worker.min_priority = nil
     Delayed::Worker.default_priority = 99
     Delayed::Worker.delay_jobs = true
-    Delayed::Worker.default_queue_name = "defalut_tracking"
+    Delayed::Worker.default_queue_name = "default_tracking"
     SimpleJob.runs = 0
     described_class.delete_all
   end
