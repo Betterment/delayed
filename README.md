@@ -58,6 +58,10 @@ running the following command:
     rails generate delayed_job:active_record
     rake db:migrate
 
+Rails 4
+=======
+If you are using the protected_attributes gem, it must appear before delayed_job in your gemfile.
+
 Upgrading from 2.x to 3.0.0 on Active Record
 ============================================
 Delayed Job 3.0.0 introduces a new column to the delayed_jobs table.
@@ -203,7 +207,7 @@ Work off queues by setting the `QUEUE` or `QUEUES` environment variable.
 
     QUEUE=tracking rake jobs:work
     QUEUES=mailers,tasks rake jobs:work
-    
+
 Restarting delayed_job
 ======================
 
@@ -214,7 +218,7 @@ The following syntax will restart delayed jobs:
 To restart multiple delayed_job workers:
 
     RAILS_ENV=production script/delayed_job -n2 restart
-    
+
 **Rails 4:** *replace script/delayed_job with bin/delayed_job*
 
 
@@ -238,7 +242,7 @@ class NewsletterJob < Struct.new(:text, :emails)
   def perform
     emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
   end
-  
+
   def max_attempts
     return 3
   end
