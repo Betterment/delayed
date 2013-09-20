@@ -31,8 +31,24 @@ module Delayed
 end
 
 module Psych
-  module Visitors
-    class ToRuby
+  def self.load yaml, filename = nil, visitor = nil
+    result = parse(yaml, filename)
+    result ? result.to_ruby(visitor) : result
+  end
+
+  module Nodes
+    class Node
+      def to_ruby(visitor)
+        visitor ||= Visitors::ToRuby
+        visitor.new.accept(self)
+      end
+    end
+  end
+end
+
+module Delayed
+  module PsychExt
+    class ToRuby < Psych::Visitors::ToRuby
       def visit_Psych_Nodes_Mapping_with_class(object) # rubocop:disable PerceivedComplexity, CyclomaticComplexity, MethodName
         return revive(Psych.load_tags[object.tag], object) if Psych.load_tags[object.tag]
 
