@@ -1,4 +1,4 @@
-require 'rails/generators'
+require 'rails/generators/base'
 require 'delayed/compatibility'
 
 class DelayedJobGenerator < Rails::Generators::Base
