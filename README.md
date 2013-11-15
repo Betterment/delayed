@@ -145,6 +145,9 @@ Notifier.signup(@user).deliver
 
 # with delayed_job
 Notifier.delay.signup(@user)
+
+# with delayed_job running at a specific time
+Notifier.delay(run_at: 5.minutes.from_now).signup(@user)
 ```
 
 Remove the `.deliver` method to make it work. It's not ideal, but it's the best
