@@ -1,13 +1,15 @@
-begin
-  require 'daemons'
-rescue LoadError
-  raise "You need to add gem 'daemons' to your Gemfile if you wish to use it."
+unless ENV['RAILS_ENV'] == 'test'
+  begin
+    require 'daemons'
+  rescue LoadError
+    raise "You need to add gem 'daemons' to your Gemfile if you wish to use it."
+  end
 end
 require 'optparse'
 
 module Delayed
   class Command
-    attr_accessor :worker_count
+    attr_accessor :worker_count, :worker_pools
 
     def initialize(args)
       @options = {
@@ -61,6 +63,9 @@ module Delayed
         opt.on('--queue=queue', 'Specify which queue DJ must look up for jobs') do |queue|
           @options[:queues] = queue.split(',')
         end
+        opt.on('--pools=queue1,queue2:workers/queue3:workers', "Specify queues and number of workers for multiple worker pools") do |pools|
+          parse_worker_pools(pools)
+        end
         opt.on('--exit-on-complete', 'Exit when no more jobs are available to run. This will exit if all jobs are scheduled to run in the future.') do
           @options[:exit_on_complete] = true
         end
@@ -72,42 +77,69 @@ module Delayed
       dir = @options[:pid_dir]
       Dir.mkdir(dir) unless File.exist?(dir)
 
-      if @options[:identifier]
-        if @worker_count > 1
-          fail(ArgumentError.new('Cannot specify both --number-of-workers and --identifier'))
-        elsif @worker_count == 1
-          process_name = "delayed_job.#{@options[:identifier]}"
-          run_process(process_name, dir)
+      if @worker_pools
+        worker_index = 0
+        @worker_pools.each do |queues, worker_count|
+          options = @options.merge(:queues => queues)
+          worker_count.times do
+            process_name = "delayed_job.#{worker_index}"
+            run_process(process_name, options)
+            worker_index += 1
+          end
         end
+
+      elsif @worker_count > 1 && @options[:identifier]
+        fail(ArgumentError.new('Cannot specify both --number-of-workers and --identifier'))
+
+      elsif @worker_count == 1 && @options[:identifier]
+        process_name = "delayed_job.#{@options[:identifier]}"
+        run_process(process_name, @options)
+
       else
         worker_count.times do |worker_index|
-          process_name = worker_count == 1 ? 'delayed_job' : "delayed_job.#{worker_index}"
-          run_process(process_name, dir)
+          process_name = worker_count == 1 ? "delayed_job" : "delayed_job.#{worker_index}"
+          run_process(process_name, @options)
         end
       end
     end
 
-    def run_process(process_name, dir)
+    def run_process(process_name, options = {})
       Delayed::Worker.before_fork
-      Daemons.run_proc(process_name, :dir => dir, :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*_args|
-        $0 = File.join(@options[:prefix], process_name) if @options[:prefix]
+      Daemons.run_proc(process_name, :dir => options[:pid_dir], :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*args|
+        $0 = File.join(options[:prefix], process_name) if @options[:prefix]
         run process_name
       end
     end
 
-    def run(worker_name = nil)
+    def run(worker_name = nil, options = {})
       Dir.chdir(Rails.root)
 
       Delayed::Worker.after_fork
       Delayed::Worker.logger ||= Logger.new(File.join(Rails.root, 'log', 'delayed_job.log'))
 
-      worker = Delayed::Worker.new(@options)
+      worker = Delayed::Worker.new(options)
       worker.name_prefix = "#{worker_name} "
       worker.start
     rescue => e
       Rails.logger.fatal e
       STDERR.puts e.message
       exit 1
+    end
+
+
+    private
+
+    def parse_worker_pools(pools)
+      @worker_pools = pools.split('/').map do |pool|
+        queues, worker_count = pool.split(':')
+        if ['*', '', nil].include?(queues)
+          queues = []
+        else
+          queues = queues.split(',')
+        end
+        worker_count = worker_count.to_i rescue 1
+        [queues, worker_count]
+      end
     end
   end
 end
