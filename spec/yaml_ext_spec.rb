@@ -22,6 +22,15 @@ describe 'YAML' do
     end.not_to raise_error
   end
 
+  it 'autoloads the class of an anonymous struct' do
+    expect do
+      yaml = "--- !ruby/struct\nn: 1\n"
+      object = YAML.load(yaml)
+      expect(object).to be_kind_of(Struct)
+      expect(object.n).to eq(1)
+    end.not_to raise_error
+  end
+
   it 'autoloads the class for the instance' do
     expect do
       yaml = "--- !ruby/object:Autoloaded::InstanceClazz {}\n"

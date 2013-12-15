@@ -136,6 +136,7 @@ module Psych
       alias_method_chain :visit_Psych_Nodes_Mapping, :class
 
       def resolve_class_with_constantize(klass_name)
+        return nil if !klass_name || klass_name.empty?
         klass_name.constantize
       rescue
         resolve_class_without_constantize(klass_name)
