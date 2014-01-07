@@ -90,7 +90,7 @@ describe Delayed::Worker do
       Delayed::Job.stub(:reserve).and_raise(Exception)
       worker = Delayed::Worker.new
       9.times { worker.work_off }
-      expect(lambda { worker.work_off }).to raise_exception
+      expect(lambda { worker.work_off }).to raise_exception Delayed::FatalBackendError
     end
 
     it "allows the backend to attempt recovery from reservation errors" do
