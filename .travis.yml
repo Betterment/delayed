@@ -1,22 +1,23 @@
 language: ruby
-only:
-  - master
-rvm:
-  - jruby-19mode
-  - rbx-19mode
-  - 1.9.2
-  - 1.9.3
-  - 2.0.0
 env:
   matrix:
-    - "RAILS_VERSION=\"~> 3.0.0\""
-    - "RAILS_VERSION=\"~> 3.1.0\""
-    - "RAILS_VERSION=\"~> 3.2.0\""
-    - "RAILS_VERSION=\"~> 4.0.0\""
+    - RAILS_VERSION="~> 3.0.0"
+    - RAILS_VERSION="~> 3.1.0"
+    - RAILS_VERSION="~> 3.2.0"
+    - RAILS_VERSION="~> 4.0.0"
+rvm:
+  - 1.9.3
+  - 2.0.0
+  - 2.1.0
+  - rbx
+  - ruby-head
 matrix:
-  exclude:
-    - rvm: 1.9.2
-      env: "RAILS_VERSION=\"~> 4.0.0\""
-  allow_failures:
+  include:
     - rvm: jruby-19mode
-    - rvm: rbx-19mode
+      env: JRUBY_OPTS="$JRUBY_OPTS --debug"
+    - rvm: jruby-head
+      env: JRUBY_OPTS="$JRUBY_OPTS --debug"
+  allow_failures:
+    - rvm: jruby-head
+    - rvm: rbx
+    - rvm: ruby-head

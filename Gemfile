@@ -19,4 +19,10 @@ group :test do
   gem 'simplecov', :require => false
 end
 
+platforms :rbx do
+  gem 'rubinius-coverage'
+  gem 'rubysl'
+  gem 'rubysl-json'
+end
+
 gemspec
