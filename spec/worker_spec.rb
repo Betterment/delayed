@@ -28,7 +28,7 @@ describe Delayed::Worker do
     end
 
     it "logs with job name and id" do
-      @worker.should_receive(:say).
+      expect(@worker).to receive(:say).
         with('Job ExampleJob (id=123) message', Delayed::Worker::DEFAULT_LOG_LEVEL)
       @worker.job_say(@job, 'message')
     end
@@ -44,13 +44,13 @@ describe Delayed::Worker do
     end
 
     it "reads five jobs" do
-      Delayed::Job.should_receive(:find_available).with(anything, 5, anything).and_return([])
+      expect(Delayed::Job).to receive(:find_available).with(anything, 5, anything).and_return([])
       Delayed::Job.reserve(Delayed::Worker.new)
     end
 
     it "reads a configurable number of jobs" do
       Delayed::Worker.read_ahead = 15
-      Delayed::Job.should_receive(:find_available).with(anything, Delayed::Worker.read_ahead, anything).and_return([])
+      expect(Delayed::Job).to receive(:find_available).with(anything, Delayed::Worker.read_ahead, anything).and_return([])
       Delayed::Job.reserve(Delayed::Worker.new)
     end
   end
@@ -82,20 +82,20 @@ describe Delayed::Worker do
     end
 
     it "handles error during job reservation" do
-      Delayed::Job.should_receive(:reserve).and_raise(Exception)
+      expect(Delayed::Job).to receive(:reserve).and_raise(Exception)
       Delayed::Worker.new.work_off
     end
 
     it "gives up after 10 backend failures" do
-      Delayed::Job.stub(:reserve).and_raise(Exception)
+      expect(Delayed::Job).to receive(:reserve).exactly(10).times.and_raise(Exception)
       worker = Delayed::Worker.new
       9.times { worker.work_off }
       expect(lambda { worker.work_off }).to raise_exception
     end
 
     it "allows the backend to attempt recovery from reservation errors" do
-      Delayed::Job.should_receive(:reserve).and_raise(Exception)
-      Delayed::Job.should_receive(:recover_from).with(instance_of(Exception))
+      expect(Delayed::Job).to receive(:reserve).and_raise(Exception)
+      expect(Delayed::Job).to receive(:recover_from).with(instance_of(Exception))
       Delayed::Worker.new.work_off
     end
   end

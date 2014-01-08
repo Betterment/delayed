@@ -13,8 +13,8 @@ describe Delayed::Lifecycle do
     end
 
     it "executes before wrapped block" do
-      callback.should_receive(:call).with(*arguments).ordered
-      behavior.should_receive(:inside!).ordered
+      expect(callback).to receive(:call).with(*arguments).ordered
+      expect(behavior).to receive(:inside!).ordered
       lifecycle.run_callbacks :execute, *arguments, &wrapped_block
     end
   end
@@ -25,8 +25,8 @@ describe Delayed::Lifecycle do
     end
 
     it "executes after wrapped block" do
-      behavior.should_receive(:inside!).ordered
-      callback.should_receive(:call).with(*arguments).ordered
+      expect(behavior).to receive(:inside!).ordered
+      expect(callback).to receive(:call).with(*arguments).ordered
       lifecycle.run_callbacks :execute, *arguments, &wrapped_block
     end
   end
@@ -41,16 +41,16 @@ describe Delayed::Lifecycle do
     end
 
     it "wraps a block" do
-      behavior.should_receive(:before!).ordered
-      behavior.should_receive(:inside!).ordered
-      behavior.should_receive(:after!).ordered
+      expect(behavior).to receive(:before!).ordered
+      expect(behavior).to receive(:inside!).ordered
+      expect(behavior).to receive(:after!).ordered
       lifecycle.run_callbacks :execute, *arguments, &wrapped_block
     end
 
     it "executes multiple callbacks in order" do
-      behavior.should_receive(:one).ordered
-      behavior.should_receive(:two).ordered
-      behavior.should_receive(:three).ordered
+      expect(behavior).to receive(:one).ordered
+      expect(behavior).to receive(:two).ordered
+      expect(behavior).to receive(:three).ordered
 
       lifecycle.around(:execute) { |*args, &block| behavior.one; block.call(*args) }
       lifecycle.around(:execute) { |*args, &block| behavior.two; block.call(*args) }

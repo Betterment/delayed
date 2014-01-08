@@ -34,8 +34,8 @@ describe ActionMailer::Base do
         mailer_class = double('MailerClass', :signup => email)
         mailer = Delayed::PerformableMailer.new(mailer_class, :signup, ['john@example.com'])
 
-        mailer_class.should_receive(:signup).with('john@example.com')
-        email.should_receive(:deliver)
+        expect(mailer_class).to receive(:signup).with('john@example.com')
+        expect(email).to receive(:deliver)
         mailer.perform
       end
     end
