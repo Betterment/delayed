@@ -327,6 +327,8 @@ By default all jobs will be queued without a named queue. A default named queue 
 
 It is possible to disable delayed jobs for testing purposes. Set Delayed::Worker.delay_jobs = false to execute all jobs realtime.
 
+It may be required to raise exceptions on SIGTERM signals, this will allow jobs to be unlocked and to be available to workers after a worker restart if sent the TERM signal. The default for this option is false.
+
 Here is an example of changing job parameters in Rails:
 
 ```ruby
@@ -338,6 +340,7 @@ Delayed::Worker.max_run_time = 5.minutes
 Delayed::Worker.read_ahead = 10
 Delayed::Worker.default_queue_name = 'default'
 Delayed::Worker.delay_jobs = !Rails.env.test?
+Delayed::Worker.raise_signal_exceptions = :term
 ```
 
 Cleaning up
