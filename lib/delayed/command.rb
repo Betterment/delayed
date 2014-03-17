@@ -4,15 +4,19 @@ rescue LoadError
   raise "You need to add gem 'daemons' to your Gemfile if you wish to use it."
 end
 require 'optparse'
+require 'pathname'
 
 module Delayed
   class Command
     attr_accessor :worker_count
 
+    DIR_PWD = Pathname.new Dir.pwd
+
     def initialize(args)
       @options = {
         :quiet => true,
-        :pid_dir => "#{Rails.root}/tmp/pids"
+        :pid_dir => "#{root}/tmp/pids",
+        :log_dir => "#{root}/log"
       }
 
       @worker_count = 1
@@ -39,6 +43,9 @@ module Delayed
         end
         opts.on('--pid-dir=DIR', 'Specifies an alternate directory in which to store the process ids.') do |dir|
           @options[:pid_dir] = dir
+        end
+        opts.on('--log-dir=DIR', 'Specifies an alternate directory in which to store the delayed_job log.') do |dir|
+          @options[:log_dir] = dir
         end
         opts.on('-i', '--identifier=n', 'A numeric identifier for the worker.') do |n|
           @options[:identifier] = n
@@ -93,18 +100,27 @@ module Delayed
       end
     end
 
+    def root
+      @root ||= rails_defined? ? ::Rails.root : DIR_PWD
+    end
+
+    def rails_defined?
+      defined?(::Rails)
+    end
+
     def run(worker_name = nil)
-      Dir.chdir(Rails.root)
+      Dir.chdir(root)
 
       Delayed::Worker.after_fork
-      Delayed::Worker.logger ||= Logger.new(File.join(Rails.root, 'log', 'delayed_job.log'))
+      Delayed::Worker.logger ||= Logger.new(File.join(@options[:log_dir], 'delayed_job.log'))
 
       worker = Delayed::Worker.new(@options)
       worker.name_prefix = "#{worker_name} "
       worker.start
     rescue => e
-      Rails.logger.fatal e
       STDERR.puts e.message
+      STDERR.puts e.backtrace
+      ::Rails.logger.fatal(e) if rails_defined?
       exit 1
     end
   end
