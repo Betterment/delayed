@@ -8,7 +8,7 @@ end
 
 platforms :jruby do
   gem 'jruby-openssl'
-  gem 'activerecord-jdbcsqlite3-adapter', '< 1.3.4'
+  gem 'activerecord-jdbcsqlite3-adapter'
 end
 
 group :test do
