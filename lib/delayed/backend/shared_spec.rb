@@ -405,29 +405,41 @@ shared_examples_for "a delayed_job backend" do
   end
 
   describe "yaml serialization" do
-    it "reloads changed attributes" do
-      story = Story.create(:text => 'hello')
-      job = story.delay.tell
-      story.update_attributes :text => 'goodbye'
-      expect(job.reload.payload_object.object.text).to eq('goodbye')
-    end
+    context "when serializing jobs" do
+      it "raises error ArgumentError for new records" do
+        story = Story.new(:text => 'hello')
+        if story.respond_to?(:new_record?)
+          expect {
+            story.delay.tell
+          }.to raise_error(ArgumentError, 'Jobs cannot be created for non-persisted records')
+        end
+      end
 
-    it "raises error ArgumentError the record is not persisted" do
-      story = Story.new(:text => 'hello')
-      if story.respond_to?(:new_record?)
+      it "raises error ArgumentError for destroyed records" do
+        story = Story.create(:text => 'hello')
+        story.destroy
         expect {
           story.delay.tell
-        }.to raise_error(ArgumentError, "Jobs cannot be created for records before they've been persisted")
+        }.to raise_error(ArgumentError, 'Jobs cannot be created for non-persisted records')
       end
     end
 
-    it "raises deserialization error for destroyed records" do
-      story = Story.create(:text => 'hello')
-      job = story.delay.tell
-      story.destroy
-      expect {
-        job.reload.payload_object
-      }.to raise_error(Delayed::DeserializationError)
+    context "when reload jobs back" do
+      it "reloads changed attributes" do
+        story = Story.create(:text => 'hello')
+        job = story.delay.tell
+        story.update_attributes :text => 'goodbye'
+        expect(job.reload.payload_object.object.text).to eq('goodbye')
+      end
+
+      it "raises deserialization error for destroyed records" do
+        story = Story.create(:text => 'hello')
+        job = story.delay.tell
+        story.destroy
+        expect {
+          job.reload.payload_object
+        }.to raise_error(Delayed::DeserializationError)
+      end
     end
   end
 
