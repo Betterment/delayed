@@ -117,7 +117,13 @@ describe Delayed::Worker do
     end
 
     shared_examples_for "a worker which logs on the correct severity" do |severity|
-      it "logs a message on the #{severity[:level].upcase} level" do
+      it "logs a message on the #{severity[:level].upcase} level given a string" do
+        expect(@worker.logger).to receive(:send).
+          with(severity[:level], "#{@expected_time}: #{@worker_name} #{@text}")
+        @worker.say(@text, severity[:level])
+      end
+
+      it "logs a message on the #{severity[:level].upcase} level given a fixnum" do
         expect(@worker.logger).to receive(:send).
           with(severity[:level], "#{@expected_time}: #{@worker_name} #{@text}")
         @worker.say(@text, severity[:index])
