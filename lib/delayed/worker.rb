@@ -243,13 +243,12 @@ module Delayed
     end
 
     def say(text, level = DEFAULT_LOG_LEVEL)
-      # This builds a hash {0=>:DEBUG, 1=>:INFO, 2=>:WARN, 3=>:ERROR, 4=>:FATAL, 5=>:UNKNOWN}
-      severities = Hash[*Logger::Severity.constants.enum_for(:each_with_index)
-                                         .collect{ |s, i| [i, s] }.flatten]
       text = "[Worker(#{name})] #{text}"
       puts text unless @quiet
-      severity = severities[level].to_s.downcase
-      logger.send(severity, "#{Time.now.strftime('%FT%T%z')}: #{text}") if logger
+      if logger
+        severity = Logger::Severity.constants[level].to_s.downcase
+        logger.send(severity, "#{Time.now.strftime('%FT%T%z')}: #{text}")
+      end
     end
 
     def max_attempts(job)
