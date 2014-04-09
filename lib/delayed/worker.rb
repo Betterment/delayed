@@ -245,7 +245,10 @@ module Delayed
     def say(text, level = DEFAULT_LOG_LEVEL)
       text = "[Worker(#{name})] #{text}"
       puts text unless @quiet
-      logger.add level, "#{Time.now.strftime('%FT%T%z')}: #{text}" if logger
+      if logger
+        severity = Logger::Severity.constants[level].to_s.downcase
+        logger.send(severity, "#{Time.now.strftime('%FT%T%z')}: #{text}")
+      end
     end
 
     def max_attempts(job)
