@@ -8,6 +8,8 @@ require 'benchmark'
 
 module Delayed
   class Worker
+    class FatalBackendError < Exception; end
+
     DEFAULT_LOG_LEVEL        = Logger::INFO
     DEFAULT_SLEEP_DELAY      = 5
     DEFAULT_MAX_ATTEMPTS     = 25
