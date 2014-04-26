@@ -29,7 +29,15 @@ describe Delayed::Worker do
 
     it "logs with job name and id" do
       expect(@worker).to receive(:say).
-        with('Job ExampleJob (id=123) message', Delayed::Worker::DEFAULT_LOG_LEVEL)
+        with('Job ExampleJob (id=123) message', Delayed::Worker.default_log_level)
+      @worker.job_say(@job, 'message')
+    end
+
+    it "has a configurable default log level" do
+      Delayed::Worker.default_log_level = 'error'
+
+      expect(@worker).to receive(:say).
+        with('Job ExampleJob (id=123) message', 'error')
       @worker.job_say(@job, 'message')
     end
   end
@@ -143,7 +151,7 @@ describe Delayed::Worker do
     it "logs a message on the default log's level" do
       expect(@worker.logger).to receive(:send).
         with("info", "#{@expected_time}: #{@worker_name} #{@text}")
-      @worker.say(@text, Delayed::Worker::DEFAULT_LOG_LEVEL)
+      @worker.say(@text, Delayed::Worker.default_log_level)
     end
   end
 end
