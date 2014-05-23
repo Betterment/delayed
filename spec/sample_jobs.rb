@@ -25,7 +25,9 @@ class LongRunningJob
 end
 
 class OnPermanentFailureJob < SimpleJob
-  def failure; end
+  def initialize; @raise_error = false; end
+  def raise_error=(raise_error); @raise_error = raise_error; end
+  def failure; raise 'did not work' if @raise_error; end
   def max_attempts; 1; end
 end
 

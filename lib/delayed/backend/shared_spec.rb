@@ -538,6 +538,13 @@ shared_examples_for "a delayed_job backend" do
             expect(@job.payload_object).to receive(:failure)
             worker.reschedule(@job)
           end
+
+          it "handles error in hook" do
+            Delayed::Worker.destroy_failed_jobs = false
+            @job.payload_object.raise_error = true
+            expect{worker.reschedule(@job)}.not_to raise_error
+            expect(@job.failed_at).to_not be_nil
+          end
         end
 
         context "when the job's payload has no #failure hook" do

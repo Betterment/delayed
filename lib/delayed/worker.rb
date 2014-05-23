@@ -233,8 +233,14 @@ module Delayed
 
     def failed(job)
       self.class.lifecycle.run_callbacks(:failure, self, job) do
-        job.hook(:failure)
-        self.class.destroy_failed_jobs ? job.destroy : job.fail!
+        begin
+          job.hook(:failure)
+        rescue Exception => error
+          say "Error when running failure callback: #{error}", Logger::ERROR
+          say error.backtrace.join("\n"), Logger::ERROR
+        ensure
+          self.class.destroy_failed_jobs ? job.destroy : job.fail!
+        end
       end
     end
 
