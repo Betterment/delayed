@@ -344,6 +344,8 @@ Cleaning up
 ===========
 You can invoke `rake jobs:clear` to delete all jobs in the queue.
 
-Mailing List
-============
-Join us on the [mailing list](http://groups.google.com/group/delayed_job)
+Having problems?
+================
+Good places to get help are:
+* [Google Groups](http://groups.google.com/group/delayed_job) where you can join our mailing list.
+* [StackOverflow](http://stackoverflow.com/questions/tagged/delayed-job)
