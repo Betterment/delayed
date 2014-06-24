@@ -527,7 +527,7 @@ shared_examples_for "a delayed_job backend" do
         @job = Delayed::Job.create :payload_object => SimpleJob.new
       end
 
-      share_examples_for "any failure more than Worker.max_attempts times" do
+      shared_examples_for "any failure more than Worker.max_attempts times" do
         context "when the job's payload has a #failure hook" do
           before do
             @job = Delayed::Job.create :payload_object => OnPermanentFailureJob.new

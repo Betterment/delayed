@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 require 'bundler/setup'
 Bundler::GemHelper.install_tasks
 

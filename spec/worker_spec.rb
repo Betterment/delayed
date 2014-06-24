@@ -106,7 +106,7 @@ describe Delayed::Worker do
       @worker.name = 'ExampleJob'
       @worker.logger = double('job')
       time = Time.now
-      Time.stub(:now).and_return(time)
+      allow(Time).to receive(:now).and_return(time)
       @text = "Job executed"
       @worker_name = "[Worker(ExampleJob)]"
       @expected_time = time.strftime('%FT%T%z')
