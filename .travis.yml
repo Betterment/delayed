@@ -3,8 +3,6 @@ env:
   global:
     - JRUBY_OPTS="$JRUBY_OPTS --debug"
   matrix:
-    - RAILS_VERSION="~> 3.0.0"
-    - RAILS_VERSION="~> 3.1.0"
     - RAILS_VERSION="~> 3.2.0"
     - RAILS_VERSION="~> 4.0.0"
     - RAILS_VERSION="~> 4.1.0"
@@ -20,3 +18,4 @@ matrix:
   allow_failures:
     - rvm: jruby-head
     - rvm: ruby-head
+  fast_finish: true
