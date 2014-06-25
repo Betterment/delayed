@@ -7,4 +7,9 @@ RSpec::Core::RakeTask.new do |r|
   r.verbose = false
 end
 
-task :default => :spec
+task :test => :spec
+
+require 'rubocop/rake_task'
+RuboCop::RakeTask.new
+
+task :default => [:spec, :rubocop]

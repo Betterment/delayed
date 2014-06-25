@@ -16,6 +16,7 @@ group :test do
   gem 'actionmailer', (ENV['RAILS_VERSION'] || ['>= 3.0', '< 4.2'])
   gem 'coveralls', :require => false
   gem 'rspec', '>= 3'
+  gem 'rubocop', '>= 0.23'
   gem 'simplecov', :require => false
 end
 
