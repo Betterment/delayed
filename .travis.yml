@@ -11,13 +11,12 @@ env:
 rvm:
   - 1.9.3
   - 2.0.0
-  - 2.1.1
-  - rbx-2
-  - ruby-head
+  - 2.1
   - jruby-19mode
   - jruby-head
+  - rbx-2
+  - ruby-head
 matrix:
   allow_failures:
-    - rvm: jruby-19mode
     - rvm: jruby-head
     - rvm: ruby-head
