@@ -18,50 +18,50 @@ module Delayed
       @worker_count = 1
       @monitor = false
 
-      opts = OptionParser.new do |opts|
-        opts.banner = "Usage: #{File.basename($0)} [options] start|stop|restart|run"
+      opts = OptionParser.new do |opt|
+        opt.banner = "Usage: #{File.basename($PROGRAM_NAME)} [options] start|stop|restart|run"
 
-        opts.on('-h', '--help', 'Show this message') do
-          puts opts
+        opt.on('-h', '--help', 'Show this message') do
+          puts opt
           exit 1
         end
-        opts.on('-e', '--environment=NAME', 'Specifies the environment to run this delayed jobs under (test/development/production).') do |e|
-          STDERR.puts "The -e/--environment option has been deprecated and has no effect. Use RAILS_ENV and see http://github.com/collectiveidea/delayed_job/issues/#issue/7"
+        opt.on('-e', '--environment=NAME', 'Specifies the environment to run this delayed jobs under (test/development/production).') do |_e|
+          STDERR.puts 'The -e/--environment option has been deprecated and has no effect. Use RAILS_ENV and see http://github.com/collectiveidea/delayed_job/issues/#issue/7'
         end
-        opts.on('--min-priority N', 'Minimum priority of jobs to run.') do |n|
+        opt.on('--min-priority N', 'Minimum priority of jobs to run.') do |n|
           @options[:min_priority] = n
         end
-        opts.on('--max-priority N', 'Maximum priority of jobs to run.') do |n|
+        opt.on('--max-priority N', 'Maximum priority of jobs to run.') do |n|
           @options[:max_priority] = n
         end
-        opts.on('-n', '--number_of_workers=workers', "Number of unique workers to spawn") do |worker_count|
-          @worker_count = worker_count.to_i rescue 1
+        opt.on('-n', '--number_of_workers=workers', 'Number of unique workers to spawn') do |worker_count|
+          @worker_count = worker_count.to_i rescue 1 # rubocop:disable RescueModifier
         end
-        opts.on('--pid-dir=DIR', 'Specifies an alternate directory in which to store the process ids.') do |dir|
+        opt.on('--pid-dir=DIR', 'Specifies an alternate directory in which to store the process ids.') do |dir|
           @options[:pid_dir] = dir
         end
-        opts.on('-i', '--identifier=n', 'A numeric identifier for the worker.') do |n|
+        opt.on('-i', '--identifier=n', 'A numeric identifier for the worker.') do |n|
           @options[:identifier] = n
         end
-        opts.on('-m', '--monitor', 'Start monitor process.') do
+        opt.on('-m', '--monitor', 'Start monitor process.') do
           @monitor = true
         end
-        opts.on('--sleep-delay N', "Amount of time to sleep when no jobs are found") do |n|
+        opt.on('--sleep-delay N', 'Amount of time to sleep when no jobs are found') do |n|
           @options[:sleep_delay] = n.to_i
         end
-        opts.on('--read-ahead N', "Number of jobs from the queue to consider") do |n|
+        opt.on('--read-ahead N', 'Number of jobs from the queue to consider') do |n|
           @options[:read_ahead] = n
         end
-        opts.on('-p', '--prefix NAME', "String to be prefixed to worker process names") do |prefix|
+        opt.on('-p', '--prefix NAME', 'String to be prefixed to worker process names') do |prefix|
           @options[:prefix] = prefix
         end
-        opts.on('--queues=queues', "Specify which queue DJ must look up for jobs") do |queues|
+        opt.on('--queues=queues', 'Specify which queue DJ must look up for jobs') do |queues|
           @options[:queues] = queues.split(',')
         end
-        opts.on('--queue=queue', "Specify which queue DJ must look up for jobs") do |queue|
+        opt.on('--queue=queue', 'Specify which queue DJ must look up for jobs') do |queue|
           @options[:queues] = queue.split(',')
         end
-        opts.on('--exit-on-complete', "Exit when no more jobs are available to run. This will exit if all jobs are scheduled to run in the future.") do
+        opt.on('--exit-on-complete', 'Exit when no more jobs are available to run. This will exit if all jobs are scheduled to run in the future.') do
           @options[:exit_on_complete] = true
         end
       end
@@ -70,16 +70,18 @@ module Delayed
 
     def daemonize
       dir = @options[:pid_dir]
-      Dir.mkdir(dir) unless File.exists?(dir)
+      Dir.mkdir(dir) unless File.exist?(dir)
 
-      if @worker_count > 1 && @options[:identifier]
-        raise ArgumentError, 'Cannot specify both --number-of-workers and --identifier'
-      elsif @worker_count == 1 && @options[:identifier]
-        process_name = "delayed_job.#{@options[:identifier]}"
-        run_process(process_name, dir)
+      if @options[:identifier]
+        if @worker_count > 1
+          fail(ArgumentError.new('Cannot specify both --number-of-workers and --identifier'))
+        elsif @worker_count == 1
+          process_name = "delayed_job.#{@options[:identifier]}"
+          run_process(process_name, dir)
+        end
       else
         worker_count.times do |worker_index|
-          process_name = worker_count == 1 ? "delayed_job" : "delayed_job.#{worker_index}"
+          process_name = worker_count == 1 ? 'delayed_job' : "delayed_job.#{worker_index}"
           run_process(process_name, dir)
         end
       end
@@ -87,7 +89,7 @@ module Delayed
 
     def run_process(process_name, dir)
       Delayed::Worker.before_fork
-      Daemons.run_proc(process_name, :dir => dir, :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*args|
+      Daemons.run_proc(process_name, :dir => dir, :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*_args|
         $0 = File.join(@options[:prefix], process_name) if @options[:prefix]
         run process_name
       end

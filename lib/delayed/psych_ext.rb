@@ -9,37 +9,39 @@ if defined?(ActiveRecord)
       alias_method :encode_with, :encode_with_override
     else
       def encode_with(coder)
-        coder["attributes"] = attributes
+        coder['attributes'] = attributes
         coder.tag = "!ruby/ActiveRecord:#{self.class.name}"
       end
     end
   end
 end
 
-class Delayed::PerformableMethod
-  # serialize to YAML
-  def encode_with(coder)
-    coder.map = {
-      "object" => object,
-      "method_name" => method_name,
-      "args" => args
-    }
+module Delayed
+  class PerformableMethod
+    # serialize to YAML
+    def encode_with(coder)
+      coder.map = {
+        'object' => object,
+        'method_name' => method_name,
+        'args' => args
+      }
+    end
   end
 end
 
 module Psych
   module Visitors
     class YAMLTree
-      def visit_Class(klass)
+      def visit_Class(klass) # rubocop:disable MethodName
         @emitter.scalar klass.name, nil, '!ruby/class', false, false, Nodes::Scalar::SINGLE_QUOTED
       end
     end
 
     class ToRuby
-      def visit_Psych_Nodes_Scalar(o)
+      def visit_Psych_Nodes_Scalar(o) # rubocop:disable CyclomaticComplexity, MethodName
         @st[o.anchor] = o.value if o.anchor
 
-        if klass = Psych.load_tags[o.tag]
+        if (klass = Psych.load_tags[o.tag])
           instance = klass.allocate
 
           if instance.respond_to?(:init_with)
@@ -59,23 +61,23 @@ module Psych
           o.value.unpack('m').first
         when '!str', 'tag:yaml.org,2002:str'
           o.value
-        when "!ruby/object:DateTime"
+        when '!ruby/object:DateTime'
           require 'date'
           @ss.parse_time(o.value).to_datetime
-        when "!ruby/object:Complex"
+        when '!ruby/object:Complex'
           Complex(o.value)
-        when "!ruby/object:Rational"
+        when '!ruby/object:Rational'
           Rational(o.value)
-        when "!ruby/class", "!ruby/module"
+        when '!ruby/class', '!ruby/module'
           resolve_class o.value
-        when "tag:yaml.org,2002:float", "!float"
+        when 'tag:yaml.org,2002:float', '!float'
           Float(@ss.tokenize(o.value))
-        when "!ruby/regexp"
-          o.value =~ /^\/(.*)\/([mixn]*)$/
-          source  = $1
+        when '!ruby/regexp'
+          o.value =~ %r{^/(.*)/([mixn]*)$}
+          source  = Regexp.last_match[1]
           options = 0
           lang    = nil
-          ($2 || '').split('').each do |option|
+          (Regexp.last_match[2] || '').split('').each do |option|
             case option
             when 'x' then options |= Regexp::EXTENDED
             when 'i' then options |= Regexp::IGNORECASE
@@ -85,10 +87,8 @@ module Psych
             end
           end
           Regexp.new(*[source, options, lang].compact)
-        when "!ruby/range"
-          args = o.value.split(/([.]{2,3})/, 2).map { |s|
-            accept Nodes::Scalar.new(s)
-          }
+        when '!ruby/range'
+          args = o.value.split(/([.]{2,3})/, 2).collect { |s| accept Nodes::Scalar.new(s) }
           args.push(args.delete_at(1) == '...')
           Range.new(*args)
         when /^!ruby\/sym(bol)?:?(.*)?$/
@@ -98,34 +98,34 @@ module Psych
         end
       end
 
-      def visit_Psych_Nodes_Mapping_with_class(object)
+      def visit_Psych_Nodes_Mapping_with_class(object) # rubocop:disable CyclomaticComplexity, MethodName
         return revive(Psych.load_tags[object.tag], object) if Psych.load_tags[object.tag]
 
         case object.tag
         when /^!ruby\/ActiveRecord:(.+)$/
-          klass = resolve_class($1)
-          payload = Hash[*object.children.map { |c| accept c }]
-          id = payload["attributes"][klass.primary_key]
+          klass = resolve_class(Regexp.last_match[1])
+          payload = Hash[*object.children.collect { |c| accept c }]
+          id = payload['attributes'][klass.primary_key]
           begin
             klass.unscoped.find(id)
           rescue ActiveRecord::RecordNotFound
             raise Delayed::DeserializationError
           end
         when /^!ruby\/Mongoid:(.+)$/
-          klass = resolve_class($1)
-          payload = Hash[*object.children.map { |c| accept c }]
+          klass = resolve_class(Regexp.last_match[1])
+          payload = Hash[*object.children.collect { |c| accept c }]
           begin
-            klass.find(payload["attributes"]["_id"])
+            klass.find(payload['attributes']['_id'])
           rescue Mongoid::Errors::DocumentNotFound
             raise Delayed::DeserializationError
           end
         when /^!ruby\/DataMapper:(.+)$/
-          klass = resolve_class($1)
-          payload = Hash[*object.children.map { |c| accept c }]
+          klass = resolve_class(Regexp.last_match[1])
+          payload = Hash[*object.children.collect { |c| accept c }]
           begin
             primary_keys = klass.properties.select { |p| p.key? }
-            key_names = primary_keys.map { |p| p.name.to_s }
-            klass.get!(*key_names.map { |k| payload["attributes"][k] })
+            key_names = primary_keys.collect { |p| p.name.to_s }
+            klass.get!(*key_names.collect { |k| payload['attributes'][k] })
           rescue DataMapper::ObjectNotFoundError
             raise Delayed::DeserializationError
           end

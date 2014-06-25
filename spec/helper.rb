@@ -28,7 +28,6 @@ ActiveSupport::Dependencies.autoload_paths << File.dirname(__FILE__)
 # Add this to simulate Railtie initializer being executed
 ActionMailer::Base.extend(Delayed::DelayMail)
 
-
 # Used to test interactions between DJ and an ORM
 ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => ':memory:'
 ActiveRecord::Base.logger = Delayed::Worker.logger
@@ -43,8 +42,13 @@ end
 
 class Story < ActiveRecord::Base
   self.primary_key = 'story_id'
-  def tell; text; end
-  def whatever(n, _); tell*n; end
+  def tell
+    text
+  end
+
+  def whatever(n, _)
+    tell * n
+  end
   default_scope { where(:scoped => true) }
 
   handle_asynchronously :whatever

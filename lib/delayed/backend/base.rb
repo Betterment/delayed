@@ -16,17 +16,17 @@ module Delayed
           options[:payload_object] ||= args.shift
 
           if args.size > 0
-            warn "[DEPRECATION] Passing multiple arguments to `#enqueue` is deprecated. Pass a hash with :priority and :run_at."
+            warn '[DEPRECATION] Passing multiple arguments to `#enqueue` is deprecated. Pass a hash with :priority and :run_at.'
             options[:priority] = args.first || options[:priority]
             options[:run_at]   = args[1]
           end
 
           unless options[:payload_object].respond_to?(:perform)
-            raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
+            fail(ArgumentError.new('Cannot enqueue items which do not respond to perform'))
           end
 
           if Delayed::Worker.delay_jobs
-            self.new(options).tap do |job|
+            new(options).tap do |job|
               Delayed::Worker.lifecycle.run_callbacks(:enqueue, job) do
                 job.hook(:enqueue)
                 job.save
@@ -48,7 +48,7 @@ module Delayed
         end
 
         # Allow the backend to attempt recovery from reserve errors
-        def recover_from(error)
+        def recover_from(_error)
         end
 
         # Hook method that is called before a new worker is forked
@@ -60,7 +60,7 @@ module Delayed
         end
 
         def work_off(num = 100)
-          warn "[DEPRECATION] `Delayed::Job.work_off` is deprecated. Use `Delayed::Worker.new.work_off instead."
+          warn '[DEPRECATION] `Delayed::Job.work_off` is deprecated. Use `Delayed::Worker.new.work_off instead.'
           Delayed::Worker.new.work_off(num)
         end
       end
@@ -70,12 +70,10 @@ module Delayed
       end
       alias_method :failed, :failed?
 
-      ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/
+      ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/ # rubocop:disable ConstantName
 
       def name
-        @name ||= payload_object.respond_to?(:display_name) ?
-                    payload_object.display_name :
-                    payload_object.class.name
+        @name ||= payload_object.respond_to?(:display_name) ? payload_object.display_name : payload_object.class.name
       rescue DeserializationError
         ParseObjectFromYaml.match(handler)[1]
       end
@@ -87,15 +85,14 @@ module Delayed
 
       def payload_object
         if YAML.respond_to?(:unsafe_load)
-          #See https://github.com/dtao/safe_yaml
-          #When the method is there, we need to load our YAML like this...
-          @payload_object ||= YAML.load(self.handler, :safe => false)
+          # See https://github.com/dtao/safe_yaml
+          # When the method is there, we need to load our YAML like this...
+          @payload_object ||= YAML.load(handler, :safe => false)
         else
-          @payload_object ||= YAML.load(self.handler)
+          @payload_object ||= YAML.load(handler)
         end
       rescue TypeError, LoadError, NameError, ArgumentError => e
-        raise DeserializationError,
-          "Job failed to load: #{e.message}. Handler: #{handler.inspect}"
+        raise(DeserializationError.new("Job failed to load: #{e.message}. Handler: #{handler.inspect}"))
       end
 
       def invoke_job
@@ -104,7 +101,7 @@ module Delayed
             hook :before
             payload_object.perform
             hook :success
-          rescue Exception => e
+          rescue => e
             hook :error, e
             raise e
           ensure
@@ -124,14 +121,15 @@ module Delayed
           method = payload_object.method(name)
           method.arity == 0 ? method.call : method.call(self, *args)
         end
-      rescue DeserializationError
-        # do nothing
+      rescue DeserializationError # rubocop:disable HandleExceptions
       end
 
       def reschedule_at
-        payload_object.respond_to?(:reschedule_at) ?
-          payload_object.reschedule_at(self.class.db_time_now, attempts) :
-          self.class.db_time_now + (attempts ** 4) + 5
+        if payload_object.respond_to?(:reschedule_at)
+          payload_object.reschedule_at(self.class.db_time_now, attempts)
+        else
+          self.class.db_time_now + (attempts**4) + 5
+        end
       end
 
       def max_attempts

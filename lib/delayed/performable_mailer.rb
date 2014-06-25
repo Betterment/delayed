@@ -15,7 +15,7 @@ module Delayed
 end
 
 Mail::Message.class_eval do
-  def delay(*args)
-    raise RuntimeError, "Use MyMailer.delay.mailer_action(args) to delay sending of emails."
+  def delay(*_args)
+    fail 'Use MyMailer.delay.mailer_action(args) to delay sending of emails.'
   end
 end
