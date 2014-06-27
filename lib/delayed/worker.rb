@@ -231,7 +231,7 @@ module Delayed
       self.class.lifecycle.run_callbacks(:failure, self, job) do
         begin
           job.hook(:failure)
-        rescue Exception => error
+        rescue => error
           say "Error when running failure callback: #{error}", Logger::ERROR
           say error.backtrace.join("\n"), Logger::ERROR
         ensure
