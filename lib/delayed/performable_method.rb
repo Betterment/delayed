@@ -7,10 +7,10 @@ module Delayed
     delegate :method, :to => :object
 
     def initialize(object, method_name, args)
-      raise NoMethodError, "undefined method `#{method_name}' for #{object.inspect}" unless object.respond_to?(method_name, true)
+      fail(NoMethodError.new("undefined method `#{method_name}' for #{object.inspect}")) unless object.respond_to?(method_name, true)
 
       if object.respond_to?(:persisted?) && !object.persisted?
-        raise(ArgumentError, 'Jobs cannot be created for non-persisted records')
+        fail(ArgumentError.new('Jobs cannot be created for non-persisted records'))
       end
 
       self.object       = object
@@ -30,7 +30,7 @@ module Delayed
       object.send(symbol, *args)
     end
 
-    def respond_to?(symbol, include_private=false)
+    def respond_to?(symbol, include_private = false)
       super || object.respond_to?(symbol, include_private)
     end
   end

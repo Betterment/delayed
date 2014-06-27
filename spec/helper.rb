@@ -1,3 +1,16 @@
+require 'simplecov'
+require 'coveralls'
+
+SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter[
+  SimpleCov::Formatter::HTMLFormatter,
+  Coveralls::SimpleCov::Formatter
+]
+
+SimpleCov.start do
+  add_filter '/spec/'
+  minimum_coverage(89.48)
+end
+
 require 'logger'
 require 'rspec'
 
@@ -7,15 +20,6 @@ require 'active_record'
 
 require 'delayed_job'
 require 'delayed/backend/shared_spec'
-
-require 'simplecov'
-require 'coveralls'
-
-SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter[
-  SimpleCov::Formatter::HTMLFormatter,
-  Coveralls::SimpleCov::Formatter
-]
-SimpleCov.start
 
 Delayed::Worker.logger = Logger.new('/tmp/dj.log')
 ENV['RAILS_ENV'] = 'test'
@@ -27,7 +31,6 @@ ActiveSupport::Dependencies.autoload_paths << File.dirname(__FILE__)
 
 # Add this to simulate Railtie initializer being executed
 ActionMailer::Base.extend(Delayed::DelayMail)
-
 
 # Used to test interactions between DJ and an ORM
 ActiveRecord::Base.establish_connection :adapter => 'sqlite3', :database => ':memory:'
@@ -43,8 +46,13 @@ end
 
 class Story < ActiveRecord::Base
   self.primary_key = 'story_id'
-  def tell; text; end
-  def whatever(n, _); tell*n; end
+  def tell
+    text
+  end
+
+  def whatever(n, _)
+    tell * n
+  end
   default_scope { where(:scoped => true) }
 
   handle_asynchronously :whatever

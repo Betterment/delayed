@@ -7,8 +7,7 @@ require 'logger'
 require 'benchmark'
 
 module Delayed
-
-  class Worker
+  class Worker # rubocop:disable ClassLength
     DEFAULT_LOG_LEVEL        = 'info'
     DEFAULT_SLEEP_DELAY      = 5
     DEFAULT_MAX_ATTEMPTS     = 25
@@ -19,8 +18,8 @@ module Delayed
     DEFAULT_READ_AHEAD       = 5
 
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
-      :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
-      :read_ahead, :plugins, :destroy_failed_jobs, :exit_on_complete
+                   :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
+                   :read_ahead, :plugins, :destroy_failed_jobs, :exit_on_complete
 
     # Named queue into which jobs are enqueued by default
     cattr_accessor :default_queue_name
@@ -70,12 +69,12 @@ module Delayed
         require "delayed/backend/#{backend}"
         backend = "Delayed::Backend::#{backend.to_s.classify}::Job".constantize
       end
-      @@backend = backend
+      @@backend = backend # rubocop:disable ClassVars
       silence_warnings { ::Delayed.const_set(:Job, backend) }
     end
 
     def self.guess_backend
-      warn "[DEPRECATION] guess_backend is deprecated. Please remove it from your code."
+      warn '[DEPRECATION] guess_backend is deprecated. Please remove it from your code.'
     end
 
     def self.before_fork
@@ -93,12 +92,11 @@ module Delayed
       # Re-open file handles
       @files_to_reopen.each do |file|
         begin
-          file.reopen file.path, "a+"
+          file.reopen file.path, 'a+'
           file.sync = true
-        rescue ::Exception
+        rescue ::Exception # rubocop:disable HandleExceptions, RescueException
         end
       end
-
       backend.after_fork
     end
 
@@ -106,15 +104,15 @@ module Delayed
       @lifecycle ||= Delayed::Lifecycle.new
     end
 
-    def initialize(options={})
-      @quiet = options.has_key?(:quiet) ? options[:quiet] : true
+    def initialize(options = {})
+      @quiet = options.key?(:quiet) ? options[:quiet] : true
       @failed_reserve_count = 0
 
       [:min_priority, :max_priority, :sleep_delay, :read_ahead, :queues, :exit_on_complete].each do |option|
-        self.class.send("#{option}=", options[option]) if options.has_key?(option)
+        self.class.send("#{option}=", options[option]) if options.key?(option)
       end
 
-      self.plugins.each { |klass| klass.new }
+      plugins.each { |klass| klass.new }
     end
 
     # Every worker has a unique name which by default is the pid of the process. There are some
@@ -123,29 +121,27 @@ module Delayed
     # it crashed before.
     def name
       return @name unless @name.nil?
-      "#{@name_prefix}host:#{Socket.gethostname} pid:#{Process.pid}" rescue "#{@name_prefix}pid:#{Process.pid}"
+      "#{@name_prefix}host:#{Socket.gethostname} pid:#{Process.pid}" rescue "#{@name_prefix}pid:#{Process.pid}" # rubocop:disable RescueModifier
     end
 
     # Sets the name of the worker.
     # Setting the name to nil will reset the default worker name
-    def name=(val)
-      @name = val
-    end
+    attr_writer :name
 
-    def start
+    def start # rubocop:disable CyclomaticComplexity
       trap('TERM') do
         say 'Exiting...'
         stop
-        raise SignalException.new('TERM') if self.class.raise_signal_exceptions
+        fail SignalException.new('TERM') if self.class.raise_signal_exceptions
       end
 
       trap('INT') do
         say 'Exiting...'
         stop
-        raise SignalException.new('INT') if self.class.raise_signal_exceptions && self.class.raise_signal_exceptions != :term
+        fail SignalException.new('INT') if self.class.raise_signal_exceptions && self.class.raise_signal_exceptions != :term
       end
 
-      say "Starting job worker"
+      say 'Starting job worker'
 
       self.class.lifecycle.run_callbacks(:execute, self) do
         loop do
@@ -159,13 +155,13 @@ module Delayed
 
           if count.zero?
             if self.class.exit_on_complete
-              say "No more jobs available. Exiting"
+              say 'No more jobs available. Exiting'
               break
-            else
-              sleep(self.class.sleep_delay) unless stop?
+            elsif !stop?
+              sleep(self.class.sleep_delay)
             end
           else
-            say "#{count} jobs processed at %.4f j/s, %d failed" % [count / @realtime, @result.last]
+            say format("#{count} jobs processed at %.4f j/s, %d failed", count / @realtime, @result.last)
           end
 
           break if stop?
@@ -189,16 +185,16 @@ module Delayed
       num.times do
         case reserve_and_run_one_job
         when true
-            success += 1
+          success += 1
         when false
-            failure += 1
+          failure += 1
         else
           break  # leave if no work could be done
         end
         break if stop? # leave if we're exiting
       end
 
-      return [success, failure]
+      [success, failure]
     end
 
     def run(job)
@@ -207,13 +203,13 @@ module Delayed
         Timeout.timeout(self.class.max_run_time.to_i, WorkerTimeout) { job.invoke_job }
         job.destroy
       end
-      job_say job, 'COMPLETED after %.4f' % runtime
+      job_say job, format('COMPLETED after %.4f', runtime)
       return true  # did work
     rescue DeserializationError => error
       job.last_error = "#{error.message}\n#{error.backtrace.join("\n")}"
       failed(job)
-    rescue Exception => error
-      self.class.lifecycle.run_callbacks(:error, self, job){ handle_failed_job(job, error) }
+    rescue => error
+      self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, error) }
       return false  # work failed
     end
 
@@ -252,13 +248,12 @@ module Delayed
     def say(text, level = DEFAULT_LOG_LEVEL)
       text = "[Worker(#{name})] #{text}"
       puts text unless @quiet
-      if logger
-        # TODO: Deprecate use of Fixnum log levels
-        if !level.is_a?(String)
-          level = Logger::Severity.constants.detect {|i| Logger::Severity.const_get(i) == level }.to_s.downcase
-        end
-        logger.send(level, "#{Time.now.strftime('%FT%T%z')}: #{text}")
+      return unless logger
+      # TODO: Deprecate use of Fixnum log levels
+      unless level.is_a?(String)
+        level = Logger::Severity.constants.detect { |i| Logger::Severity.const_get(i) == level }.to_s.downcase
       end
+      logger.send(level, "#{Time.now.strftime('%FT%T%z')}: #{text}")
     end
 
     def max_attempts(job)
@@ -277,14 +272,14 @@ module Delayed
     # If no jobs are left we return nil
     def reserve_and_run_one_job
       job = reserve_job
-      self.class.lifecycle.run_callbacks(:perform, self, job){ run(job) } if job
+      self.class.lifecycle.run_callbacks(:perform, self, job) { run(job) } if job
     end
 
     def reserve_job
       job = Delayed::Job.reserve(self)
       @failed_reserve_count = 0
       job
-    rescue Exception => error
+    rescue ::Exception => error # rubocop:disable RescueException
       say "Error while reserving job: #{error}"
       Delayed::Job.recover_from(error)
       @failed_reserve_count += 1
@@ -292,5 +287,4 @@ module Delayed
       nil
     end
   end
-
 end

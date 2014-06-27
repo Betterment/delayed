@@ -1,7 +1,7 @@
 class Module
-  yaml_as "tag:ruby.yaml.org,2002:module"
+  yaml_as 'tag:ruby.yaml.org,2002:module'
 
-  def self.yaml_new(klass, tag, val)
+  def self.yaml_new(_klass, _tag, val)
     val.constantize
   end
 
@@ -20,7 +20,7 @@ class Module
 end
 
 class Class
-  yaml_as "tag:ruby.yaml.org,2002:class"
+  yaml_as 'tag:ruby.yaml.org,2002:class'
   remove_method :to_yaml if respond_to?(:to_yaml) && method(:to_yaml).owner == Class # use Module's to_yaml
 end
 
