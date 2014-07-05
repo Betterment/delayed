@@ -232,8 +232,8 @@ module Delayed
         begin
           job.hook(:failure)
         rescue => error
-          say "Error when running failure callback: #{error}", Logger::ERROR
-          say error.backtrace.join("\n"), Logger::ERROR
+          say "Error when running failure callback: #{error}", 'error'
+          say error.backtrace.join("\n"), 'error'
         ensure
           self.class.destroy_failed_jobs ? job.destroy : job.fail!
         end
