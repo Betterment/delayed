@@ -39,7 +39,15 @@ class LongRunningJob
 end
 
 class OnPermanentFailureJob < SimpleJob
-  def failure; end
+  attr_writer :raise_error
+
+  def initialize
+    @raise_error = false
+  end
+
+  def failure
+    fail 'did not work' if @raise_error
+  end
 
   def max_attempts
     1
