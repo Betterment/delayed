@@ -63,8 +63,8 @@ module Delayed
         opt.on('--queue=queue', 'Specify which queue DJ must look up for jobs') do |queue|
           @options[:queues] = queue.split(',')
         end
-        opt.on('--pools=queue1,queue2:workers/queue3:workers', "Specify queues and number of workers for multiple worker pools") do |pools|
-          parse_worker_pools(pools)
+        opt.on('--pool=queue1[,queue2][:worker_count]', "Specify queues and number of workers for a worker pool") do |pool|
+          parse_worker_pool(pool)
         end
         opt.on('--exit-on-complete', 'Exit when no more jobs are available to run. This will exit if all jobs are scheduled to run in the future.') do
           @options[:exit_on_complete] = true
@@ -129,17 +129,17 @@ module Delayed
 
     private
 
-    def parse_worker_pools(pools)
-      @worker_pools = pools.split('/').map do |pool|
-        queues, worker_count = pool.split(':')
-        if ['*', '', nil].include?(queues)
-          queues = []
-        else
-          queues = queues.split(',')
-        end
-        worker_count = worker_count.to_i rescue 1
-        [queues, worker_count]
+    def parse_worker_pool(pool)
+      @worker_pools ||= []
+
+      queues, worker_count = pool.split(':')
+      if ['*', '', nil].include?(queues)
+        queues = []
+      else
+        queues = queues.split(',')
       end
+      worker_count = (worker_count || 1).to_i rescue 1
+      @worker_pools << [queues, worker_count]
     end
   end
 end

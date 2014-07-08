@@ -190,10 +190,10 @@ You can then do the following:
     RAILS_ENV=production script/delayed_job --queue=tracking start
     RAILS_ENV=production script/delayed_job --queues=mailers,tasks start
 
-    # Set the --pools option to start multiple worker pools, with different queues and numbers of workers.
+    # Use the --pool option to specify a worker pool. You can use this option multiple times to start different numbers of workers for different queues.
     # The following command will start 1 worker for the tracking queue,
-    # 2 workers for the mailers and tasks queues, and 2 workers for any available jobs
-    RAILS_ENV=production script/delayed_job --pools=tracking:1/mailers,tasks:2/*:2 start
+    # 2 workers for the mailers and tasks queues, and 2 workers for any jobs:
+    RAILS_ENV=production script/delayed_job --pool=tracking --pool=mailers,tasks:2 --pool=*:2 start
 
     # Runs all available jobs and then exits
     RAILS_ENV=production script/delayed_job start --exit-on-complete
