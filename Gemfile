@@ -14,10 +14,10 @@ end
 group :test do
   gem 'activerecord', (ENV['RAILS_VERSION'] || ['>= 3.2', '< 4.2'])
   gem 'actionmailer', (ENV['RAILS_VERSION'] || ['>= 3.2', '< 4.2'])
-  gem 'coveralls', :require => false
+  gem 'coveralls'
   gem 'rspec', '>= 3'
   gem 'rubocop', '>= 0.23'
-  gem 'simplecov', :require => false
+  gem 'simplecov', '>= 0.9'
 end
 
 gemspec

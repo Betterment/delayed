@@ -565,7 +565,7 @@ shared_examples_for 'a delayed_job backend' do
       end
 
       context 'and we want to destroy jobs' do
-        it_should_behave_like 'any failure more than Worker.max_attempts times'
+        it_behaves_like 'any failure more than Worker.max_attempts times'
 
         it 'is destroyed if it failed more than Worker.max_attempts times' do
           expect(@job).to receive(:destroy)
@@ -587,7 +587,7 @@ shared_examples_for 'a delayed_job backend' do
           Delayed::Worker.destroy_failed_jobs = true
         end
 
-        it_should_behave_like 'any failure more than Worker.max_attempts times'
+        it_behaves_like 'any failure more than Worker.max_attempts times'
 
         it 'is failed if it failed more than Worker.max_attempts times' do
           expect(@job.reload).not_to be_failed
