@@ -8,10 +8,10 @@ end
 require 'optparse'
 
 module Delayed
-  class Command
+  class Command # rubocop:disable ClassLength
     attr_accessor :worker_count, :worker_pools
 
-    def initialize(args)
+    def initialize(args) # rubocop:disable MethodLength
       @options = {
         :quiet => true,
         :pid_dir => "#{Rails.root}/tmp/pids"
@@ -63,7 +63,7 @@ module Delayed
         opt.on('--queue=queue', 'Specify which queue DJ must look up for jobs') do |queue|
           @options[:queues] = queue.split(',')
         end
-        opt.on('--pool=queue1[,queue2][:worker_count]', "Specify queues and number of workers for a worker pool") do |pool|
+        opt.on('--pool=queue1[,queue2][:worker_count]', 'Specify queues and number of workers for a worker pool') do |pool|
           parse_worker_pool(pool)
         end
         opt.on('--exit-on-complete', 'Exit when no more jobs are available to run. This will exit if all jobs are scheduled to run in the future.') do
@@ -77,35 +77,37 @@ module Delayed
       dir = @options[:pid_dir]
       Dir.mkdir(dir) unless File.exist?(dir)
 
-      if @worker_pools
-        worker_index = 0
-        @worker_pools.each do |queues, worker_count|
-          options = @options.merge(:queues => queues)
-          worker_count.times do
-            process_name = "delayed_job.#{worker_index}"
-            run_process(process_name, options)
-            worker_index += 1
-          end
+      if worker_pools
+        setup_pools
+      elsif @options[:identifier]
+        if worker_count > 1
+          fail(ArgumentError.new('Cannot specify both --number-of-workers and --identifier'))
+        else
+          run_process("delayed_job.#{@options[:identifier]}", @options)
         end
-
-      elsif @worker_count > 1 && @options[:identifier]
-        fail(ArgumentError.new('Cannot specify both --number-of-workers and --identifier'))
-
-      elsif @worker_count == 1 && @options[:identifier]
-        process_name = "delayed_job.#{@options[:identifier]}"
-        run_process(process_name, @options)
-
       else
         worker_count.times do |worker_index|
-          process_name = worker_count == 1 ? "delayed_job" : "delayed_job.#{worker_index}"
+          process_name = worker_count == 1 ? 'delayed_job' : "delayed_job.#{worker_index}"
           run_process(process_name, @options)
+        end
+      end
+    end
+
+    def setup_pools
+      worker_index = 0
+      @worker_pools.each do |queues, worker_count|
+        options = @options.merge(:queues => queues)
+        worker_count.times do
+          process_name = "delayed_job.#{worker_index}"
+          run_process(process_name, options)
+          worker_index += 1
         end
       end
     end
 
     def run_process(process_name, options = {})
       Delayed::Worker.before_fork
-      Daemons.run_proc(process_name, :dir => options[:pid_dir], :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*args|
+      Daemons.run_proc(process_name, :dir => options[:pid_dir], :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*_args|
         $0 = File.join(options[:prefix], process_name) if @options[:prefix]
         run process_name
       end
@@ -126,8 +128,7 @@ module Delayed
       exit 1
     end
 
-
-    private
+  private
 
     def parse_worker_pool(pool)
       @worker_pools ||= []

@@ -94,3 +94,6 @@ PercentLiteralDelimiters:
 
 NonNilCheck:
   Enabled: false
+
+RescueModifier:
+  Enabled: false
