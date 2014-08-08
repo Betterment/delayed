@@ -5,7 +5,9 @@ SimpleCov.formatters = [SimpleCov::Formatter::HTMLFormatter, Coveralls::SimpleCo
 
 SimpleCov.start do
   add_filter '/spec/'
-  minimum_coverage(89.48)
+  # Each version of ruby and version of rails test different things
+  # This should probably just be removed.
+  minimum_coverage(85.0)
 end
 
 require 'logger'
