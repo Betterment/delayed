@@ -128,7 +128,7 @@ module Delayed
     # Setting the name to nil will reset the default worker name
     attr_writer :name
 
-    def start # rubocop:disable CyclomaticComplexity
+    def start # rubocop:disable CyclomaticComplexity, PerceivedComplexity
       trap('TERM') do
         say 'Exiting...'
         stop
