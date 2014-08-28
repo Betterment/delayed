@@ -23,7 +23,7 @@ require 'delayed/backend/shared_spec'
 Delayed::Worker.logger = Logger.new('/tmp/dj.log')
 ENV['RAILS_ENV'] = 'test'
 
-class Rails
+module Rails
   def self.root
     '.'
   end
