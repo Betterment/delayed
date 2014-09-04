@@ -3,6 +3,8 @@ env:
   global:
     - JRUBY_OPTS="$JRUBY_OPTS --debug"
   matrix:
+    - RAILS_VERSION="~> 3.0.0"
+    - RAILS_VERSION="~> 3.1.0"
     - RAILS_VERSION="~> 3.2.0"
     - RAILS_VERSION="~> 4.0.0"
     - RAILS_VERSION="~> 4.1.0"
@@ -22,4 +24,5 @@ matrix:
     - rvm: ruby-head
     - env: RAILS_VERSION="~> 4.2.0.beta1"
   fast_finish: true
+
 sudo: false
