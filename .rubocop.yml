@@ -1,33 +1,30 @@
+# Enforce outdenting of access modifiers (i.e. public, private, protected)
+AccessModifierIndentation:
+  EnforcedStyle: outdent
+
 AllCops:
   Include:
     - 'Gemfile'
     - 'Rakefile'
     - 'delayed_job.gemspec'
 
-# Avoid long parameter lists
-ParameterLists:
-  Max: 4
-  CountKeywordArgs: true
-
-ClassLength:
-  Max: 100
-
-LineLength:
-  Enabled: false
-
-MethodLength:
-  CountComments: false
-  Max: 53
-
 # Avoid more than `Max` levels of nesting.
 BlockNesting:
   Max: 2
 
+# Indentation of when/else
+CaseIndentation:
+  IndentWhenRelativeTo: end
+  IndentOneStep: false
+
+ClassLength:
+  Max: 100
+
 # Align with the style guide.
 CollectionMethods:
   PreferredMethods:
-    map:      'collect'
-    map!:     'collect!'
+    collect:  'map'
+    collect!: 'map!'
     reduce:   'inject'
     find:     'detect'
     find_all: 'select'
@@ -36,49 +33,42 @@ CollectionMethods:
 Documentation:
   Enabled: false
 
-# Enforce Ruby 1.8-compatible hash syntax
-HashSyntax:
-  EnforcedStyle: hash_rockets
-
-# No spaces inside hash literals
-SpaceInsideHashLiteralBraces:
-  EnforcedStyle: no_space
-
 # Allow dots at the end of lines
 DotPosition:
+  EnforcedStyle: trailing
+
+DoubleNegation:
   Enabled: false
+
+EmptyLinesAroundAccessModifier:
+  Enabled: true
 
 # Don't require magic comment at the top of every file
 Encoding:
   Enabled: false
 
-# Enforce outdenting of access modifiers (i.e. public, private, protected)
-AccessModifierIndentation:
-  EnforcedStyle: outdent
-
-EmptyLinesAroundAccessModifier:
-  Enabled: true
-
 # Align ends correctly
 EndAlignment:
   AlignWith: variable
 
-# Indentation of when/else
-CaseIndentation:
-  IndentWhenRelativeTo: end
-  IndentOneStep: false
+# Enforce Ruby 1.8-compatible hash syntax
+HashSyntax:
+  EnforcedStyle: hash_rockets
 
 Lambda:
   Enabled: false
 
-RaiseArgs:
-  EnforcedStyle: compact
-
-TrailingComma:
+LineLength:
   Enabled: false
 
-DoubleNegation:
-  Enabled: false
+MethodLength:
+  CountComments: false
+  Max: 53
+
+# Avoid long parameter lists
+ParameterLists:
+  Max: 4
+  CountKeywordArgs: true
 
 PercentLiteralDelimiters:
   PreferredDelimiters:
@@ -92,8 +82,21 @@ PercentLiteralDelimiters:
     '%W': '[]'
     '%x': ()
 
-NonNilCheck:
-  Enabled: false
+RaiseArgs:
+  EnforcedStyle: exploded
 
 RescueModifier:
+  Enabled: false
+
+SignalException:
+  EnforcedStyle: only_raise
+
+# No spaces inside hash literals
+SpaceInsideHashLiteralBraces:
+  EnforcedStyle: no_space
+
+SymbolProc:
+  Enabled: false
+
+TrailingComma:
   Enabled: false

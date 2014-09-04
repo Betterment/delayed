@@ -22,7 +22,7 @@ module Delayed
           end
 
           unless options[:payload_object].respond_to?(:perform)
-            fail(ArgumentError.new('Cannot enqueue items which do not respond to perform'))
+            raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
           end
 
           if Delayed::Worker.delay_jobs
@@ -92,7 +92,7 @@ module Delayed
           @payload_object ||= YAML.load(handler)
         end
       rescue TypeError, LoadError, NameError, ArgumentError => e
-        raise(DeserializationError.new("Job failed to load: #{e.message}. Handler: #{handler.inspect}"))
+        raise DeserializationError, "Job failed to load: #{e.message}. Handler: #{handler.inspect}"
       end
 
       def invoke_job

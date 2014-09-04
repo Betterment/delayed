@@ -30,7 +30,7 @@ namespace :jobs do
     unprocessed_jobs = Delayed::Job.where('attempts = 0 AND created_at < ?', Time.now - args[:max_age].to_i).count
 
     if unprocessed_jobs > 0
-      fail "#{unprocessed_jobs} jobs older than #{args[:max_age]} seconds have not been processed yet"
+      raise "#{unprocessed_jobs} jobs older than #{args[:max_age]} seconds have not been processed yet"
     end
 
   end

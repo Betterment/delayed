@@ -39,7 +39,7 @@ module Psych
         case object.tag
         when /^!ruby\/ActiveRecord:(.+)$/
           klass = resolve_class(Regexp.last_match[1])
-          payload = Hash[*object.children.collect { |c| accept c }]
+          payload = Hash[*object.children.map { |c| accept c }]
           id = payload['attributes'][klass.primary_key]
           begin
             klass.unscoped.find(id)
@@ -48,7 +48,7 @@ module Psych
           end
         when /^!ruby\/Mongoid:(.+)$/
           klass = resolve_class(Regexp.last_match[1])
-          payload = Hash[*object.children.collect { |c| accept c }]
+          payload = Hash[*object.children.map { |c| accept c }]
           id = payload['attributes']['_id']
           begin
             klass.find(id)
@@ -57,11 +57,11 @@ module Psych
           end
         when /^!ruby\/DataMapper:(.+)$/
           klass = resolve_class(Regexp.last_match[1])
-          payload = Hash[*object.children.collect { |c| accept c }]
+          payload = Hash[*object.children.map { |c| accept c }]
           begin
-            primary_keys = klass.properties.select { |p| p.key? }
-            key_names = primary_keys.collect { |p| p.name.to_s }
-            klass.get!(*key_names.collect { |k| payload['attributes'][k] })
+            primary_keys = klass.properties.select(&:key?)
+            key_names = primary_keys.map { |p| p.name.to_s }
+            klass.get!(*key_names.map { |k| payload['attributes'][k] })
           rescue DataMapper::ObjectNotFoundError => error
             raise Delayed::DeserializationError, "DataMapper::ObjectNotFoundError, class: #{klass} (#{error.message})"
           end

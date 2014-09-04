@@ -132,13 +132,13 @@ module Delayed
       trap('TERM') do
         say 'Exiting...'
         stop
-        fail SignalException.new('TERM') if self.class.raise_signal_exceptions
+        raise SignalException, 'TERM' if self.class.raise_signal_exceptions
       end
 
       trap('INT') do
         say 'Exiting...'
         stop
-        fail SignalException.new('INT') if self.class.raise_signal_exceptions && self.class.raise_signal_exceptions != :term
+        raise SignalException, 'INT' if self.class.raise_signal_exceptions && self.class.raise_signal_exceptions != :term
       end
 
       say 'Starting job worker'
