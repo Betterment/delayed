@@ -41,6 +41,7 @@ module Psych
           klass = resolve_class(Regexp.last_match[1])
           payload = Hash[*object.children.map { |c| accept c }]
           id = payload['attributes'][klass.primary_key]
+          id = id.value if defined?(ActiveRecord::Attribute) && id.is_a?(ActiveRecord::Attribute)
           begin
             klass.unscoped.find(id)
           rescue ActiveRecord::RecordNotFound => error
