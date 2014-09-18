@@ -109,7 +109,7 @@ module Delayed
       Delayed::Worker.before_fork
       Daemons.run_proc(process_name, :dir => options[:pid_dir], :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*_args|
         $0 = File.join(options[:prefix], process_name) if @options[:prefix]
-        run process_name
+        run process_name, options
       end
     end
 
