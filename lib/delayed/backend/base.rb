@@ -25,16 +25,10 @@ module Delayed
             raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
           end
 
-          if Delayed::Worker.delay_jobs
-            new(options).tap do |job|
-              Delayed::Worker.lifecycle.run_callbacks(:enqueue, job) do
-                job.hook(:enqueue)
-                job.save
-              end
-            end
-          else
-            Delayed::Job.new(:payload_object => options[:payload_object]).tap do |job|
-              job.invoke_job
+          new(options).tap do |job|
+            Delayed::Worker.lifecycle.run_callbacks(:enqueue, job) do
+              job.hook(:enqueue)
+              Delayed::Worker.delay_jobs ? job.save : job.invoke_job
             end
           end
         end
