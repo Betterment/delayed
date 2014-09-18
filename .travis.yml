@@ -22,7 +22,7 @@ matrix:
     - rvm: jruby-head
     - rvm: rbx-2
     - rvm: ruby-head
-    - env: RAILS_VERSION="~> 4.2.0.beta1"
+    - env: RAILS_VERSION="edge"
   fast_finish: true
 
 sudo: false
