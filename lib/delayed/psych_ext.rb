@@ -33,7 +33,7 @@ end
 module Psych
   module Visitors
     class ToRuby
-      def visit_Psych_Nodes_Mapping_with_class(object) # rubocop:disable CyclomaticComplexity, MethodName
+      def visit_Psych_Nodes_Mapping_with_class(object) # rubocop:disable PerceivedComplexity, CyclomaticComplexity, MethodName
         return revive(Psych.load_tags[object.tag], object) if Psych.load_tags[object.tag]
 
         case object.tag
