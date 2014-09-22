@@ -190,6 +190,11 @@ You can then do the following:
     RAILS_ENV=production script/delayed_job --queue=tracking start
     RAILS_ENV=production script/delayed_job --queues=mailers,tasks start
 
+    # Use the --pool option to specify a worker pool. You can use this option multiple times to start different numbers of workers for different queues.
+    # The following command will start 1 worker for the tracking queue,
+    # 2 workers for the mailers and tasks queues, and 2 workers for any jobs:
+    RAILS_ENV=production script/delayed_job --pool=tracking --pool=mailers,tasks:2 --pool=*:2 start
+
     # Runs all available jobs and then exits
     RAILS_ENV=production script/delayed_job start --exit-on-complete
     # or to run in the foreground
@@ -310,22 +315,22 @@ end
 
 On failure, the job is scheduled again in 5 seconds + N ** 4, where N is the number of retries.
 
-The default Worker.max_attempts is 25. After this, the job either deleted (default), or left in the database with "failed_at" set.
+The default `Worker.max_attempts` is 25. After this, the job either deleted (default), or left in the database with "failed_at" set.
 With the default of 25 attempts, the last retry will be 20 days later, with the last interval being almost 100 hours.
 
-The default Worker.max_run_time is 4.hours. If your job takes longer than that, another computer could pick it up. It's up to you to
+The default `Worker.max_run_time` is 4.hours. If your job takes longer than that, another computer could pick it up. It's up to you to
 make sure your job doesn't exceed this time. You should set this to the longest time you think the job could take.
 
 By default, it will delete failed jobs (and it always deletes successful jobs). If you want to keep failed jobs, set
-Delayed::Worker.destroy_failed_jobs = false. The failed jobs will be marked with non-null failed_at.
+`Delayed::Worker.destroy_failed_jobs = false`. The failed jobs will be marked with non-null failed_at.
 
-By default all jobs are scheduled with priority = 0, which is top priority. You can change this by setting Delayed::Worker.default_priority to something else. Lower numbers have higher priority.
+By default all jobs are scheduled with `priority = 0`, which is top priority. You can change this by setting `Delayed::Worker.default_priority` to something else. Lower numbers have higher priority.
 
-The default behavior is to read 5 jobs from the queue when finding an available job. You can configure this by setting Delayed::Worker.read_ahead.
+The default behavior is to read 5 jobs from the queue when finding an available job. You can configure this by setting `Delayed::Worker.read_ahead`.
 
-By default all jobs will be queued without a named queue. A default named queue can be specified by using Delayed::Worker.default_queue_name.
+By default all jobs will be queued without a named queue. A default named queue can be specified by using `Delayed::Worker.default_queue_name`.
 
-It is possible to disable delayed jobs for testing purposes. Set Delayed::Worker.delay_jobs = false to execute all jobs realtime.
+It is possible to disable delayed jobs for testing purposes. Set `Delayed::Worker.delay_jobs = false` to execute all jobs realtime.
 
 Here is an example of changing job parameters in Rails:
 
@@ -344,6 +349,8 @@ Cleaning up
 ===========
 You can invoke `rake jobs:clear` to delete all jobs in the queue.
 
-Mailing List
-============
-Join us on the [mailing list](http://groups.google.com/group/delayed_job)
+Having problems?
+================
+Good places to get help are:
+* [Google Groups](http://groups.google.com/group/delayed_job) where you can join our mailing list.
+* [StackOverflow](http://stackoverflow.com/questions/tagged/delayed-job)

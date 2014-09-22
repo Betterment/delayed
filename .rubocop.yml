@@ -1,0 +1,102 @@
+# Enforce outdenting of access modifiers (i.e. public, private, protected)
+AccessModifierIndentation:
+  EnforcedStyle: outdent
+
+AllCops:
+  Include:
+    - 'Gemfile'
+    - 'Rakefile'
+    - 'delayed_job.gemspec'
+
+# Avoid more than `Max` levels of nesting.
+BlockNesting:
+  Max: 2
+
+# Indentation of when/else
+CaseIndentation:
+  IndentWhenRelativeTo: end
+  IndentOneStep: false
+
+ClassLength:
+  Max: 100
+
+# Align with the style guide.
+CollectionMethods:
+  PreferredMethods:
+    collect:  'map'
+    collect!: 'map!'
+    reduce:   'inject'
+    find:     'detect'
+    find_all: 'select'
+
+# Disable documentation checking until a class needs to be documented once
+Documentation:
+  Enabled: false
+
+# Allow dots at the end of lines
+DotPosition:
+  EnforcedStyle: trailing
+
+DoubleNegation:
+  Enabled: false
+
+EmptyLinesAroundAccessModifier:
+  Enabled: true
+
+# Don't require magic comment at the top of every file
+Encoding:
+  Enabled: false
+
+# Align ends correctly
+EndAlignment:
+  AlignWith: variable
+
+# Enforce Ruby 1.8-compatible hash syntax
+HashSyntax:
+  EnforcedStyle: hash_rockets
+
+Lambda:
+  Enabled: false
+
+LineLength:
+  Enabled: false
+
+MethodLength:
+  CountComments: false
+  Max: 53
+
+# Avoid long parameter lists
+ParameterLists:
+  Max: 4
+  CountKeywordArgs: true
+
+PercentLiteralDelimiters:
+  PreferredDelimiters:
+    '%':  ()
+    '%i': ()
+    '%q': ()
+    '%Q': ()
+    '%r': '{}'
+    '%s': ()
+    '%w': '[]'
+    '%W': '[]'
+    '%x': ()
+
+RaiseArgs:
+  EnforcedStyle: exploded
+
+RescueModifier:
+  Enabled: false
+
+SignalException:
+  EnforcedStyle: only_raise
+
+# No spaces inside hash literals
+SpaceInsideHashLiteralBraces:
+  EnforcedStyle: no_space
+
+SymbolProc:
+  Enabled: false
+
+TrailingComma:
+  Enabled: false

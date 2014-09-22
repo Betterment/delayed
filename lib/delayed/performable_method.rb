@@ -30,7 +30,7 @@ module Delayed
       object.send(symbol, *args)
     end
 
-    def respond_to?(symbol, include_private=false)
+    def respond_to?(symbol, include_private = false)
       super || object.respond_to?(symbol, include_private)
     end
   end

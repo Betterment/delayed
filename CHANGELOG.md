@@ -1,3 +1,14 @@
+4.0.3 - 2014-09-04
+==================
+* Added --pools option to delayed_job command
+* Removed a bunch of the Psych hacks
+* Improved deserialization error reporting
+* Misc bug fixes
+
+4.0.2 - 2014-06-24
+==================
+* Add support for RSpec 3
+
 4.0.1 - 2014-04-12
 ==================
 * Update gemspec for Rails 4.1
