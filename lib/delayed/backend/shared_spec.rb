@@ -411,7 +411,10 @@ shared_examples_for "a delayed_job backend" do
         if story.respond_to?(:new_record?)
           expect {
             story.delay.tell
-          }.to raise_error(ArgumentError, 'Jobs cannot be created for non-persisted records')
+          }.to raise_error(
+            ArgumentError,
+            "job cannot be created for non-persisted record: #{story.inspect}"
+          )
         end
       end
 
@@ -420,7 +423,10 @@ shared_examples_for "a delayed_job backend" do
         story.destroy
         expect {
           story.delay.tell
-        }.to raise_error(ArgumentError, 'Jobs cannot be created for non-persisted records')
+        }.to raise_error(
+            ArgumentError,
+            "job cannot be created for non-persisted record: #{story.inspect}"
+          )
       end
     end
 
