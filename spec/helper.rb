@@ -20,7 +20,15 @@ require 'active_record'
 require 'delayed_job'
 require 'delayed/backend/shared_spec'
 
-Delayed::Worker.logger = Logger.new('/tmp/dj.log')
+if ENV['DEBUG_LOGS']
+  Delayed::Worker.logger = Logger.new(STDOUT)
+else
+  require 'tempfile'
+
+  tf = Tempfile.new('dj.log')
+  Delayed::Worker.logger = Logger.new(tf.path)
+  tf.unlink
+end
 ENV['RAILS_ENV'] = 'test'
 
 # Trigger AR to initialize
