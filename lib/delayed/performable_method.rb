@@ -10,7 +10,7 @@ module Delayed
       raise NoMethodError, "undefined method `#{method_name}' for #{object.inspect}" unless object.respond_to?(method_name, true)
 
       if object.respond_to?(:persisted?) && !object.persisted?
-        raise ArgumentError, 'Jobs cannot be created for non-persisted records'
+        raise(ArgumentError, "job cannot be created for non-persisted record: #{object.inspect}")
       end
 
       self.object       = object
