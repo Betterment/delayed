@@ -23,6 +23,9 @@ require 'delayed/backend/shared_spec'
 Delayed::Worker.logger = Logger.new('/tmp/dj.log')
 ENV['RAILS_ENV'] = 'test'
 
+# Trigger AR to initialize
+ActiveRecord::Base # rubocop:disable Void
+
 module Rails
   def self.root
     '.'

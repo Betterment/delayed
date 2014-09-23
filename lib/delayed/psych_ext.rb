@@ -1,22 +1,3 @@
-if defined?(ActiveRecord)
-  ActiveRecord::Base.class_eval do
-    # rubocop:disable BlockNesting
-    if instance_methods.include?(:encode_with)
-      def encode_with_override(coder)
-        encode_with_without_override(coder)
-        coder.tag = "!ruby/ActiveRecord:#{self.class.name}" if coder.respond_to?(:tag=)
-      end
-      alias_method :encode_with_without_override, :encode_with
-      alias_method :encode_with, :encode_with_override
-    else
-      def encode_with(coder)
-        coder['attributes'] = attributes
-        coder.tag = "!ruby/ActiveRecord:#{self.class.name}" if coder.respond_to?(:tag=)
-      end
-    end
-  end
-end
-
 module Delayed
   class PerformableMethod
     # serialize to YAML
@@ -46,10 +27,21 @@ module Delayed
         end
       end
 
-      def visit_Psych_Nodes_Mapping(object) # rubocop:disable PerceivedComplexity, CyclomaticComplexity, MethodName
+      def visit_Psych_Nodes_Mapping(object) # rubocop:disable CyclomaticComplexity, MethodName, PerceivedComplexity
         return revive(Psych.load_tags[object.tag], object) if Psych.load_tags[object.tag]
 
         case object.tag
+        when /^!ruby\/object/
+          result = super
+          if defined?(ActiveRecord::Base) && result.is_a?(ActiveRecord::Base)
+            begin
+              result.class.find(result[result.class.primary_key])
+            rescue ActiveRecord::RecordNotFound => error # rubocop:disable BlockNesting
+              raise Delayed::DeserializationError, "ActiveRecord::RecordNotFound, class: #{klass}, primary key: #{id} (#{error.message})"
+            end
+          else
+            result
+          end
         when /^!ruby\/ActiveRecord:(.+)$/
           klass = resolve_class(Regexp.last_match[1])
           payload = Hash[*object.children.map { |c| accept c }]
