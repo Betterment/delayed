@@ -77,6 +77,7 @@ module Delayed
       end
 
       def resolve_class(klass_name)
+        return nil if !klass_name || klass_name.empty?
         klass_name.constantize
       rescue
         super
