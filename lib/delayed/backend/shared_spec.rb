@@ -175,7 +175,7 @@ shared_examples_for 'a delayed_job backend' do
 
     it 'raises a DeserializationError when the YAML.load raises argument error' do
       job = described_class.new :handler => '--- !ruby/struct:GoingToRaiseArgError {}'
-      expect(YAML).to receive(:load).and_raise(ArgumentError)
+      expect(YAML).to receive(:load_dj).and_raise(ArgumentError)
       expect { job.payload_object }.to raise_error(Delayed::DeserializationError)
     end
   end

@@ -31,39 +31,22 @@ module Delayed
 end
 
 module Psych
-  if VERSION.to_f < 1.3
-    def self.load yaml, filename = nil, visitor = nil
-      result = parse(yaml)
-      result ? result.to_ruby(visitor) : result
-    end
-  else
-    def self.load yaml, filename = nil, visitor = nil
-      result = parse(yaml, filename)
-      result ? result.to_ruby(visitor) : result
-    end
-  end
-
-  module Nodes
-    class Node
-      if Gem::Version.new(VERSION) >= Gem::Version.new('2.0.2')
-        def to_ruby(visitor)
-          visitor ||= Visitors::ToRuby
-          visitor.create.accept(self)
-        end
-      else
-        def to_ruby(visitor)
-          visitor ||= Visitors::ToRuby
-          visitor.new.accept(self)
-        end
-      end
-    end
+  def self.load_dj(yaml)
+    result = parse(yaml)
+    result ? Delayed::PsychExt::ToRuby.create.accept(result) : result
   end
 end
 
 module Delayed
   module PsychExt
     class ToRuby < Psych::Visitors::ToRuby
-      def visit_Psych_Nodes_Mapping_with_class(object) # rubocop:disable PerceivedComplexity, CyclomaticComplexity, MethodName
+      unless respond_to?(:create)
+        def self.create
+          new
+        end
+      end
+
+      def visit_Psych_Nodes_Mapping(object) # rubocop:disable PerceivedComplexity, CyclomaticComplexity, MethodName
         return revive(Psych.load_tags[object.tag], object) if Psych.load_tags[object.tag]
 
         case object.tag
@@ -97,17 +80,15 @@ module Delayed
             raise Delayed::DeserializationError, "DataMapper::ObjectNotFoundError, class: #{klass} (#{error.message})"
           end
         else
-          visit_Psych_Nodes_Mapping_without_class(object)
+          super
         end
       end
-      alias_method_chain :visit_Psych_Nodes_Mapping, :class
 
-      def resolve_class_with_constantize(klass_name)
+      def resolve_class(klass_name)
         klass_name.constantize
       rescue
-        resolve_class_without_constantize(klass_name)
+        super
       end
-      alias_method_chain :resolve_class, :constantize
     end
   end
 end

@@ -34,6 +34,6 @@ describe 'YAML' do
   end
 
   def load_with_delayed_visitor(yaml)
-    YAML.load(yaml, nil, Delayed::PsychExt::ToRuby)
+    YAML.load_dj(yaml)
   end
 end
