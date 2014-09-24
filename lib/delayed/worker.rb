@@ -59,12 +59,6 @@ module Delayed
     cattr_accessor :raise_signal_exceptions
     self.raise_signal_exceptions = false
 
-    self.logger = if defined?(Rails)
-      Rails.logger
-    elsif defined?(RAILS_DEFAULT_LOGGER)
-      RAILS_DEFAULT_LOGGER
-    end
-
     def self.backend=(backend)
       if backend.is_a? Symbol
         require "delayed/serialization/#{backend}"
