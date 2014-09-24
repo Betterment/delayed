@@ -435,6 +435,11 @@ shared_examples_for 'a delayed_job backend' do
       expect(@job.payload_object).to receive(:max_run_time).and_return(45.minutes)
       expect(worker.max_run_time(@job)).to eq(45.minutes)
     end
+
+    it 'job set max_run_time can not exceed default max run time' do
+      expect(@job.payload_object).to receive(:max_run_time).and_return(Delayed::Worker::DEFAULT_MAX_RUN_TIME + 60)
+      expect(worker.max_run_time(@job)).to eq(Delayed::Worker::DEFAULT_MAX_RUN_TIME)
+    end
   end
 
   describe 'yaml serialization' do

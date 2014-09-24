@@ -244,7 +244,9 @@ end
 
 Delayed::Job.enqueue NewsletterJob.new('lorem ipsum...', Customers.pluck(:email))
 ```
+
 To set a per-job max attempts that overrides the Delayed::Worker.max_attempts you can define a max_attempts method on the job
+
 ```ruby
 NewsletterJob = Struct.new(:text, :emails) do
   def perform
@@ -256,7 +258,25 @@ NewsletterJob = Struct.new(:text, :emails) do
   end
 end
 ```
+
+To set a per-job max run time that overrides the Delayed::Worker.max_run_time you can define a max_run_time method on the job
+
+NOTE: this can ONLY be used to set a max_run_time that is lower than Delayed::Worker.max_run_time. Otherwise the lock on the job would expire and another worker would start the working on the in progress job.
+
+```ruby
+NewsletterJob = Struct.new(:text, :emails) do
+  def perform
+    emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
+  end
+
+  def max_run_time
+    120 # seconds
+  end
+end
+```
+
 To set a default queue name for a custom job that overrides Delayed::Worker.default_queue_name, you can define a queue_name method on the job
+
 ```ruby
 NewsletterJob = Struct.new(:text, :emails) do
   def perform
