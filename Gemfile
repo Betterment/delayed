@@ -11,6 +11,10 @@ platforms :jruby do
   gem 'activerecord-jdbcsqlite3-adapter'
 end
 
+platforms :rbx do
+  gem 'psych'
+end
+
 group :test do
   if ENV['RAILS_VERSION'] == 'edge'
     gem 'activerecord', :github => 'rails/rails'
