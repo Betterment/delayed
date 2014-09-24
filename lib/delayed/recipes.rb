@@ -38,7 +38,7 @@ Capistrano::Configuration.instance.load do
 
     desc 'Stop the delayed_job process'
     task :stop, :roles => lambda { roles } do
-      run "cd #{current_path};#{rails_env} #{delayed_job_command} stop"
+      run "cd #{current_path};#{rails_env} #{delayed_job_command} stop #{args}"
     end
 
     desc 'Start the delayed_job process'
