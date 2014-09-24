@@ -1,3 +1,12 @@
+4.0.4 - 2014-09-24
+==================
+* Fix using options passed into delayed_job command
+* Add the ability to set a default queue for a custom job
+* Add the ability to override the max_run_time on a custom job. MUST be lower than worker setting
+* Psych YAML overrides are now exclusively used only when loading a job payload
+* SLEEP_DELAY and READ_AHEAD can be set for the rake task
+* Some updates for Rails 4.2 support
+
 4.0.3 - 2014-09-04
 ==================
 * Added --pools option to delayed_job command
