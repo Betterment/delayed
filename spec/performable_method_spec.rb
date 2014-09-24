@@ -37,6 +37,16 @@ describe Delayed::PerformableMethod do
     expect { Delayed::PerformableMethod.new(clazz.new, :private_method, []) }.not_to raise_error
   end
 
+  describe 'display_name' do
+    it 'returns class_name#method_name for instance methods' do
+      expect(Delayed::PerformableMethod.new('foo', :count, ['o']).display_name).to eq('String#count')
+    end
+
+    it 'returns class_name.method_name for class methods' do
+      expect(Delayed::PerformableMethod.new(Class, :inspect, []).display_name).to eq('Class.inspect')
+    end
+  end
+
   describe 'hooks' do
     %w[before after success].each do |hook|
       it "delegates #{hook} hook to object" do
