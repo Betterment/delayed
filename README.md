@@ -252,10 +252,22 @@ NewsletterJob = Struct.new(:text, :emails) do
   end
 
   def max_attempts
-    return 3
+    3
   end
 end
-````
+```
+To set a default queue name for a custom job that overrides Delayed::Worker.default_queue_name, you can define a queue_name method on the job
+```ruby
+NewsletterJob = Struct.new(:text, :emails) do
+  def perform
+    emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
+  end
+
+  def queue_name
+    'newsletter_queue'
+  end
+end
+```
 
 
 Hooks

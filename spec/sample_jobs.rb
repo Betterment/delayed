@@ -12,6 +12,12 @@ class SimpleJob
   end
 end
 
+class NamedQueueJob < SimpleJob
+  def queue_name
+    'job_tracking'
+  end
+end
+
 class ErrorJob
   cattr_accessor :runs
   @runs = 0

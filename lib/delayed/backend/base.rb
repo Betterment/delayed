@@ -7,13 +7,17 @@ module Delayed
 
       module ClassMethods
         # Add a job to the queue
-        def enqueue(*args)
-          options = {
-            :priority => Delayed::Worker.default_priority,
-            :queue => Delayed::Worker.default_queue_name
-          }.merge!(args.extract_options!)
-
+        def enqueue(*args) # rubocop:disable CyclomaticComplexity
+          options = args.extract_options!
           options[:payload_object] ||= args.shift
+          options[:priority]       ||= Delayed::Worker.default_priority
+
+          if options[:queue].nil?
+            if options[:payload_object].respond_to?(:queue_name)
+              options[:queue] = options[:payload_object].queue_name
+            end
+            options[:queue] ||= Delayed::Worker.default_queue_name
+          end
 
           if args.size > 0
             warn '[DEPRECATION] Passing multiple arguments to `#enqueue` is deprecated. Pass a hash with :priority and :run_at.'
