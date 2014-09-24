@@ -189,6 +189,14 @@ shared_examples_for 'a delayed_job backend' do
       expect(YAML).to receive(:load_dj).and_raise(ArgumentError)
       expect { job.payload_object }.to raise_error(Delayed::DeserializationError)
     end
+
+    it 'raises a DeserializationError when the YAML.load raises syntax error' do
+      # only test with Psych since the other YAML parsers don't raise a SyntaxError
+      if YAML.parser.class.name !~ /syck|yecht/i
+        job = described_class.new :handler => 'message: "no ending quote'
+        expect { job.payload_object }.to raise_error(Delayed::DeserializationError)
+      end
+    end
   end
 
   describe 'reserve' do

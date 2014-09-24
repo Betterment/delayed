@@ -83,7 +83,7 @@ module Delayed
 
       def payload_object
         @payload_object ||= YAML.load_dj(handler)
-      rescue TypeError, LoadError, NameError, ArgumentError => e
+      rescue TypeError, LoadError, NameError, ArgumentError, SyntaxError, Psych::SyntaxError => e
         raise DeserializationError, "Job failed to load: #{e.message}. Handler: #{handler.inspect}"
       end
 
