@@ -19,7 +19,8 @@ module Delayed
 
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
                    :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
-                   :read_ahead, :plugins, :destroy_failed_jobs, :exit_on_complete
+                   :read_ahead, :plugins, :destroy_failed_jobs, :exit_on_complete,
+                   :default_log_level
 
     # Named queue into which jobs are enqueued by default
     cattr_accessor :default_queue_name
@@ -30,13 +31,14 @@ module Delayed
     attr_accessor :name_prefix
 
     def self.reset
-      self.sleep_delay      = DEFAULT_SLEEP_DELAY
-      self.max_attempts     = DEFAULT_MAX_ATTEMPTS
-      self.max_run_time     = DEFAULT_MAX_RUN_TIME
-      self.default_priority = DEFAULT_DEFAULT_PRIORITY
-      self.delay_jobs       = DEFAULT_DELAY_JOBS
-      self.queues           = DEFAULT_QUEUES
-      self.read_ahead       = DEFAULT_READ_AHEAD
+      self.default_log_level = DEFAULT_LOG_LEVEL
+      self.sleep_delay       = DEFAULT_SLEEP_DELAY
+      self.max_attempts      = DEFAULT_MAX_ATTEMPTS
+      self.max_run_time      = DEFAULT_MAX_RUN_TIME
+      self.default_priority  = DEFAULT_DEFAULT_PRIORITY
+      self.delay_jobs        = DEFAULT_DELAY_JOBS
+      self.queues            = DEFAULT_QUEUES
+      self.read_ahead        = DEFAULT_READ_AHEAD
     end
 
     reset
@@ -240,12 +242,12 @@ module Delayed
       end
     end
 
-    def job_say(job, text, level = DEFAULT_LOG_LEVEL)
+    def job_say(job, text, level = default_log_level)
       text = "Job #{job.name} (id=#{job.id}) #{text}"
       say text, level
     end
 
-    def say(text, level = DEFAULT_LOG_LEVEL)
+    def say(text, level = default_log_level)
       text = "[Worker(#{name})] #{text}"
       puts text unless @quiet
       return unless logger
