@@ -8,7 +8,7 @@ module Delayed
         ActionMailer::Base.extend(Delayed::DelayMail)
       end
 
-      Delayed::Worker.logger = if defined?(Rails)
+      Delayed::Worker.logger ||= if defined?(Rails)
         Rails.logger
       elsif defined?(RAILS_DEFAULT_LOGGER)
         RAILS_DEFAULT_LOGGER
