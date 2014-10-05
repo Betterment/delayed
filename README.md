@@ -345,7 +345,7 @@ create_table :delayed_jobs, :force => true do |table|
 end
 ```
 
-On failure, the job is scheduled again in 5 seconds + N ** 4, where N is the number of retries.
+On error, the job is scheduled again in 5 seconds + N ** 4, where N is the number of retries.
 
 The default `Worker.max_attempts` is 25. After this, the job either deleted (default), or left in the database with "failed_at" set.
 With the default of 25 attempts, the last retry will be 20 days later, with the last interval being almost 100 hours.
