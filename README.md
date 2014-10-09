@@ -289,7 +289,7 @@ NewsletterJob = Struct.new(:text, :emails) do
 end
 ```
 
-On error, the job is scheduled again in 5 seconds + N ** 4, where N is the number of retries. This behavior can be overridden when you define `reschedule_at` method.
+On error, the job is scheduled again in 5 seconds + N ** 4, where N is the number of attempts. You can define your own `reschedule_at` method to override this default behavior.
 
 ```ruby
 NewsletterJob = Struct.new(:text, :emails) do
@@ -358,7 +358,7 @@ create_table :delayed_jobs, :force => true do |table|
 end
 ```
 
-On error, unless `reschedule_at` is defined, the job is scheduled again in 5 seconds + N ** 4, where N is the number of retries.
+On error, the job is scheduled again in 5 seconds + N ** 4, where N is the number of attempts or using the job's defined `reschedule_at` method.
 
 The default `Worker.max_attempts` is 25. After this, the job either deleted (default), or left in the database with "failed_at" set.
 With the default of 25 attempts, the last retry will be 20 days later, with the last interval being almost 100 hours.
