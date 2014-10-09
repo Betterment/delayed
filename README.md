@@ -58,6 +58,11 @@ running the following command:
     rails generate delayed_job:active_record
     rake db:migrate
 
+Development
+===========
+In development mode, if you are using Rails 3.1+, your application code will automatically reload every 100 jobs or when the queue finishes.
+You no longer need to restart Delayed Job every time you update your code in development.
+
 Rails 4
 =======
 If you are using the protected_attributes gem, it must appear before delayed_job in your gemfile.
