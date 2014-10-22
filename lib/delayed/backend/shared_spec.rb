@@ -500,6 +500,7 @@ shared_examples_for 'a delayed_job backend' do
         Delayed::Worker.max_run_time = 1.second
         job = Delayed::Job.create :payload_object => LongRunningJob.new
         worker.run(job)
+        expect(job.error).to_not be_nil
         expect(job.reload.last_error).to match(/expired/)
         expect(job.reload.last_error).to match(/Delayed::Worker\.max_run_time is only 1 second/)
         expect(job.attempts).to eq(1)
@@ -535,6 +536,7 @@ shared_examples_for 'a delayed_job backend' do
         Delayed::Worker.max_attempts = 1
         worker.run(@job)
         @job.reload
+        expect(@job.error).to_not be_nil
         expect(@job.last_error).to match(/did not work/)
         expect(@job.attempts).to eq(1)
         expect(@job).to be_failed
@@ -543,6 +545,7 @@ shared_examples_for 'a delayed_job backend' do
       it 're-schedules jobs after failing' do
         worker.work_off
         @job.reload
+        expect(@job.error).to_not be_nil
         expect(@job.last_error).to match(/did not work/)
         expect(@job.last_error).to match(/sample_jobs.rb:\d+:in `perform'/)
         expect(@job.attempts).to eq(1)
