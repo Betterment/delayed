@@ -150,7 +150,7 @@ class << self
   def my_class_method
     # some code
   end
-  handle_asynchronously
+  handle_asynchronously :my_class_method
 end
 ```
 
