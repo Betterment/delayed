@@ -138,6 +138,22 @@ class LongTasks
 end
 ```
 
+What if you want to apply `handle_asynchronously` to a class method?  That's no problem, just use Ruby's syntax to create a singleton class method, so if you had this:
+```ruby
+def self.my_class_method
+  # some code
+end
+```
+you can instruct Delayed Job to run it in the background like this:
+```ruby
+class << self
+  def my_class_method
+    # some code
+  end
+  handle_asynchronously :my_class_method
+end
+```
+
 If you ever want to call a `handle_asynchronously`'d method without Delayed Job, for instance while debugging something at the console, just add `_without_delay` to the method name. For instance, if your original method was `foo`, then call `foo_without_delay`.
 
 Rails 3 Mailers
