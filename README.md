@@ -138,19 +138,15 @@ class LongTasks
 end
 ```
 
-What if you want to apply `handle_asynchronously` to a class method?  That's no problem, just use Ruby's syntax to create a singleton class method, so if you had this:
+To use `handle_asynchronously` on a class method, you must do so within a `class << self` block.
 ```ruby
-def self.my_class_method
-  # some code
-end
-```
-you can instruct Delayed Job to run it in the background like this:
-```ruby
-class << self
-  def my_class_method
-    # some code
+class MyClass
+  class << self
+    def slow_method
+      # some code
+    end
+    handle_asynchronously :slow_method
   end
-  handle_asynchronously :my_class_method
 end
 ```
 
