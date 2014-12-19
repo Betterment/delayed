@@ -124,10 +124,12 @@ class LongTasks
     2.hours.from_now
   end
 
-  def call_a_class_method
-    # Some other code
+  class << self
+    def call_a_class_method
+      # Some other code
+    end
+    handle_asynchronously :call_a_class_method, :run_at => Proc.new { when_to_run }
   end
-  handle_asynchronously :call_a_class_method, :run_at => Proc.new { when_to_run }
 
   attr_reader :how_important
 
@@ -135,18 +137,6 @@ class LongTasks
     # Some other code
   end
   handle_asynchronously :call_an_instance_method, :priority => Proc.new {|i| i.how_important }
-end
-```
-
-To use `handle_asynchronously` on a class method, you must do so within a `class << self` block.
-```ruby
-class MyClass
-  class << self
-    def slow_method
-      # some code
-    end
-    handle_asynchronously :slow_method
-  end
 end
 ```
 
