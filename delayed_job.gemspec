@@ -10,5 +10,5 @@ Gem::Specification.new do |spec|
   spec.name           = 'delayed_job'
   spec.require_paths  = ['lib']
   spec.summary        = 'Database-backed asynchronous priority queue system -- Extracted from Shopify'
-  spec.version        = '4.0.4'
+  spec.version        = '4.0.5'
 end
