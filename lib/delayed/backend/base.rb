@@ -32,7 +32,7 @@ module Delayed
           new(options).tap do |job|
             Delayed::Worker.lifecycle.run_callbacks(:enqueue, job) do
               job.hook(:enqueue)
-              Delayed::Worker.delay_jobs ? job.save : job.invoke_job
+              job.should_really_delay? ? job.save : job.invoke_job
             end
           end
         end
@@ -60,6 +60,14 @@ module Delayed
         def work_off(num = 100)
           warn '[DEPRECATION] `Delayed::Job.work_off` is deprecated. Use `Delayed::Worker.new.work_off instead.'
           Delayed::Worker.new.work_off(num)
+        end
+      end
+
+      def should_really_delay?
+        if Delayed::Worker.delay_jobs.is_a?(Proc)
+          Delayed::Worker.delay_jobs.call(self)
+        else
+          Delayed::Worker.delay_jobs
         end
       end
 
