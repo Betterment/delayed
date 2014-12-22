@@ -1,3 +1,7 @@
+4.0.6 - 2014-12-22
+==================
+* Revert removing test files from the gem
+
 4.0.5 - 2014-12-22
 ==================
 * Support for Rails 4.2
