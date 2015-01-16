@@ -58,6 +58,14 @@ running the following command:
     rails generate delayed_job:active_record
     rake db:migrate
 
+In Rails 4.2 set the queue_adapter in config/application.rb
+
+```ruby
+config.active_job.queue_adapter = :delayed_job
+```
+
+See the [rails guide](http://guides.rubyonrails.org/active_job_basics.html#setting-the-backend) for more details.
+
 Development
 ===========
 In development mode, if you are using Rails 3.1+, your application code will automatically reload every 100 jobs or when the queue finishes.
