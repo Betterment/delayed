@@ -16,6 +16,7 @@ module Delayed
     DEFAULT_DELAY_JOBS       = true
     DEFAULT_QUEUES           = []
     DEFAULT_READ_AHEAD       = 5
+    DEFAULT_DESTROY_FAILED_JOBS = true
 
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
                    :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
@@ -39,16 +40,13 @@ module Delayed
       self.delay_jobs        = DEFAULT_DELAY_JOBS
       self.queues            = DEFAULT_QUEUES
       self.read_ahead        = DEFAULT_READ_AHEAD
+      self.destroy_failed_jobs = DEFAULT_DESTROY_FAILED_JOBS
     end
 
     reset
 
     # Add or remove plugins in this list before the worker is instantiated
     self.plugins = [Delayed::Plugins::ClearLocks]
-
-    # By default failed jobs are destroyed after too many attempts. If you want to keep them around
-    # (perhaps to inspect the reason for the failure), set this to false.
-    self.destroy_failed_jobs = true
 
     # By default, Signals INT and TERM set @exit, and the worker exits upon completion of the current job.
     # If you would prefer to raise a SignalException and exit immediately you can use this.
@@ -236,7 +234,7 @@ module Delayed
           say "Error when running failure callback: #{error}", 'error'
           say error.backtrace.join("\n"), 'error'
         ensure
-          self.class.destroy_failed_jobs ? job.destroy : job.fail!
+          destroy_failed_jobs(job) ? job.destroy : job.fail!
         end
       end
     end
@@ -263,6 +261,10 @@ module Delayed
 
     def max_run_time(job)
       job.max_run_time || self.class.max_run_time
+    end
+
+    def destroy_failed_jobs(job)
+      job.destroy_failed_jobs.nil? ? self.class.destroy_failed_jobs : job.destroy_failed_jobs
     end
 
   protected

@@ -139,6 +139,10 @@ module Delayed
         end
       end
 
+      def destroy_failed_jobs
+        payload_object.destroy_failed_jobs if payload_object.respond_to?(:destroy_failed_jobs)
+      end
+
       def fail!
         update_attributes(:failed_at => self.class.db_time_now)
       end
