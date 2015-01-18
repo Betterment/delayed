@@ -677,7 +677,7 @@ shared_examples_for 'a delayed_job backend' do
 
         it_behaves_like 'any failure more than Worker.max_attempts times'
 
-        context "and destroy failed jobs is false" do
+        context 'and destroy failed jobs is false' do
           it 'is failed if it failed more than Worker.max_attempts times' do
             expect(@job.reload).not_to be_failed
             Delayed::Worker.max_attempts.times { worker.reschedule(@job) }
@@ -690,7 +690,7 @@ shared_examples_for 'a delayed_job backend' do
           end
         end
 
-        context "and destroy failed jobs for job is false" do
+        context 'and destroy failed jobs for job is false' do
           before do
             Delayed::Worker.destroy_failed_jobs = true
           end
