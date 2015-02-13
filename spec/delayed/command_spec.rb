@@ -2,9 +2,8 @@ require 'helper'
 require 'delayed/command'
 
 describe Delayed::Command do
-
   let(:options) { [] }
-  let(:logger) { double("Logger")}
+  let(:logger) { double('Logger') }
 
   subject { Delayed::Command.new options }
 
@@ -16,117 +15,113 @@ describe Delayed::Command do
     Delayed::Worker.logger = nil
   end
 
-  shared_examples_for "uses --log-dir option" do
-    context "when --log-dir is specified" do
+  shared_examples_for 'uses --log-dir option' do
+    context 'when --log-dir is specified' do
+      let(:options) { ['--log-dir=/custom/log/dir'] }
 
-      let(:options) { ["--log-dir=/custom/log/dir"] }
-
-      it "creates the delayed_job.log in the specified directory" do
-        expect(Logger).to receive(:new).with("/custom/log/dir/delayed_job.log")
+      it 'creates the delayed_job.log in the specified directory' do
+        expect(Logger).to receive(:new).with('/custom/log/dir/delayed_job.log')
         subject.run
       end
-
     end
   end
 
-  describe "run" do
-
-    it "sets the Delayed::Worker logger" do
+  describe 'run' do
+    it 'sets the Delayed::Worker logger' do
       subject.run
       expect(Delayed::Worker.logger).to be logger
     end
 
-    context "when Rails root is defined" do
+    context 'when Rails root is defined' do
       let(:rails_root) { Pathname.new '/rails/root' }
-      let(:rails) { double("Rails", root: rails_root)}
+      let(:rails) { double('Rails', :root => rails_root) }
 
       before do
-        stub_const("Rails", rails)
+        stub_const('Rails', rails)
       end
 
-      it "runs the Delayed::Worker process in Rails.root" do
+      it 'runs the Delayed::Worker process in Rails.root' do
         expect(Dir).to receive(:chdir).with(rails_root)
         subject.run
       end
 
-      context "when --log-dir is not specified" do
-        it "creates the delayed_job.log in Rails.root/log" do
-          expect(Logger).to receive(:new).with("/rails/root/log/delayed_job.log")
+      context 'when --log-dir is not specified' do
+        it 'creates the delayed_job.log in Rails.root/log' do
+          expect(Logger).to receive(:new).with('/rails/root/log/delayed_job.log')
           subject.run
         end
       end
 
-      include_examples "uses --log-dir option"
+      include_examples 'uses --log-dir option'
     end
 
-    context "when Rails root is not defined" do
-      let(:rails_without_root) { double("Rails")}
+    context 'when Rails root is not defined' do
+      let(:rails_without_root) { double('Rails') }
 
       before do
-        stub_const("Rails", rails_without_root)
+        stub_const('Rails', rails_without_root)
       end
 
-      it "runs the Delayed::Worker process in $PWD" do
+      it 'runs the Delayed::Worker process in $PWD' do
         expect(Dir).to receive(:chdir).with(Delayed::Command::DIR_PWD)
         subject.run
       end
 
-      it "sets the Delayed::Worker logger" do
+      it 'sets the Delayed::Worker logger' do
         subject.run
         expect(Delayed::Worker.logger).to be logger
       end
 
-      context "when --log-dir is not specified" do
-        it "creates the delayed_job.log in $PWD/log" do
+      context 'when --log-dir is not specified' do
+        it 'creates the delayed_job.log in $PWD/log' do
           expect(Logger).to receive(:new).with("#{Delayed::Command::DIR_PWD}/log/delayed_job.log")
           subject.run
         end
       end
 
-      include_examples "uses --log-dir option"
+      include_examples 'uses --log-dir option'
     end
 
-    context "when an error is raised" do
-
+    context 'when an error is raised' do
       let(:test_error) { Class.new(StandardError) }
 
       before do
-        allow(Delayed::Worker).to receive(:new).and_raise(test_error.new("An error"))
+        allow(Delayed::Worker).to receive(:new).and_raise(test_error.new('An error'))
         allow(subject).to receive(:exit_with_error_status)
         allow(STDERR).to receive(:puts)
       end
 
-      it "prints the error message to STDERR" do
-        expect(STDERR).to receive(:puts).with("An error")
+      it 'prints the error message to STDERR' do
+        expect(STDERR).to receive(:puts).with('An error')
         subject.run
       end
 
-      it "exits with an error status" do
+      it 'exits with an error status' do
         expect(subject).to receive(:exit_with_error_status)
         subject.run
       end
 
-      context "when Rails logger is not defined" do
-        let(:rails) { double("Rails") }
+      context 'when Rails logger is not defined' do
+        let(:rails) { double('Rails') }
 
         before do
-          stub_const("Rails", rails)
+          stub_const('Rails', rails)
         end
 
-        it "does not attempt to use the Rails logger" do
+        it 'does not attempt to use the Rails logger' do
           subject.run
         end
       end
 
-      context "when Rails logger is defined" do
+      context 'when Rails logger is defined' do
         let(:rails_logger) { double('Rails logger') }
-        let(:rails) { double("Rails", logger: rails_logger) }
+        let(:rails) { double('Rails', :logger => rails_logger) }
 
         before do
-          stub_const("Rails", rails)
+          stub_const('Rails', rails)
         end
 
-        it "logs the error to the Rails logger" do
+        it 'logs the error to the Rails logger' do
           expect(rails_logger).to receive(:fatal).with(test_error)
           subject.run
         end
@@ -187,4 +182,3 @@ describe Delayed::Command do
     end
   end
 end
-

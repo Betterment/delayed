@@ -136,7 +136,7 @@ module Delayed
       exit_with_error_status
     end
 
-    private
+  private
 
     def parse_worker_pool(pool)
       @worker_pools ||= []
