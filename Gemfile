@@ -11,18 +11,23 @@ platforms :jruby do
   gem 'activerecord-jdbcsqlite3-adapter'
 end
 
-group :test do
-  gem 'activerecord', (ENV['RAILS_VERSION'] || ['>= 3.0', '< 4.1'])
-  gem 'actionmailer', (ENV['RAILS_VERSION'] || ['>= 3.0', '< 4.1'])
-  gem 'coveralls', :require => false
-  gem 'rspec', '>= 2.14'
-  gem 'simplecov', :require => false
+platforms :rbx do
+  gem 'psych'
 end
 
-platforms :rbx do
-  gem 'json'
-  gem 'rubinius-coverage'
-  gem 'rubysl'
+group :test do
+  if ENV['RAILS_VERSION'] == 'edge'
+    gem 'activerecord', :github => 'rails/rails'
+    gem 'actionmailer', :github => 'rails/rails'
+  else
+    gem 'activerecord', (ENV['RAILS_VERSION'] || ['>= 3.0', '< 5.0'])
+    gem 'actionmailer', (ENV['RAILS_VERSION'] || ['>= 3.0', '< 5.0'])
+  end
+
+  gem 'coveralls', :require => false
+  gem 'rspec', '>= 3'
+  gem 'rubocop', '>= 0.25'
+  gem 'simplecov', '>= 0.9'
 end
 
 gemspec

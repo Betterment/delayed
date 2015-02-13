@@ -1,17 +1,17 @@
 namespace :jobs do
-  desc "Clear the delayed_job queue."
+  desc 'Clear the delayed_job queue.'
   task :clear => :environment do
     Delayed::Job.delete_all
   end
 
-  desc "Start a delayed_job worker."
+  desc 'Start a delayed_job worker.'
   task :work => :environment_options do
     Delayed::Worker.new(@worker_options).start
   end
 
-  desc "Start a delayed_job worker and exit when all available jobs are complete."
+  desc 'Start a delayed_job worker and exit when all available jobs are complete.'
   task :workoff => :environment_options do
-    Delayed::Worker.new(@worker_options.merge({:exit_on_complete => true})).start
+    Delayed::Worker.new(@worker_options.merge(:exit_on_complete => true)).start
   end
 
   task :environment_options => :environment do
@@ -21,6 +21,9 @@ namespace :jobs do
       :queues => (ENV['QUEUES'] || ENV['QUEUE'] || '').split(','),
       :quiet => false
     }
+
+    @worker_options[:sleep_delay] = ENV['SLEEP_DELAY'].to_i if ENV['SLEEP_DELAY']
+    @worker_options[:read_ahead] = ENV['READ_AHEAD'].to_i if ENV['READ_AHEAD']
   end
 
   desc "Exit with error status if any jobs older than max_age seconds haven't been attempted yet."
@@ -30,9 +33,7 @@ namespace :jobs do
     unprocessed_jobs = Delayed::Job.where('attempts = 0 AND created_at < ?', Time.now - args[:max_age].to_i).count
 
     if unprocessed_jobs > 0
-      fail "#{unprocessed_jobs} jobs older than #{args[:max_age]} seconds have not been processed yet"
+      raise "#{unprocessed_jobs} jobs older than #{args[:max_age]} seconds have not been processed yet"
     end
-
   end
-
 end
