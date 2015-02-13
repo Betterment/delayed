@@ -120,15 +120,6 @@ module Delayed
       end
     end
 
-
-    def root
-      @root ||= rails_defined? ? ::Rails.root : DIR_PWD
-    end
-
-    def rails_defined?
-      defined?(::Rails)
-    end
-
     def run(worker_name = nil, options = {})
       Dir.chdir(root)
 
@@ -141,11 +132,11 @@ module Delayed
     rescue => e
       STDERR.puts e.message
       STDERR.puts e.backtrace
-      ::Rails.logger.fatal(e) if rails_defined?
-      exit 1
+      ::Rails.logger.fatal(e) if rails_logger_defined?
+      exit_with_error_status
     end
 
-  private
+    private
 
     def parse_worker_pool(pool)
       @worker_pools ||= []
@@ -158,6 +149,22 @@ module Delayed
       end
       worker_count = (worker_count || 1).to_i rescue 1
       @worker_pools << [queues, worker_count]
+    end
+
+    def root
+      @root ||= rails_root_defined? ? ::Rails.root : DIR_PWD
+    end
+
+    def rails_root_defined?
+      defined?(::Rails.root)
+    end
+
+    def rails_logger_defined?
+      defined?(::Rails.logger)
+    end
+
+    def exit_with_error_status
+      exit 1
     end
   end
 end
