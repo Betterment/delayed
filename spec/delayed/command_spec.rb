@@ -12,7 +12,8 @@ describe Delayed::Command do
     allow(Dir).to receive(:chdir)
     allow(Logger).to receive(:new).and_return(logger)
     allow_any_instance_of(Delayed::Worker).to receive(:start)
-    Delayed::Worker.logger = nil
+    allow(Delayed::Worker).to receive(:logger=)
+    allow(Delayed::Worker).to receive(:logger).and_return(nil, logger)
   end
 
   shared_examples_for 'uses --log-dir option' do
@@ -28,8 +29,8 @@ describe Delayed::Command do
 
   describe 'run' do
     it 'sets the Delayed::Worker logger' do
+      expect(Delayed::Worker).to receive(:logger=).with(logger)
       subject.run
-      expect(Delayed::Worker.logger).to be logger
     end
 
     context 'when Rails root is defined' do
@@ -65,11 +66,6 @@ describe Delayed::Command do
       it 'runs the Delayed::Worker process in $PWD' do
         expect(Dir).to receive(:chdir).with(Delayed::Command::DIR_PWD)
         subject.run
-      end
-
-      it 'sets the Delayed::Worker logger' do
-        subject.run
-        expect(Delayed::Worker.logger).to be logger
       end
 
       context 'when --log-dir is not specified' do
