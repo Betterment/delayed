@@ -41,6 +41,7 @@ module Delayed
       self.queues            = DEFAULT_QUEUES
       self.read_ahead        = DEFAULT_READ_AHEAD
       self.destroy_failed_jobs = DEFAULT_DESTROY_FAILED_JOBS
+      @lifecycle             = nil
     end
 
     reset
@@ -95,7 +96,15 @@ module Delayed
     end
 
     def self.lifecycle
-      @lifecycle ||= Delayed::Lifecycle.new
+      # In case a worker has not been set up, job enqueueing needs a lifecycle.
+      setup_lifecycle unless @lifecycle
+
+      @lifecycle
+    end
+
+    def self.setup_lifecycle
+      @lifecycle = Delayed::Lifecycle.new
+      plugins.each { |klass| klass.new }
     end
 
     def self.reload_app?
@@ -110,7 +119,9 @@ module Delayed
         self.class.send("#{option}=", options[option]) if options.key?(option)
       end
 
-      plugins.each { |klass| klass.new }
+      # Reset lifecycle on the offhand chance that something lazily
+      # triggered its creation before all plugins had been registered.
+      self.class.setup_lifecycle
     end
 
     # Every worker has a unique name which by default is the pid of the process. There are some
