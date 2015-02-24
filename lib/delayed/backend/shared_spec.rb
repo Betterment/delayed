@@ -460,17 +460,17 @@ shared_examples_for 'a delayed_job backend' do
     end
 
     it 'results in the default destroy failed jobs setting when not defined' do
-      expect(worker.destroy_failed_jobs(@job)).to eq(Delayed::Worker::DEFAULT_DESTROY_FAILED_JOBS)
+      expect(worker.destroy_failed_jobs(@job)).to be true
     end
 
     it 'uses the destroy failed jobs value on the payload when defined' do
       expect(@job.payload_object).to receive(:destroy_failed_jobs).and_return(true)
-      expect(@job.destroy_failed_jobs).to be_truthy
+      expect(@job.destroy_failed_jobs).to be true
     end
 
     it 'results in an overridden destroy failed jobs value when defined' do
       expect(@job.payload_object).to receive(:destroy_failed_jobs).and_return(true).twice
-      expect(worker.destroy_failed_jobs(@job)).to be_truthy
+      expect(worker.destroy_failed_jobs(@job)).to be true
     end
   end
 
