@@ -294,7 +294,7 @@ NewsletterJob = Struct.new(:text, :emails) do
 end
 ```
 
-To set a per-job default for destorying failed jobs that overrides the Delayed::Worker.destroy_failed_jobs you can define a destroy_failed_jobs method on the job
+To set a per-job default for destroying failed jobs that overrides the Delayed::Worker.destroy_failed_jobs you can define a destroy_failed_jobs method on the job
 
 ```ruby
 NewsletterJob = Struct.new(:text, :emails) do
