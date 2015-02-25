@@ -139,8 +139,8 @@ module Delayed
         end
       end
 
-      def destroy_failed_jobs
-        payload_object.destroy_failed_jobs if payload_object.respond_to?(:destroy_failed_jobs)
+      def destroy_failed_jobs?
+        payload_object.respond_to?(:destroy_failed_jobs?) ? payload_object.destroy_failed_jobs? : Delayed::Worker.destroy_failed_jobs
       end
 
       def fail!

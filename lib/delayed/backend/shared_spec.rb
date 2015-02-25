@@ -456,21 +456,12 @@ shared_examples_for 'a delayed_job backend' do
     end
 
     it 'is not defined' do
-      expect(@job.destroy_failed_jobs).to be_nil
-    end
-
-    it 'results in the default destroy failed jobs setting when not defined' do
-      expect(worker.destroy_failed_jobs(@job)).to be true
+      expect(@job.destroy_failed_jobs?).to be true
     end
 
     it 'uses the destroy failed jobs value on the payload when defined' do
-      expect(@job.payload_object).to receive(:destroy_failed_jobs).and_return(true)
-      expect(@job.destroy_failed_jobs).to be true
-    end
-
-    it 'results in an overridden destroy failed jobs value when defined' do
-      expect(@job.payload_object).to receive(:destroy_failed_jobs).and_return(true).twice
-      expect(worker.destroy_failed_jobs(@job)).to be true
+      expect(@job.payload_object).to receive(:destroy_failed_jobs?).and_return(false)
+      expect(@job.destroy_failed_jobs?).to be false
     end
   end
 
@@ -537,7 +528,7 @@ shared_examples_for 'a delayed_job backend' do
         it 'marks the job as failed' do
           Delayed::Worker.destroy_failed_jobs = false
           job = described_class.create! :handler => '--- !ruby/object:JobThatDoesNotExist {}'
-          expect(job).to receive(:destroy_failed_jobs).and_return(false).twice
+          expect(job).to receive(:destroy_failed_jobs?).and_return(false)
           worker.work_off
           job.reload
           expect(job).to be_failed
@@ -655,7 +646,7 @@ shared_examples_for 'a delayed_job backend' do
 
         it 'is destroyed if the job has destroy failed jobs set' do
           Delayed::Worker.destroy_failed_jobs = false
-          expect(@job).to receive(:destroy_failed_jobs).and_return(true).twice
+          expect(@job).to receive(:destroy_failed_jobs?).and_return(true)
           expect(@job).to receive(:destroy)
           Delayed::Worker.max_attempts.times { worker.reschedule(@job) }
         end
@@ -696,7 +687,7 @@ shared_examples_for 'a delayed_job backend' do
           end
 
           it 'is failed if it failed more than Worker.max_attempts times' do
-            expect(@job).to receive(:destroy_failed_jobs).and_return(false).twice
+            expect(@job).to receive(:destroy_failed_jobs?).and_return(false)
             expect(@job.reload).not_to be_failed
             Delayed::Worker.max_attempts.times { worker.reschedule(@job) }
             expect(@job.reload).to be_failed
