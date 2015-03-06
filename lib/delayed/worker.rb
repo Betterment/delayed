@@ -247,7 +247,7 @@ module Delayed
           say "Error when running failure callback: #{error}", 'error'
           say error.backtrace.join("\n"), 'error'
         ensure
-          self.class.destroy_failed_jobs ? job.destroy : job.fail!
+          job.destroy_failed_jobs? ? job.destroy : job.fail!
         end
       end
     end

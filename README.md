@@ -294,6 +294,20 @@ NewsletterJob = Struct.new(:text, :emails) do
 end
 ```
 
+To set a per-job default for destroying failed jobs that overrides the Delayed::Worker.destroy_failed_jobs you can define a destroy_failed_jobs? method on the job
+
+```ruby
+NewsletterJob = Struct.new(:text, :emails) do
+  def perform
+    emails.each { |e| NewsletterMailer.deliver_text_to_email(text, e) }
+  end
+
+  def destroy_failed_jobs?
+    false
+  end
+end
+```
+
 To set a default queue name for a custom job that overrides Delayed::Worker.default_queue_name, you can define a queue_name method on the job
 
 ```ruby
