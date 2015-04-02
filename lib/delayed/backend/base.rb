@@ -32,7 +32,7 @@ module Delayed
           new(options).tap do |job|
             Delayed::Worker.lifecycle.run_callbacks(:enqueue, job) do
               job.hook(:enqueue)
-              Delayed::Worker.delay_jobs ? job.save : job.invoke_job
+              job.should_really_delay? ? job.save : job.invoke_job
             end
           end
         end
@@ -67,6 +67,14 @@ module Delayed
       def error=(error)
         @error = error
         self.last_error = "#{error.message}\n#{error.backtrace.join("\n")}" if self.respond_to?(:last_error=)
+      end
+
+      def should_really_delay?
+        if Delayed::Worker.delay_jobs.is_a?(Proc)
+          Delayed::Worker.delay_jobs.call(self)
+        else
+          Delayed::Worker.delay_jobs
+        end
       end
 
       def failed?
