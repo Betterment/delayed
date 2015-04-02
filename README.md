@@ -75,9 +75,13 @@ config.active_job.queue_adapter = :delayed_job
 
 See the [rails guide](http://guides.rubyonrails.org/active_job_basics.html#setting-the-backend) for more details.
 
-Rails 4
-=======
-If you are using the protected_attributes gem, it must appear before delayed_job in your gemfile.
+Rails 4.x
+=========
+If you are using the protected_attributes gem, it must appear before delayed_job in your gemfile. If your jobs are failing with:
+
+     ActiveRecord::StatementInvalid: PG::NotNullViolation: ERROR:  null value in column "handler" violates not-null constraint
+
+then this is the fix you're looking for.
 
 Upgrading from 2.x to 3.0.0 on Active Record
 ============================================
