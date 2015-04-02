@@ -63,7 +63,7 @@ module Delayed
         end
       end
 
-      attr_accessor :error
+      attr_reader :error
       def error=(error)
         @error = error
         self.last_error = "#{error.message}\n#{error.backtrace.join("\n")}" if self.respond_to?(:last_error=)
