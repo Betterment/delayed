@@ -228,7 +228,7 @@ module Delayed
     rescue DeserializationError => error
       job.error = error
       failed(job)
-    rescue Exception => error
+    rescue Exception => error # rubocop:disable RescueException
       self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, error) }
       return false  # work failed
     end
