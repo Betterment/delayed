@@ -1,3 +1,8 @@
+**If you're viewing this at https://github.com/collectiveidea/delayed_job,
+you're reading the documentation for the master branch.
+[View documentation for the latest release
+(4.0.6).](https://github.com/collectiveidea/delayed_job/tree/v4.0.6)**
+
 Delayed::Job
 ============
 [![Gem Version](https://badge.fury.io/rb/delayed_job.png)][gem]
