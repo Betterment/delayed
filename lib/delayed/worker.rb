@@ -106,7 +106,7 @@ module Delayed
 
     def self.setup_lifecycle
       @lifecycle = Delayed::Lifecycle.new
-      plugins.each { |klass| klass.new }
+      plugins.each(&:new)
     end
 
     def self.reload_app?
@@ -151,13 +151,13 @@ module Delayed
       trap('TERM') do
         Thread.new { say 'Exiting...' }
         stop
-        raise SignalException, 'TERM' if self.class.raise_signal_exceptions
+        fail SignalException.new('TERM') if self.class.raise_signal_exceptions
       end
 
       trap('INT') do
         Thread.new { say 'Exiting...' }
         stop
-        raise SignalException, 'INT' if self.class.raise_signal_exceptions && self.class.raise_signal_exceptions != :term
+        fail SignalException.new('INT') if self.class.raise_signal_exceptions && self.class.raise_signal_exceptions != :term
       end
 
       say 'Starting job worker'
@@ -200,7 +200,8 @@ module Delayed
     # Do num jobs and return stats on success/failure.
     # Exit early if interrupted.
     def work_off(num = 100)
-      success, failure = 0, 0
+      success = 0
+      failure = 0
 
       num.times do
         case reserve_and_run_one_job
@@ -209,7 +210,7 @@ module Delayed
         when false
           failure += 1
         else
-          break  # leave if no work could be done
+          break # leave if no work could be done
         end
         break if stop? # leave if we're exiting
       end
@@ -219,18 +220,18 @@ module Delayed
 
     def run(job)
       job_say job, 'RUNNING'
-      runtime =  Benchmark.realtime do
+      runtime = Benchmark.realtime do
         Timeout.timeout(max_run_time(job).to_i, WorkerTimeout) { job.invoke_job }
         job.destroy
       end
       job_say job, format('COMPLETED after %.4f', runtime)
-      return true  # did work
+      return true # did work
     rescue DeserializationError => error
       job.error = error
       failed(job)
     rescue => error
       self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, error) }
-      return false  # work failed
+      return false # work failed
     end
 
     # Reschedule the job in the future (when a job fails).

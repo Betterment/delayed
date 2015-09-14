@@ -142,7 +142,7 @@ shared_examples_for 'a delayed_job backend' do
       CallbackJob.messages = []
     end
 
-    %w[before success after].each do |callback|
+    %w(before success after).each do |callback|
       it "calls #{callback} with job" do
         job = described_class.enqueue(CallbackJob.new)
         expect(job.payload_object).to receive(callback).with(job)
@@ -154,7 +154,7 @@ shared_examples_for 'a delayed_job backend' do
       job = described_class.enqueue(CallbackJob.new)
       expect(CallbackJob.messages).to eq(['enqueue'])
       job.invoke_job
-      expect(CallbackJob.messages).to eq(%w[enqueue before perform success after])
+      expect(CallbackJob.messages).to eq(%w(enqueue before perform success after))
     end
 
     it 'calls the after callback with an error' do
@@ -374,7 +374,7 @@ shared_examples_for 'a delayed_job backend' do
 
     context 'when worker has two queue set' do
       before(:each) do
-        worker.queues = %w[large small]
+        worker.queues = %w(large small)
       end
 
       it 'only works off jobs which are from its queue' do
@@ -472,7 +472,7 @@ shared_examples_for 'a delayed_job backend' do
         if story.respond_to?(:new_record?)
           expect { story.delay.tell }.to raise_error(
             ArgumentError,
-            "job cannot be created for non-persisted record: #{story.inspect}"
+            "job cannot be created for non-persisted record: #{story.inspect}",
           )
         end
       end
@@ -482,7 +482,7 @@ shared_examples_for 'a delayed_job backend' do
         story.destroy
         expect { story.delay.tell }.to raise_error(
           ArgumentError,
-          "job cannot be created for non-persisted record: #{story.inspect}"
+          "job cannot be created for non-persisted record: #{story.inspect}",
         )
       end
     end

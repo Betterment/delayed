@@ -10,7 +10,7 @@ module Delayed
         def enqueue(*args) # rubocop:disable CyclomaticComplexity
           options = args.extract_options!
           options[:payload_object] ||= args.shift
-          options[:priority]       ||= Delayed::Worker.default_priority
+          options[:priority] ||= Delayed::Worker.default_priority
 
           if options[:queue].nil?
             if options[:payload_object].respond_to?(:queue_name)
@@ -26,7 +26,7 @@ module Delayed
           end
 
           unless options[:payload_object].respond_to?(:perform)
-            raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
+            fail ArgumentError.new('Cannot enqueue items which do not respond to perform')
           end
 
           new(options).tap do |job|
@@ -74,7 +74,7 @@ module Delayed
       end
       alias_method :failed, :failed?
 
-      ParseObjectFromYaml = /\!ruby\/\w+\:([^\s]+)/ # rubocop:disable ConstantName
+      ParseObjectFromYaml = %r{\!ruby/\w+\:([^\s]+)} # rubocop:disable ConstantName
 
       def name
         @name ||= payload_object.respond_to?(:display_name) ? payload_object.display_name : payload_object.class.name
@@ -90,7 +90,7 @@ module Delayed
       def payload_object
         @payload_object ||= YAML.load_dj(handler)
       rescue TypeError, LoadError, NameError, ArgumentError, SyntaxError, Psych::SyntaxError => e
-        raise DeserializationError, "Job failed to load: #{e.message}. Handler: #{handler.inspect}"
+        raise DeserializationError.new("Job failed to load: #{e.message}. Handler: #{handler.inspect}")
       end
 
       def invoke_job

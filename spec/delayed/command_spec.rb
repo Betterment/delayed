@@ -132,7 +132,7 @@ describe Delayed::Command do
       expect(command.worker_pools).to eq [
         [[], 1],
         [['test_queue'], 4],
-        [%w[mailers misc], 2]
+        [%w(mailers misc), 2],
       ]
     end
 
@@ -168,8 +168,8 @@ describe Delayed::Command do
         ['delayed_job.2', {:quiet => true, :pid_dir => './tmp/pids', :log_dir => './log', :queues => ['test_queue']}],
         ['delayed_job.3', {:quiet => true, :pid_dir => './tmp/pids', :log_dir => './log', :queues => ['test_queue']}],
         ['delayed_job.4', {:quiet => true, :pid_dir => './tmp/pids', :log_dir => './log', :queues => ['test_queue']}],
-        ['delayed_job.5', {:quiet => true, :pid_dir => './tmp/pids', :log_dir => './log', :queues => %w[mailers misc]}],
-        ['delayed_job.6', {:quiet => true, :pid_dir => './tmp/pids', :log_dir => './log', :queues => %w[mailers misc]}]
+        ['delayed_job.5', {:quiet => true, :pid_dir => './tmp/pids', :log_dir => './log', :queues => %w(mailers misc)}],
+        ['delayed_job.6', {:quiet => true, :pid_dir => './tmp/pids', :log_dir => './log', :queues => %w(mailers misc)}],
       ].each do |args|
         expect(command).to receive(:run_process).with(*args).once
       end
