@@ -9,7 +9,7 @@ module Delayed
       :perform    => [:worker, :job],
       :error      => [:worker, :job],
       :failure    => [:worker, :job],
-      :invoke_job => [:job],
+      :invoke_job => [:job]
     }
 
     def initialize
@@ -34,7 +34,7 @@ module Delayed
       missing_callback(event) unless @callbacks.key?(event)
 
       unless EVENTS[event].size == args.size
-        fail ArgumentError.new("Callback #{event} expects #{EVENTS[event].size} parameter(s): #{EVENTS[event].join(', ')}")
+        raise ArgumentError, "Callback #{event} expects #{EVENTS[event].size} parameter(s): #{EVENTS[event].join(', ')}"
       end
 
       @callbacks[event].execute(*args, &block)
@@ -48,7 +48,7 @@ module Delayed
     end
 
     def missing_callback(event)
-      fail InvalidCallback.new("Unknown callback event: #{event}")
+      raise InvalidCallback, "Unknown callback event: #{event}"
     end
   end
 
@@ -78,7 +78,7 @@ module Delayed
         chain = @around # use a local variable so that the current chain is closed over in the following lambda
         @around = lambda { |*a, &block| chain.call(*a) { |*b| callback.call(*b, &block) } }
       else
-        fail InvalidCallback.new("Invalid callback type: #{type}")
+        raise InvalidCallback, "Invalid callback type: #{type}"
       end
     end
   end

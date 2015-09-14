@@ -1,67 +1,108 @@
-Metrics/AbcSize:
+AbcSize:
   Enabled: false
 
-Metrics/BlockNesting:
-  Max: 2
-
-Metrics/LineLength:
-  AllowURI: true
-  Enabled: false
-
-Metrics/MethodLength:
-  CountComments: false
-  Max: 47 # TODO: Lower to 15
-
-Metrics/ModuleLength:
-  Max: 150 # TODO: Lower to 100
-
-Metrics/ParameterLists:
-  Max: 4
-  CountKeywordArgs: true
-
-Style/AccessModifierIndentation:
+# Enforce outdenting of access modifiers (i.e. public, private, protected)
+AccessModifierIndentation:
   EnforcedStyle: outdent
 
-Style/CollectionMethods:
+AllCops:
+  Include:
+    - 'Gemfile'
+    - 'Rakefile'
+    - 'delayed_job.gemspec'
+
+# Avoid more than `Max` levels of nesting.
+BlockNesting:
+  Max: 2
+
+# Indentation of when/else
+CaseIndentation:
+  IndentWhenRelativeTo: end
+  IndentOneStep: false
+
+ClassLength:
+  Max: 100
+
+# Align with the style guide.
+CollectionMethods:
   PreferredMethods:
-    map:      'collect'
+    collect:  'map'
+    collect!: 'map!'
     reduce:   'inject'
     find:     'detect'
     find_all: 'select'
 
-Style/Documentation:
+# Disable documentation checking until a class needs to be documented once
+Documentation:
   Enabled: false
 
-Style/DotPosition:
+# Allow dots at the end of lines
+DotPosition:
   EnforcedStyle: trailing
 
-Style/DoubleNegation:
+DoubleNegation:
   Enabled: false
 
-Style/EachWithObject:
+EmptyLinesAroundAccessModifier:
+  Enabled: true
+
+# Don't require magic comment at the top of every file
+Encoding:
   Enabled: false
 
-Style/Encoding:
-  Enabled: false
+# Align ends correctly
+EndAlignment:
+  AlignWith: variable
 
-Style/HashSyntax:
+# Enforce Ruby 1.8-compatible hash syntax
+HashSyntax:
   EnforcedStyle: hash_rockets
 
-Style/Lambda:
+Lambda:
   Enabled: false
 
-Style/RaiseArgs:
-  EnforcedStyle: compact
+LineLength:
+  Enabled: false
 
-Style/RegexpLiteral:
-  Exclude:
-    - lib/delayed/psych_ext.rb
+MethodLength:
+  CountComments: false
+  Max: 53
 
-Style/SpaceInsideHashLiteralBraces:
+MultilineOperationIndentation:
+  EnforcedStyle: indented
+
+# Avoid long parameter lists
+ParameterLists:
+  Max: 4
+  CountKeywordArgs: true
+
+PercentLiteralDelimiters:
+  PreferredDelimiters:
+    '%':  ()
+    '%i': ()
+    '%q': ()
+    '%Q': ()
+    '%r': '{}'
+    '%s': ()
+    '%w': '[]'
+    '%W': '[]'
+    '%x': ()
+
+RaiseArgs:
+  EnforcedStyle: exploded
+
+RescueModifier:
+  Enabled: false
+
+SignalException:
+  EnforcedStyle: only_raise
+
+# No spaces inside hash literals
+SpaceInsideHashLiteralBraces:
   EnforcedStyle: no_space
 
-Style/StructInheritance:
+SymbolProc:
   Enabled: false
 
-Style/TrailingComma:
-  EnforcedStyleForMultiline: 'comma'
+TrailingComma:
+  Enabled: false

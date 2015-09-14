@@ -5,7 +5,7 @@ module Delayed
       coder.map = {
         'object' => object,
         'method_name' => method_name,
-        'args' => args,
+        'args' => args
       }
     end
   end
@@ -39,7 +39,7 @@ module Delayed
             begin
               klass.find(id)
             rescue ActiveRecord::RecordNotFound => error # rubocop:disable BlockNesting
-              raise Delayed::DeserializationError.new("ActiveRecord::RecordNotFound, class: #{klass}, primary key: #{id} (#{error.message})")
+              raise Delayed::DeserializationError, "ActiveRecord::RecordNotFound, class: #{klass}, primary key: #{id} (#{error.message})"
             end
           else
             result
@@ -52,7 +52,7 @@ module Delayed
           begin
             klass.unscoped.find(id)
           rescue ActiveRecord::RecordNotFound => error
-            raise Delayed::DeserializationError.new("ActiveRecord::RecordNotFound, class: #{klass}, primary key: #{id} (#{error.message})")
+            raise Delayed::DeserializationError, "ActiveRecord::RecordNotFound, class: #{klass}, primary key: #{id} (#{error.message})"
           end
         when /^!ruby\/Mongoid:(.+)$/
           klass = resolve_class(Regexp.last_match[1])
@@ -61,7 +61,7 @@ module Delayed
           begin
             klass.find(id)
           rescue Mongoid::Errors::DocumentNotFound => error
-            raise Delayed::DeserializationError.new("Mongoid::Errors::DocumentNotFound, class: #{klass}, primary key: #{id} (#{error.message})")
+            raise Delayed::DeserializationError, "Mongoid::Errors::DocumentNotFound, class: #{klass}, primary key: #{id} (#{error.message})"
           end
         when /^!ruby\/DataMapper:(.+)$/
           klass = resolve_class(Regexp.last_match[1])
@@ -71,7 +71,7 @@ module Delayed
             key_names = primary_keys.map { |p| p.name.to_s }
             klass.get!(*key_names.map { |k| payload['attributes'][k] })
           rescue DataMapper::ObjectNotFoundError => error
-            raise Delayed::DeserializationError.new("DataMapper::ObjectNotFoundError, class: #{klass} (#{error.message})")
+            raise Delayed::DeserializationError, "DataMapper::ObjectNotFoundError, class: #{klass} (#{error.message})"
           end
         else
           super

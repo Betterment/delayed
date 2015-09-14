@@ -41,7 +41,9 @@ module Delayed
         end
 
         def self.create(attrs = {})
-          new(attrs).tap(&:save)
+          new(attrs).tap do |o|
+            o.save
+          end
         end
 
         def self.create!(*args)
@@ -59,8 +61,8 @@ module Delayed
         def self.find_available(worker_name, limit = 5, max_run_time = Worker.max_run_time) # rubocop:disable CyclomaticComplexity, PerceivedComplexity
           jobs = all.select do |j|
             j.run_at <= db_time_now &&
-            (j.locked_at.nil? || j.locked_at < db_time_now - max_run_time || j.locked_by == worker_name) &&
-            !j.failed?
+              (j.locked_at.nil? || j.locked_at < db_time_now - max_run_time || j.locked_by == worker_name) &&
+              !j.failed?
           end
           jobs.select! { |j| j.priority <= Worker.max_priority } if Worker.max_priority
           jobs.select! { |j| j.priority >= Worker.min_priority } if Worker.min_priority

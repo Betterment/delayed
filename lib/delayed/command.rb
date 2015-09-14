@@ -18,7 +18,7 @@ module Delayed
       @options = {
         :quiet => true,
         :pid_dir => "#{root}/tmp/pids",
-        :log_dir => "#{root}/log",
+        :log_dir => "#{root}/log"
       }
 
       @worker_count = 1
@@ -88,7 +88,7 @@ module Delayed
         setup_pools
       elsif @options[:identifier]
         if worker_count > 1
-          fail ArgumentError.new('Cannot specify both --number-of-workers and --identifier')
+          raise ArgumentError, 'Cannot specify both --number-of-workers and --identifier'
         else
           run_process("delayed_job.#{@options[:identifier]}", @options)
         end
@@ -147,11 +147,7 @@ module Delayed
       else
         queues = queues.split(',')
       end
-      worker_count = begin
-                       (worker_count || 1).to_i
-                     rescue
-                       1
-                     end
+      worker_count = (worker_count || 1).to_i rescue 1
       @worker_pools << [queues, worker_count]
     end
 

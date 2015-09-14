@@ -23,7 +23,7 @@ class ErrorJob
   cattr_accessor :runs
   @runs = 0
   def perform
-    fail 'did not work'
+    raise 'did not work'
   end
 end
 
@@ -32,7 +32,7 @@ class CustomRescheduleJob
   cattr_accessor :runs
   @runs = 0
   def perform
-    fail 'did not work'
+    raise 'did not work'
   end
 
   def reschedule_at(time, _attempts)
@@ -54,7 +54,7 @@ class OnPermanentFailureJob < SimpleJob
   end
 
   def failure
-    fail 'did not work' if @raise_error
+    raise 'did not work' if @raise_error
   end
 
   def max_attempts

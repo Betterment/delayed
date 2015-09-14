@@ -19,7 +19,7 @@ namespace :jobs do
       :min_priority => ENV['MIN_PRIORITY'],
       :max_priority => ENV['MAX_PRIORITY'],
       :queues => (ENV['QUEUES'] || ENV['QUEUE'] || '').split(','),
-      :quiet => ENV['QUIET'],
+      :quiet => ENV['QUIET']
     }
 
     @worker_options[:sleep_delay] = ENV['SLEEP_DELAY'].to_i if ENV['SLEEP_DELAY']
@@ -33,7 +33,7 @@ namespace :jobs do
     unprocessed_jobs = Delayed::Job.where('attempts = 0 AND created_at < ?', Time.now - args[:max_age].to_i).count
 
     if unprocessed_jobs > 0
-      fail "#{unprocessed_jobs} jobs older than #{args[:max_age]} seconds have not been processed yet"
+      raise "#{unprocessed_jobs} jobs older than #{args[:max_age]} seconds have not been processed yet"
     end
   end
 end
