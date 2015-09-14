@@ -124,9 +124,17 @@ device = Device.new
 device.deliver
 ```
 
-handle_asynchronously can take as options anything you can pass to delay. In
-addition, the values can be Proc objects allowing call time evaluation of the
-value. For some examples:
+## Parameters
+
+`#handle_asynchronously` and `#delay` take these parameters:
+
+- `:priority` (number): lower numbers run first; default is 0 but can be reconfigured (see below)
+- `:run_at` (Time): run the job after this time (probably in the future)
+- `:queue` (string): named queue to put this job in, an alternative to priorities (see below)
+
+These params can be Proc objects, allowing call-time evaluation of the value.
+
+For example:
 
 ```ruby
 class LongTasks
