@@ -451,17 +451,30 @@ shared_examples_for 'a delayed_job backend' do
   end
 
   describe 'destroy_failed_jobs' do
-    before(:each) do
-      @job = described_class.enqueue SimpleJob.new
+    context 'with a SimpleJob' do
+      before(:each) do
+        @job = described_class.enqueue SimpleJob.new
+      end
+
+      it 'is not defined' do
+        expect(@job.destroy_failed_jobs?).to be true
+      end
+
+      it 'uses the destroy failed jobs value on the payload when defined' do
+        expect(@job.payload_object).to receive(:destroy_failed_jobs?).and_return(false)
+        expect(@job.destroy_failed_jobs?).to be false
+      end
     end
 
-    it 'is not defined' do
-      expect(@job.destroy_failed_jobs?).to be true
-    end
+    context 'with a job that raises DserializationError' do
+      before(:each) do
+        @job = described_class.new :handler => '--- !ruby/struct:GoingToRaiseArgError {}'
+      end
 
-    it 'uses the destroy failed jobs value on the payload when defined' do
-      expect(@job.payload_object).to receive(:destroy_failed_jobs?).and_return(false)
-      expect(@job.destroy_failed_jobs?).to be false
+      it 'falls back reasonably' do
+        expect(YAML).to receive(:load_dj).and_raise(ArgumentError)
+        expect(@job.destroy_failed_jobs?).to be true
+      end
     end
   end
 
