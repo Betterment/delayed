@@ -1,3 +1,7 @@
+Next
+====
+* Fix shared specs for back-ends that reload objects
+
 4.1.0 - 2015-09-22
 ==================
 * Alter `Delayed::Command` to work with or without Rails
