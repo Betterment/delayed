@@ -1,5 +1,5 @@
-Next
-====
+4.1.1 - 2015-09-24
+==================
 * Fix shared specs for back-ends that reload objects
 
 4.1.0 - 2015-09-22
