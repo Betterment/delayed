@@ -5,6 +5,7 @@ unless ENV['RAILS_ENV'] == 'test'
     raise "You need to add gem 'daemons' to your Gemfile if you wish to use it."
   end
 end
+require 'fileutils'
 require 'optparse'
 require 'pathname'
 
@@ -82,7 +83,7 @@ module Delayed
 
     def daemonize # rubocop:disable PerceivedComplexity
       dir = @options[:pid_dir]
-      Dir.mkdir(dir) unless File.exist?(dir)
+      FileUtils.mkdir_p(dir) unless File.exist?(dir)
 
       if worker_pools
         setup_pools

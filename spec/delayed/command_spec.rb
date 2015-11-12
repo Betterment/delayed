@@ -159,8 +159,7 @@ describe Delayed::Command do
   describe 'running worker pools defined by multiple --pool arguments' do
     it 'should run the correct worker processes' do
       command = Delayed::Command.new(['--pool=*:1', '--pool=test_queue:4', '--pool=mailers,misc:2'])
-
-      expect(Dir).to receive(:mkdir).with('./tmp/pids').once
+      expect(FileUtils).to receive(:mkdir_p).with('./tmp/pids').once
 
       [
         ['delayed_job.0', {:quiet => true, :pid_dir => './tmp/pids', :log_dir => './log', :queues => []}],

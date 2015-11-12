@@ -2,6 +2,7 @@
 *.swp
 .bundle
 .DS_Store
+.idea
 .rvmrc
 /coverage
 Gemfile.lock
