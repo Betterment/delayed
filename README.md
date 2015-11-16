@@ -205,6 +205,15 @@ Delayed::Job.enqueue job, :queue => 'tracking'
 handle_asynchronously :tweet_later, :queue => 'tweets'
 ```
 
+You can configure default priorities for named queues:
+
+```ruby
+Delayed::Worker.queue_attributes = [
+  { name: :high_priority, priority: -10 },
+  { name: :low_priority, priority: 10 }
+]
+```
+
 Running Jobs
 ============
 `script/delayed_job` can be used to manage a background process which will

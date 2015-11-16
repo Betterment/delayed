@@ -314,6 +314,12 @@ shared_examples_for 'a delayed_job backend' do
       end
       expect(described_class.reserve(worker)).to be_nil
     end
+
+    it 'sets job priority based on queue_attributes configuration' do
+      Delayed::Worker.queue_attributes = [{:name => 'job_tracking', :priority => 4}]
+      job = described_class.enqueue :payload_object => NamedQueueJob.new
+      expect(job.priority).to eq(4)
+    end
   end
 
   context 'clear_locks!' do
