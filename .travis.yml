@@ -14,7 +14,8 @@ env:
 rvm:
   - 2.0.0
   - 2.1
-  - 2.2
+  - 2.2.4
+  - 2.3.0
   - jruby-19mode
   - jruby-head
   - rbx-2
@@ -26,5 +27,10 @@ matrix:
     - rvm: ruby-head
     - env: RAILS_VERSION="edge"
   fast_finish: true
+  exclude:
+    - rvm: 2.0.0
+      env: RAILS_VERSION="~> 5.0.0.beta1"
+    - rvm: 2.1
+      env: RAILS_VERSION="~> 5.0.0.beta1"
 
 sudo: false
