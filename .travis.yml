@@ -3,9 +3,6 @@ env:
   global:
     - JRUBY_OPTS="$JRUBY_OPTS --debug"
   matrix:
-    - RAILS_VERSION="~> 3.0.0"
-    - RAILS_VERSION="~> 3.1.0"
-    - RAILS_VERSION="~> 3.2.0"
     - RAILS_VERSION="~> 4.0.0"
     - RAILS_VERSION="~> 4.1.0"
     - RAILS_VERSION="~> 4.2.0"
@@ -27,6 +24,16 @@ matrix:
     - rvm: ruby-head
     - env: RAILS_VERSION="edge"
   fast_finish: true
+  # legacy testing
+  # things still run and we don't have a good reason to break it
+  # but we don't need to keep running the full matrix
+  include:
+    - rvm: 2.0.0
+      env: RAILS_VERSION="~> 3.0.0"
+    - rvm: 2.1
+      env: RAILS_VERSION="~> 3.1.0"
+    - rvm: 2.1
+      env: RAILS_VERSION="~> 3.2.0"
   exclude:
     - rvm: 2.0.0
       env: RAILS_VERSION="~> 5.0.0.beta1"
