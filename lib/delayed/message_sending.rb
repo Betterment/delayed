@@ -28,7 +28,7 @@ module Delayed
     end
 
     module ClassMethods
-      def handle_asynchronously(method, opts = {})
+      def handle_asynchronously(method, opts = {}) # rubocop:disable PerceivedComplexity
         aliased_method = method.to_s.sub(/([?!=])$/, '')
         punctuation = $1 # rubocop:disable PerlBackrefs
         with_method = "#{aliased_method}_with_delay#{punctuation}"
