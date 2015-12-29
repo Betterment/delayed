@@ -1,8 +1,7 @@
 require 'timeout'
+require 'active_support/dependencies'
 require 'active_support/core_ext/numeric/time'
 require 'active_support/core_ext/class/attribute_accessors'
-require 'active_support/core_ext/kernel'
-require 'active_support/core_ext/enumerable'
 require 'logger'
 require 'benchmark'
 
@@ -172,7 +171,7 @@ module Delayed
             end
           end
 
-          count = @result.sum
+          count = @result[0] + @result[1]
 
           if count.zero?
             if self.class.exit_on_complete

@@ -1,6 +1,6 @@
 require File.expand_path('../../../../spec/sample_jobs', __FILE__)
 
-require 'active_support/core_ext'
+require 'active_support/core_ext/numeric/time'
 
 shared_examples_for 'a delayed_job backend' do
   let(:worker) { Delayed::Worker.new }
