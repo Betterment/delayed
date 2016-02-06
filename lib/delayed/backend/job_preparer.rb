@@ -4,7 +4,7 @@ module Delayed
       attr_reader :options, :args
 
       def initialize(*args)
-        @options = args.extract_options!
+        @options = args.extract_options!.dup
         @args = args
       end
 

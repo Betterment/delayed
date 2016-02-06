@@ -113,6 +113,13 @@ shared_examples_for 'a delayed_job backend' do
         job = described_class.enqueue M::ModuleJob.new
         expect { job.invoke_job }.to change { M::ModuleJob.runs }.from(0).to(1)
       end
+
+      it 'does not mutate the options hash' do
+        options = { priority: 1}
+        job = described_class.enqueue SimpleJob.new, options
+        expect(options).to eq({ priority: 1 })
+      end
+
     end
 
     context 'with delay_jobs = false' do
