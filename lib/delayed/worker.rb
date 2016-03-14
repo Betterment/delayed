@@ -228,6 +228,8 @@ module Delayed
       job_say job, format('COMPLETED after %.4f', runtime)
       return true # did work
     rescue DeserializationError => error
+      job_say job, "FAILED permanently with #{error.class.name}: #{error.message}", 'error'
+
       job.error = error
       failed(job)
     rescue Exception => error # rubocop:disable RescueException
