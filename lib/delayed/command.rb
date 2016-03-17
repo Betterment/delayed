@@ -143,11 +143,7 @@ module Delayed
       @worker_pools ||= []
 
       queues, worker_count = pool.split(':')
-      if ['*', '', nil].include?(queues)
-        queues = []
-      else
-        queues = queues.split(',')
-      end
+      queues = ['*', '', nil].include?(queues) ? [] : queues.split(',')
       worker_count = (worker_count || 1).to_i rescue 1
       @worker_pools << [queues, worker_count]
     end

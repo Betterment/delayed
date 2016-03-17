@@ -7,14 +7,14 @@ require 'benchmark'
 
 module Delayed
   class Worker # rubocop:disable ClassLength
-    DEFAULT_LOG_LEVEL        = 'info'
+    DEFAULT_LOG_LEVEL        = 'info'.freeze
     DEFAULT_SLEEP_DELAY      = 5
     DEFAULT_MAX_ATTEMPTS     = 25
     DEFAULT_MAX_RUN_TIME     = 4.hours
     DEFAULT_DEFAULT_PRIORITY = 0
     DEFAULT_DELAY_JOBS       = true
-    DEFAULT_QUEUES           = []
-    DEFAULT_QUEUE_ATTRIBUTES = []
+    DEFAULT_QUEUES           = [].freeze
+    DEFAULT_QUEUE_ATTRIBUTES = [].freeze
     DEFAULT_READ_AHEAD       = 5
 
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,

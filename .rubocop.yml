@@ -5,11 +5,17 @@ AbcSize:
 AccessModifierIndentation:
   EnforcedStyle: outdent
 
+Alias:
+  EnforcedStyle: prefer_alias_method
+
 AllCops:
   Include:
     - 'Gemfile'
     - 'Rakefile'
     - 'delayed_job.gemspec'
+
+RedundantBlockCall:
+  Enabled: false
 
 # Avoid more than `Max` levels of nesting.
 BlockNesting:
@@ -107,5 +113,11 @@ SpaceInsideHashLiteralBraces:
 SymbolProc:
   Enabled: false
 
-TrailingComma:
+TrailingCommaInLiteral:
+  Enabled: false
+
+TrailingCommaInArguments:
+  Enabled: false
+
+ZeroLengthPredicate:
   Enabled: false

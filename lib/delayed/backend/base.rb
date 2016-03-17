@@ -50,7 +50,7 @@ module Delayed
       attr_reader :error
       def error=(error)
         @error = error
-        self.last_error = "#{error.message}\n#{error.backtrace.join("\n")}" if self.respond_to?(:last_error=)
+        self.last_error = "#{error.message}\n#{error.backtrace.join("\n")}" if respond_to?(:last_error=)
       end
 
       def failed?
