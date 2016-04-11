@@ -13,7 +13,7 @@ rvm:
   - 2.1
   - 2.2.4
   - 2.3.0
-  - jruby-19mode
+  - jruby
   - jruby-head
   - rbx-2
   - ruby-head
@@ -23,8 +23,6 @@ matrix:
     - rvm: rbx-2
     - rvm: ruby-head
     - env: RAILS_VERSION="edge"
-    - rvm: jruby-19mode
-      env: RAILS_VERSION="~> 5.0.0.beta1"
   fast_finish: true
   # legacy testing
   # things still run and we don't have a good reason to break it
