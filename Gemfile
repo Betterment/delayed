@@ -9,6 +9,7 @@ end
 platforms :jruby do
   gem 'jruby-openssl'
   gem 'activerecord-jdbcsqlite3-adapter'
+  gem 'mime-types', '~> 2.6, < 2.99'
 end
 
 platforms :rbx do
