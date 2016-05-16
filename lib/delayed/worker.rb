@@ -2,6 +2,8 @@ require 'timeout'
 require 'active_support/dependencies'
 require 'active_support/core_ext/numeric/time'
 require 'active_support/core_ext/class/attribute_accessors'
+require 'active_support/hash_with_indifferent_access'
+require 'active_support/core_ext/hash/indifferent_access'
 require 'logger'
 require 'benchmark'
 
@@ -14,18 +16,18 @@ module Delayed
     DEFAULT_DEFAULT_PRIORITY = 0
     DEFAULT_DELAY_JOBS       = true
     DEFAULT_QUEUES           = [].freeze
-    DEFAULT_QUEUE_ATTRIBUTES = [].freeze
+    DEFAULT_QUEUE_ATTRIBUTES = HashWithIndifferentAccess.new.freeze
     DEFAULT_READ_AHEAD       = 5
 
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
                    :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
                    :read_ahead, :plugins, :destroy_failed_jobs, :exit_on_complete,
-                   :default_log_level, :queue_attributes
+                   :default_log_level
 
     # Named queue into which jobs are enqueued by default
     cattr_accessor :default_queue_name
 
-    cattr_reader :backend
+    cattr_reader :backend, :queue_attributes
 
     # name_prefix is ignored if name is set directly
     attr_accessor :name_prefix
@@ -42,8 +44,6 @@ module Delayed
       self.read_ahead        = DEFAULT_READ_AHEAD
       @lifecycle             = nil
     end
-
-    reset
 
     # Add or remove plugins in this list before the worker is instantiated
     self.plugins = [Delayed::Plugins::ClearLocks]
@@ -69,6 +69,11 @@ module Delayed
       end
       @@backend = backend # rubocop:disable ClassVars
       silence_warnings { ::Delayed.const_set(:Job, backend) }
+    end
+
+    # rubocop:disable ClassVars
+    def self.queue_attributes=(val)
+      @@queue_attributes = val.with_indifferent_access
     end
 
     def self.guess_backend
@@ -320,3 +325,5 @@ module Delayed
     end
   end
 end
+
+Delayed::Worker.reset

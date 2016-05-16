@@ -279,6 +279,7 @@ shared_examples_for 'a delayed_job backend' do
     after do
       Delayed::Worker.max_priority = nil
       Delayed::Worker.min_priority = nil
+      Delayed::Worker.queue_attributes = {}
     end
 
     it 'fetches jobs ordered by priority' do
@@ -316,9 +317,15 @@ shared_examples_for 'a delayed_job backend' do
     end
 
     it 'sets job priority based on queue_attributes configuration' do
-      Delayed::Worker.queue_attributes = [{:name => 'job_tracking', :priority => 4}]
+      Delayed::Worker.queue_attributes = {'job_tracking' => {:priority => 4}}
       job = described_class.enqueue :payload_object => NamedQueueJob.new
       expect(job.priority).to eq(4)
+    end
+
+    it 'sets job priority based on the passed in priority overrideing queue_attributes configuration' do
+      Delayed::Worker.queue_attributes = {'job_tracking' => {:priority => 4}}
+      job = described_class.enqueue :payload_object => NamedQueueJob.new, :priority => 10
+      expect(job.priority).to eq(10)
     end
   end
 
