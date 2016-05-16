@@ -1,4 +1,5 @@
 4.1.2 - 2016-05-16
+==================
 * Added Delayed::Worker.queue_attributes
 * Limit what we require in ActiveSupport
 * Fix pid file creation when there is no tmp directory
