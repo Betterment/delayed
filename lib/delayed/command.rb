@@ -77,11 +77,11 @@ module Delayed
         opt.on('--exit-on-complete', 'Exit when no more jobs are available to run. This will exit if all jobs are scheduled to run in the future.') do
           @options[:exit_on_complete] = true
         end
-        opt.on('--no_wait', 'Do not force kill long running jobs') do
-          @no_wait = true
+        opt.on('--daemon-options a, b, c', Array, 'options to be passed through to daemon gem') do |daemon_options|
+          @daemon_options = daemon_options
         end
       end
-      @args = opts.parse!(args)
+      @args = opts.parse!(args) + (@daemon_options || [])
     end
 
     def daemonize # rubocop:disable PerceivedComplexity
@@ -118,16 +118,7 @@ module Delayed
 
     def run_process(process_name, options = {})
       Delayed::Worker.before_fork
-
-      daemon_options = {
-        :dir => options[:pid_dir],
-        :dir_mode => :normal,
-        :monitor => @monitor,
-        :no_wait => @no_wait,
-        :ARGV => @args
-      }
-
-      Daemons.run_proc(process_name, daemon_options) do |*_args|
+      Daemons.run_proc(process_name, :dir => options[:pid_dir], :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*_args|
         $0 = File.join(options[:prefix], process_name) if @options[:prefix]
         run process_name, options
       end
