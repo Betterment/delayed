@@ -24,12 +24,20 @@ describe Delayed::Worker do
   describe 'job_say' do
     before do
       @worker = Delayed::Worker.new
-      @job = double('job', :id => 123, :name => 'ExampleJob')
+      @job = double('job', :id => 123, :name => 'ExampleJob', :queue => nil)
     end
 
     it 'logs with job name and id' do
+      expect(@job).to receive(:queue)
       expect(@worker).to receive(:say).
         with('Job ExampleJob (id=123) message', Delayed::Worker.default_log_level)
+      @worker.job_say(@job, 'message')
+    end
+
+    it 'logs with job name, queue and id' do
+      expect(@job).to receive(:queue).and_return('test')
+      expect(@worker).to receive(:say).
+        with('Job ExampleJob (id=123) (queue=test) message', Delayed::Worker.default_log_level)
       @worker.job_say(@job, 'message')
     end
 
