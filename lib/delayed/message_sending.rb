@@ -26,36 +26,36 @@ module Delayed
       warn '[DEPRECATION] `object.send_at(time, :method)` is deprecated. Use `object.delay(:run_at => time).method'
       __delay__(:run_at => time).__send__(method, *args)
     end
+  end
 
-    module ClassMethods
-      def handle_asynchronously(method, opts = {}) # rubocop:disable PerceivedComplexity
-        aliased_method = method.to_s.sub(/([?!=])$/, '')
-        punctuation = $1 # rubocop:disable PerlBackrefs
-        with_method = "#{aliased_method}_with_delay#{punctuation}"
-        without_method = "#{aliased_method}_without_delay#{punctuation}"
-        define_method(with_method) do |*args|
-          curr_opts = opts.clone
-          curr_opts.each_key do |key|
-            next unless (val = curr_opts[key]).is_a?(Proc)
-            curr_opts[key] = if val.arity == 1
-              val.call(self)
-            else
-              val.call
-            end
+  module ClassMethods
+    def handle_asynchronously(method, opts = {}) # rubocop:disable PerceivedComplexity
+      aliased_method = method.to_s.sub(/([?!=])$/, '')
+      punctuation = $1 # rubocop:disable PerlBackrefs
+      with_method = "#{aliased_method}_with_delay#{punctuation}"
+      without_method = "#{aliased_method}_without_delay#{punctuation}"
+      define_method(with_method) do |*args|
+        curr_opts = opts.clone
+        curr_opts.each_key do |key|
+          next unless (val = curr_opts[key]).is_a?(Proc)
+          curr_opts[key] = if val.arity == 1
+            val.call(self)
+          else
+            val.call
           end
-          delay(curr_opts).__send__(without_method, *args)
         end
+        delay(curr_opts).__send__(without_method, *args)
+      end
 
-        alias_method without_method, method
-        alias_method method, with_method
+      alias_method without_method, method
+      alias_method method, with_method
 
-        if public_method_defined?(without_method)
-          public method
-        elsif protected_method_defined?(without_method)
-          protected method
-        elsif private_method_defined?(without_method)
-          private method
-        end
+      if public_method_defined?(without_method)
+        public method
+      elsif protected_method_defined?(without_method)
+        protected method
+      elsif private_method_defined?(without_method)
+        private method
       end
     end
   end
