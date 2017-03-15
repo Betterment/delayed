@@ -6,7 +6,7 @@ env:
     - RAILS_VERSION="~> 4.0.0"
     - RAILS_VERSION="~> 4.1.0"
     - RAILS_VERSION="~> 4.2.0"
-    - RAILS_VERSION="~> 5.0.0.beta1"
+    - RAILS_VERSION="~> 5.0.0"
     - RAILS_VERSION="edge"
 rvm:
   - 2.0.0
@@ -41,8 +41,8 @@ matrix:
 
   exclude:
     - rvm: 2.0.0
-      env: RAILS_VERSION="~> 5.0.0.beta1"
+      env: RAILS_VERSION="~> 5.0.0"
     - rvm: 2.1
-      env: RAILS_VERSION="~> 5.0.0.beta1"
+      env: RAILS_VERSION="~> 5.0.0"
 
 sudo: false
