@@ -8,5 +8,5 @@ module Delayed
     end
   end
 
-  class FatalBackendError < Exception; end
+  class FatalBackendError < RuntimeError; end
 end
