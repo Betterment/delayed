@@ -20,4 +20,4 @@ require 'delayed/deserialization_error'
 require 'delayed/railtie' if defined?(Rails::Railtie)
 
 Object.send(:include, Delayed::MessageSending)
-Module.send(:include, Delayed::ClassMethods)
+Module.send(:include, Delayed::MessageSendingClassMethods)
