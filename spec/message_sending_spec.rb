@@ -42,8 +42,7 @@ describe Delayed::MessageSending do
       describe 'using a proc with parameters' do
         class Yarn
           attr_accessor :importance
-          def spin
-          end
+          def spin; end
           handle_asynchronously :spin, :priority => proc { |y| y.importance }
         end
 

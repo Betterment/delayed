@@ -30,16 +30,13 @@ module Delayed
         end
 
         # Allow the backend to attempt recovery from reserve errors
-        def recover_from(_error)
-        end
+        def recover_from(_error); end
 
         # Hook method that is called before a new worker is forked
-        def before_fork
-        end
+        def before_fork; end
 
         # Hook method that is called after a new worker is forked
-        def after_fork
-        end
+        def after_fork; end
 
         def work_off(num = 100)
           warn '[DEPRECATION] `Delayed::Job.work_off` is deprecated. Use `Delayed::Worker.new.work_off instead.'
@@ -101,7 +98,7 @@ module Delayed
       def hook(name, *args)
         if payload_object.respond_to?(name)
           method = payload_object.method(name)
-          method.arity == 0 ? method.call : method.call(self, *args)
+          method.arity.zero? ? method.call : method.call(self, *args)
         end
       rescue DeserializationError # rubocop:disable HandleExceptions
       end

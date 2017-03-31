@@ -1,5 +1,5 @@
 module Delayed
-  class InvalidCallback < Exception; end
+  class InvalidCallback < RuntimeError; end
 
   class Lifecycle
     EVENTS = {

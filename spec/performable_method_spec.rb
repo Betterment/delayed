@@ -30,8 +30,7 @@ describe Delayed::PerformableMethod do
 
   it 'does not raise NoMethodError if target method is private' do
     clazz = Class.new do
-      def private_method
-      end
+      def private_method; end
       private :private_method
     end
     expect { Delayed::PerformableMethod.new(clazz.new, :private_method, []) }.not_to raise_error

@@ -1,7 +1,6 @@
 module Autoloaded
   InstanceStruct = ::Struct.new(nil)
   class InstanceStruct
-    def perform
-    end
+    def perform; end
   end
 end

@@ -6,9 +6,11 @@ module Delayed
       @options = options
     end
 
+    # rubocop:disable MethodMissing
     def method_missing(method, *args)
       Job.enqueue({:payload_object => @payload_class.new(@target, method.to_sym, args)}.merge(@options))
     end
+    # rubocop:enable MethodMissing
   end
 
   module MessageSending

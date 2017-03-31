@@ -17,13 +17,16 @@ AllCops:
 RedundantBlockCall:
   Enabled: false
 
+BlockLength:
+  Enabled: false
+
 # Avoid more than `Max` levels of nesting.
 BlockNesting:
   Max: 2
 
 # Indentation of when/else
 CaseIndentation:
-  IndentWhenRelativeTo: end
+  EnforcedStyle: end
   IndentOneStep: false
 
 ClassLength:
@@ -49,6 +52,10 @@ DotPosition:
 DoubleNegation:
   Enabled: false
 
+# Detects any duplication as issue including our conditional requires
+DuplicatedGem:
+  Enabled: false
+
 EmptyLinesAroundAccessModifier:
   Enabled: true
 
@@ -58,7 +65,7 @@ Encoding:
 
 # Align ends correctly
 EndAlignment:
-  AlignWith: variable
+  EnforcedStyleAlignWith: variable
 
 # Enforce Ruby 1.8-compatible hash syntax
 HashSyntax:
@@ -117,6 +124,9 @@ TrailingCommaInLiteral:
   Enabled: false
 
 TrailingCommaInArguments:
+  Enabled: false
+
+YAMLLoad:
   Enabled: false
 
 ZeroLengthPredicate:
