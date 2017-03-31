@@ -67,6 +67,9 @@ Encoding:
 EndAlignment:
   EnforcedStyleAlignWith: variable
 
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
 # Enforce Ruby 1.8-compatible hash syntax
 HashSyntax:
   EnforcedStyle: hash_rockets
@@ -83,6 +86,9 @@ MethodLength:
 
 MultilineOperationIndentation:
   EnforcedStyle: indented
+
+Style/NumericPredicate:
+  Enabled: false
 
 # Avoid long parameter lists
 ParameterLists:
@@ -110,12 +116,18 @@ RegexpLiteral:
 RescueModifier:
   Enabled: false
 
+Style/SafeNavigation:
+  Enabled: false
+
 SignalException:
   EnforcedStyle: only_raise
 
 # No spaces inside hash literals
 SpaceInsideHashLiteralBraces:
   EnforcedStyle: no_space
+
+Style/SymbolArray:
+  Enabled: false
 
 SymbolProc:
   Enabled: false
