@@ -37,8 +37,7 @@ multitude of core tasks. Amongst those tasks are:
 
 Installation
 ============
-delayed_job 3.0.0 only supports Rails 3.0+. See the [2.0
-branch](https://github.com/collectiveidea/delayed_job/tree/v2.0) for Rails 2.
+delayed_job 3.0.0 only supports Rails 3.0+.
 
 delayed_job supports multiple backends for storing the job queue. [See the wiki
 for other backends](https://github.com/collectiveidea/delayed_job/wiki/Backends).
