@@ -1,6 +1,11 @@
 require 'helper'
 
 describe Delayed::MessageSending do
+  it 'does not include ClassMethods along with MessageSending' do
+    expect { ClassMethods }.to raise_error(NameError)
+    expect(defined?(String::ClassMethods)).to eq(nil)
+  end
+
   describe 'handle_asynchronously' do
     class Story
       def tell!(_arg); end
