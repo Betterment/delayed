@@ -13,6 +13,7 @@ AllCops:
     - 'Gemfile'
     - 'Rakefile'
     - 'delayed_job.gemspec'
+  TargetRubyVersion: 2.1
 
 RedundantBlockCall:
   Enabled: false
