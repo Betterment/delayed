@@ -1,3 +1,12 @@
+4.1.3 - 2017-05-26
+=================
+* Don't mutate the options hash (#877)
+* Log an error message when a deserialization error occurs (#894)
+* Adding the queue name to the log output (#917)
+* Don't include ClassMethods with MessageSending (#924)
+* Fix YAML deserialization error if original object is soft-deleted (#947)
+* Add support for Rails 5.1 (#982)
+
 4.1.2 - 2016-05-16
 ==================
 * Added Delayed::Worker.queue_attributes
