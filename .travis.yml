@@ -1,4 +1,7 @@
 language: ruby
+branches:
+  only:
+    - master
 env:
   global:
     - JRUBY_OPTS="$JRUBY_OPTS --debug"
