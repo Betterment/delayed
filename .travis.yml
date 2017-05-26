@@ -5,21 +5,18 @@ env:
   matrix:
     - RAILS_VERSION="~> 4.2.0"
     - RAILS_VERSION="~> 5.0.0"
-    - RAILS_VERSION="~> 5.1.0.rc1"
+    - RAILS_VERSION="~> 5.1.0"
     - RAILS_VERSION="edge"
 rvm:
-  - 2.1
-  - 2.2.6
-  - 2.3.3
+  - 2.1.10
+  - 2.2.7
+  - 2.3.4
   - 2.4.1
   - jruby-9.1.8.0
   - jruby-head
   - rbx-2
   - ruby-head
-
-
 jdk: oraclejdk8
-
 matrix:
   allow_failures:
     - rvm: jruby-head
@@ -27,7 +24,7 @@ matrix:
     - rvm: ruby-head
     - env: RAILS_VERSION="edge"
     - rvm: jruby-9.1.8.0
-      env: RAILS_VERSION="~> 5.1.0.rc1"
+      env: RAILS_VERSION="~> 5.1.0"
   fast_finish: true
   # legacy testing
   # things still run and we don't have a good reason to break it
@@ -43,13 +40,11 @@ matrix:
       env: RAILS_VERSION="~> 4.0.0"
     - rvm: 2.3.3
       env: RAILS_VERSION="~> 4.1.0"
-
   exclude:
-    - rvm: 2.1
+    - rvm: 2.1.10
       env: RAILS_VERSION="~> 5.0.0"
-    - rvm: 2.1
-      env: RAILS_VERSION="~> 5.1.0.rc1"
-    - rvm: 2.1
+    - rvm: 2.1.10
+      env: RAILS_VERSION="~> 5.1.0"
+    - rvm: 2.1.10
       env: RAILS_VERSION="edge"
-
 sudo: false
