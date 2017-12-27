@@ -1,7 +1,5 @@
 source 'https://rubygems.org'
 
-rails_version = ENV['RAILS_VERSION'] || ''
-
 gem 'rake'
 
 platforms :ruby do
@@ -9,14 +7,8 @@ platforms :ruby do
 end
 
 platforms :jruby do
+  gem 'activerecord-jdbcsqlite3-adapter'
   gem 'jruby-openssl'
-  if rails_version == 'edge' || rails_version.match(/5\.\d+\.\d+/)
-    gem 'activerecord-jdbcsqlite3-adapter',
-        :git => 'https://github.com/jruby/activerecord-jdbc-adapter.git',
-        :branch => 'rails-5'
-  else
-    gem 'activerecord-jdbcsqlite3-adapter'
-  end
   gem 'mime-types', ['~> 2.6', '< 2.99']
 end
 
