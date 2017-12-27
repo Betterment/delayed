@@ -18,13 +18,13 @@ rvm:
   - 2.5.0
   - jruby-9.1.15.0
   - jruby-head
-  - rbx-2
+  - rbx-3
   - ruby-head
 jdk: oraclejdk8
 matrix:
   allow_failures:
     - rvm: jruby-head
-    - rvm: rbx-2
+    - rvm: rbx-3
     - rvm: ruby-head
     - env: RAILS_VERSION="edge"
     - rvm: jruby-9.1.15.0
