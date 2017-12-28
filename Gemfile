@@ -7,7 +7,11 @@ platforms :ruby do
 end
 
 platforms :jruby do
-  gem 'activerecord-jdbcsqlite3-adapter'
+  if ENV['RAILS_VERSION'] == '~> 4.2.0'
+    gem 'activerecord-jdbcsqlite3-adapter', '< 50.0'
+  else
+    gem 'activerecord-jdbcsqlite3-adapter'
+  end
   gem 'jruby-openssl'
   gem 'mime-types', ['~> 2.6', '< 2.99']
 end
