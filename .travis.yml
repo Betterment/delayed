@@ -20,6 +20,8 @@ rvm:
   - jruby-head
   - rbx-3
   - ruby-head
+before_install:
+  - "gem install bundler"
 jdk: oraclejdk8
 matrix:
   allow_failures:
