@@ -14,6 +14,11 @@ platforms :jruby do
   end
   gem 'jruby-openssl'
   gem 'mime-types', ['~> 2.6', '< 2.99']
+  if ENV['RAILS_VERSION'] == 'edge'
+    gem 'railties', :github => 'rails/rails'
+  else
+    gem 'railties', (ENV['RAILS_VERSION'] || ['>= 3.0', '< 5.2'])
+  end
 end
 
 platforms :rbx do
