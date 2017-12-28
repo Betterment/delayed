@@ -18,7 +18,6 @@ rvm:
   - 2.5.0
   - jruby-9.1.15.0
   - jruby-head
-  - rbx-3
   - ruby-head
 before_install:
   - "gem install bundler"
@@ -26,7 +25,6 @@ jdk: oraclejdk8
 matrix:
   allow_failures:
     - rvm: jruby-head
-    - rvm: rbx-3
     - rvm: ruby-head
     - env: RAILS_VERSION="edge"
     - rvm: jruby-9.1.15.0
