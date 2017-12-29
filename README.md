@@ -1,7 +1,7 @@
 **If you're viewing this at https://github.com/collectiveidea/delayed_job,
 you're reading the documentation for the master branch.
 [View documentation for the latest release
-(4.1.3).](https://github.com/collectiveidea/delayed_job/tree/v4.1.3)**
+(4.1.4).](https://github.com/collectiveidea/delayed_job/tree/v4.1.4)**
 
 Delayed::Job
 ============
@@ -222,7 +222,7 @@ object.delay(:queue => 'high_priority', priority: 0).method
 You can start processes to only work certain queues with the `queue` and `queues`
 options defined below. Processes started without specifying a queue will run jobs
 from **any** queue. To effectively have a process that runs jobs where a queue is not
-specified, set a default queue name with `Delayed::Worker.default_queue_name` and 
+specified, set a default queue name with `Delayed::Worker.default_queue_name` and
 have the processes run that queue.
 
 Running Jobs

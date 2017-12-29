@@ -1,3 +1,8 @@
+4.1.4 - 2017-12-29
+=================
+* Use `yaml_tag` instead of deprecated `yaml_as` (#996)
+* Support ruby 2.5.0
+
 4.1.3 - 2017-05-26
 =================
 * Don't mutate the options hash (#877)
