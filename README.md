@@ -167,9 +167,10 @@ end
 
 If you ever want to call a `handle_asynchronously`'d method without Delayed Job, for instance while debugging something at the console, just add `_without_delay` to the method name. For instance, if your original method was `foo`, then call `foo_without_delay`.
 
-Rails 3 Mailers
-===============
-Due to how mailers are implemented in Rails 3, we had to do a little work around to get delayed_job to work.
+Rails Mailers
+=============
+Delayed Job uses special syntax for Rails Mailers.
+Do not call the `.deliver` method when using `.delay`.
 
 ```ruby
 # without delayed_job
@@ -178,12 +179,16 @@ Notifier.signup(@user).deliver
 # with delayed_job
 Notifier.delay.signup(@user)
 
-# with delayed_job running at a specific time
+# delayed_job running at a specific time
 Notifier.delay(run_at: 5.minutes.from_now).signup(@user)
+
+# when using parameters, the .with method must be called before the .delay method 
+Notifier.with(foo: 1, bar: 2).delay.signup(@user)
 ```
 
-Remove the `.deliver` method to make it work. It's not ideal, but it's the best
-we could do for now.
+You may also wish to consider using
+[Active Job with Action Mailer](https://edgeguides.rubyonrails.org/active_job_basics.html#action-mailer)
+which provides convenient `.deliver_later` syntax that forwards to Delayed Job under-the-hood.
 
 Named Queues
 ============
