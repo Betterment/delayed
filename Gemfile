@@ -15,6 +15,8 @@ end
 platforms :jruby do
   if ENV['RAILS_VERSION'] == '4.2.0'
     gem 'activerecord-jdbcsqlite3-adapter', '< 50.0'
+  elsif ENV['RAILS_VERSION'] == 'edge' || ENV['RAILS_VERSION'] == '6.1.0.rc2'
+    gem 'activerecord-jdbcsqlite3-adapter', :github => 'jruby/activerecord-jdbc-adapter'
   else
     gem 'activerecord-jdbcsqlite3-adapter'
   end
@@ -25,7 +27,7 @@ platforms :jruby do
   elsif ENV['RAILS_VERSION']
     gem 'railties', "~> #{ENV['RAILS_VERSION']}"
   else
-    gem 'railties', ['>= 3.0', '< 5.3']
+    gem 'railties', ['>= 3.0', '< 6.2']
   end
 end
 
@@ -41,8 +43,8 @@ group :test do
     gem 'actionmailer', "~> #{ENV['RAILS_VERSION']}"
     gem 'activerecord', "~> #{ENV['RAILS_VERSION']}"
   else
-    gem 'actionmailer', ['>= 3.0', '< 5.3']
-    gem 'activerecord', ['>= 3.0', '< 5.3']
+    gem 'actionmailer', ['>= 3.0', '< 6.2']
+    gem 'activerecord', ['>= 3.0', '< 6.2']
   end
 
   gem 'rspec', '>= 3'
