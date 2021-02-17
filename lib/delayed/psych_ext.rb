@@ -16,14 +16,42 @@ module Psych
     result = parse(yaml)
     result ? Delayed::PsychExt::ToRuby.create.accept(result) : result
   end
+
+  def self.dump_dj(object)
+    visitor = Delayed::PsychExt::YAMLTree.create
+    visitor << object
+    visitor.tree.yaml
+  end
 end
 
 module Delayed
   module PsychExt
+    class YAMLTree < Psych::Visitors::YAMLTree
+      def accept(target)
+        if defined?(ActiveRecord::Base) && target.is_a?(ActiveRecord::Base)
+          tag = ['!ruby/ActiveRecord', target.class.name].compact.join(':')
+          map = @emitter.start_mapping(nil, tag, false, Psych::Nodes::Mapping::BLOCK)
+          register(target, map)
+          @emitter.scalar('attributes', nil, nil, true, false, Psych::Nodes::Mapping::ANY)
+          accept target.attributes.slice(target.class.primary_key)
+
+          @emitter.end_mapping
+        else
+          super
+        end
+      end
+    end
+
     class ToRuby < Psych::Visitors::ToRuby
       unless respond_to?(:create)
         def self.create
           new
+        end
+      end
+
+      def accept(target)
+        super.tap do |value|
+          register(target, value) if value.class.include?(Singleton)
         end
       end
 
@@ -96,6 +124,10 @@ module Delayed
         klass_name.constantize
       rescue
         super
+      end
+
+      def revive(klass, node)
+        klass.include?(Singleton) ? klass.instance : super
       end
     end
   end

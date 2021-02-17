@@ -5,7 +5,7 @@ module Delayed
     def initialize(object, method_name, args)
       raise NoMethodError, "undefined method `#{method_name}' for #{object.inspect}" unless object.respond_to?(method_name, true)
 
-      if object.respond_to?(:persisted?) && !object.persisted?
+      if !her_model?(object) && object.respond_to?(:persisted?) && !object.persisted?
         raise(ArgumentError, "job cannot be created for non-persisted record: #{object.inspect}")
       end
 
@@ -38,6 +38,12 @@ module Delayed
 
     def respond_to?(symbol, include_private = false)
       super || object.respond_to?(symbol, include_private)
+    end
+
+  private
+
+    def her_model?(object)
+      object.class.respond_to?(:save_existing)
     end
   end
 end

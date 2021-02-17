@@ -1,3 +1,14 @@
+#### We forked DJ. Why?
+
+We work with Her models frequently in the Retail application. When we persist
+them, we tend to do so in a Delayed::Job. However, DJ cannot enqueue work
+on an object that is not persisted. For instance, `PersistableThing.new.delay.expensive_work`
+will throw an error and insist that it be persisted before `#expensive_work` is called.
+
+For Her models, we want to perform the act of persistence in a Delayed::Job, so we need to
+make an exception for them.
+
+
 **If you're viewing this at https://github.com/collectiveidea/delayed_job,
 you're reading the documentation for the master branch.
 [View documentation for the latest release
@@ -5,14 +16,7 @@ you're reading the documentation for the master branch.
 
 Delayed::Job
 ============
-[![Gem Version](https://badge.fury.io/rb/delayed_job.svg)][gem]
-![CI](https://github.com/collectiveidea/delayed_job/workflows/CI/badge.svg)
-[![Code Climate](https://codeclimate.com/github/collectiveidea/delayed_job.svg)][codeclimate]
-[![Coverage Status](https://coveralls.io/repos/collectiveidea/delayed_job/badge.svg?branch=master)][coveralls]
-
-[gem]: https://rubygems.org/gems/delayed_job
-[codeclimate]: https://codeclimate.com/github/collectiveidea/delayed_job
-[coveralls]: https://coveralls.io/r/collectiveidea/delayed_job
+![CI](https://github.com/Betterment/delayed_job/workflows/CI/badge.svg)
 
 Delayed::Job (or DJ) encapsulates the common pattern of asynchronously executing
 longer tasks in the background.
@@ -447,6 +451,8 @@ By default, it will delete failed jobs (and it always deletes successful jobs). 
 By default all jobs are scheduled with `priority = 0`, which is top priority. You can change this by setting `Delayed::Worker.default_priority` to something else. Lower numbers have higher priority.
 
 The default behavior is to read 5 jobs from the queue when finding an available job. You can configure this by setting `Delayed::Worker.read_ahead`.
+
+If `Delayed::Worker.max_claims` is configured, some backends will attempt to lock multiple jobs at once for the same worker. This may ease query contention, but may result in some jobs synchronously waiting on the same worker, even if another worker is available. (By default, only one job is claimed at a time, to avoid such trade-offs.)
 
 By default all jobs will be queued without a named queue. A default named queue can be specified by using `Delayed::Worker.default_queue_name`.
 

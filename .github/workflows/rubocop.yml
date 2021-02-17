@@ -27,4 +27,4 @@ jobs:
         bundle config set without 'default test'
         bundle install --jobs 4 --retry 3
     - name: Run RuboCop
-      run: bundle exec rubocop
+      run: bundle exec rubocop --parallel

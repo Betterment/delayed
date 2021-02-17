@@ -62,6 +62,9 @@ module Delayed
         opt.on('--read-ahead N', 'Number of jobs from the queue to consider') do |n|
           @options[:read_ahead] = n
         end
+        opt.on('--max-claims N', 'Max number of jobs to return from the pickup query (defaults to 1)') do |n|
+          @options[:max_claims] = n
+        end
         opt.on('-p', '--prefix NAME', 'String to be prefixed to worker process names') do |prefix|
           @options[:prefix] = prefix
         end

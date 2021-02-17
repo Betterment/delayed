@@ -36,6 +36,19 @@ describe Delayed::PerformableMethod do
     expect { Delayed::PerformableMethod.new(clazz.new, :private_method, []) }.not_to raise_error
   end
 
+  context 'when it receives an object that is not persisted' do
+    let(:object) { double(:persisted? => false, :expensive_operation => true) }
+
+    it 'raises an ArgumentError' do
+      expect { Delayed::PerformableMethod.new(object, :expensive_operation, []) }.to raise_error ArgumentError
+    end
+
+    it 'does not raise ArgumentError if the object acts like a Her model' do
+      allow(object.class).to receive(:save_existing) { true }
+      expect { Delayed::PerformableMethod.new(object, :expensive_operation, []) }.not_to raise_error
+    end
+  end
+
   describe 'display_name' do
     it 'returns class_name#method_name for instance methods' do
       expect(Delayed::PerformableMethod.new('foo', :count, ['o']).display_name).to eq('String#count')

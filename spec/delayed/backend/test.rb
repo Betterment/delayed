@@ -14,6 +14,7 @@ module Delayed
         attr_accessor :locked_at
         attr_accessor :locked_by
         attr_accessor :failed_at
+        attr_accessor :created_at
         attr_accessor :queue
 
         include Delayed::Backend::Base
@@ -93,6 +94,7 @@ module Delayed
 
         def save
           self.run_at ||= Time.current
+          self.created_at ||= Time.current
 
           self.class.all << self unless self.class.all.include?(self)
           true

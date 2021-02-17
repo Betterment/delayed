@@ -167,14 +167,14 @@ shared_examples_for 'a delayed_job backend' do
       job = described_class.enqueue(CallbackJob.new)
       expect(job.payload_object).to receive(:perform).and_raise(RuntimeError.new('fail'))
 
-      expect { job.invoke_job }.to raise_error(RuntimeError)
+      expect { job.invoke_job }.to raise_error(RuntimeError, 'fail')
       expect(CallbackJob.messages).to eq(['enqueue', 'before', 'error: RuntimeError', 'after'])
     end
 
     it 'calls error when before raises an error' do
       job = described_class.enqueue(CallbackJob.new)
       expect(job.payload_object).to receive(:before).and_raise(RuntimeError.new('fail'))
-      expect { job.invoke_job }.to raise_error(RuntimeError)
+      expect { job.invoke_job }.to raise_error(RuntimeError, 'fail')
       expect(CallbackJob.messages).to eq(['enqueue', 'error: RuntimeError', 'after'])
     end
   end
@@ -216,46 +216,46 @@ shared_examples_for 'a delayed_job backend' do
 
     it 'does not reserve failed jobs' do
       create_job :attempts => 50, :failed_at => described_class.db_time_now
-      expect(described_class.reserve(worker)).to be_nil
+      expect(described_class.reserve(worker)).to eq []
     end
 
     it 'does not reserve jobs scheduled for the future' do
       create_job :run_at => described_class.db_time_now + 1.minute
-      expect(described_class.reserve(worker)).to be_nil
+      expect(described_class.reserve(worker)).to eq []
     end
 
     it 'reserves jobs scheduled for the past' do
       job = create_job :run_at => described_class.db_time_now - 1.minute
-      expect(described_class.reserve(worker)).to eq(job)
+      expect(described_class.reserve(worker)).to eq([job])
     end
 
     it 'reserves jobs scheduled for the past when time zones are involved' do
       Time.zone = 'US/Eastern'
       job = create_job :run_at => described_class.db_time_now - 1.minute
-      expect(described_class.reserve(worker)).to eq(job)
+      expect(described_class.reserve(worker)).to eq([job])
     end
 
     it 'does not reserve jobs locked by other workers' do
       job = create_job
       other_worker = Delayed::Worker.new
       other_worker.name = 'other_worker'
-      expect(described_class.reserve(other_worker)).to eq(job)
-      expect(described_class.reserve(worker)).to be_nil
+      expect(described_class.reserve(other_worker)).to eq([job])
+      expect(described_class.reserve(worker)).to eq []
     end
 
     it 'reserves open jobs' do
       job = create_job
-      expect(described_class.reserve(worker)).to eq(job)
+      expect(described_class.reserve(worker)).to eq([job])
     end
 
     it 'reserves expired jobs' do
       job = create_job(:locked_by => 'some other worker', :locked_at => described_class.db_time_now - Delayed::Worker.max_run_time - 1.minute)
-      expect(described_class.reserve(worker)).to eq(job)
+      expect(described_class.reserve(worker)).to eq([job])
     end
 
     it 'reserves own jobs' do
       job = create_job(:locked_by => worker.name, :locked_at => (described_class.db_time_now - 1.minutes))
-      expect(described_class.reserve(worker)).to eq(job)
+      expect(described_class.reserve(worker)).to eq([job])
     end
   end
 
@@ -283,15 +283,18 @@ shared_examples_for 'a delayed_job backend' do
 
   context 'worker prioritization' do
     after do
+      Delayed::Worker.max_claims = nil
       Delayed::Worker.max_priority = nil
       Delayed::Worker.min_priority = nil
+      Delayed::Worker.read_ahead = nil
       Delayed::Worker.queue_attributes = {}
     end
 
     it 'fetches jobs ordered by priority' do
       10.times { described_class.enqueue SimpleJob.new, :priority => rand(10) }
-      jobs = []
-      10.times { jobs << described_class.reserve(worker) }
+      Delayed::Worker.read_ahead = 10
+      Delayed::Worker.max_claims = 10
+      jobs = described_class.reserve(worker)
       expect(jobs.size).to eq(10)
       jobs.each_cons(2) do |a, b|
         expect(a.priority).to be <= b.priority
@@ -301,25 +304,23 @@ shared_examples_for 'a delayed_job backend' do
     it 'only finds jobs greater than or equal to min priority' do
       min = 5
       Delayed::Worker.min_priority = min
+      Delayed::Worker.max_claims = 2
       [4, 5, 6].sort_by { |_i| rand }.each { |i| create_job :priority => i }
-      2.times do
-        job = described_class.reserve(worker)
-        expect(job.priority).to be >= min
-        job.destroy
-      end
-      expect(described_class.reserve(worker)).to be_nil
+      jobs = described_class.reserve(worker)
+      expect(jobs.map(&:priority).min).to be >= min
+      jobs.map(&:destroy)
+      expect(described_class.reserve(worker)).to eq []
     end
 
     it 'only finds jobs less than or equal to max priority' do
       max = 5
       Delayed::Worker.max_priority = max
+      Delayed::Worker.max_claims = 2
       [4, 5, 6].sort_by { |_i| rand }.each { |i| create_job :priority => i }
-      2.times do
-        job = described_class.reserve(worker)
-        expect(job.priority).to be <= max
-        job.destroy
-      end
-      expect(described_class.reserve(worker)).to be_nil
+      jobs = described_class.reserve(worker)
+      expect(jobs.map(&:priority).max).to be <= max
+      jobs.map(&:destroy)
+      expect(described_class.reserve(worker)).to eq []
     end
 
     it 'sets job priority based on queue_attributes configuration' do
@@ -342,12 +343,12 @@ shared_examples_for 'a delayed_job backend' do
 
     it 'clears locks for the given worker' do
       described_class.clear_locks!('worker1')
-      expect(described_class.reserve(worker)).to eq(@job)
+      expect(described_class.reserve(worker)).to eq([@job])
     end
 
     it 'does not clear locks for other workers' do
       described_class.clear_locks!('different_worker')
-      expect(described_class.reserve(worker)).not_to eq(@job)
+      expect(described_class.reserve(worker)).not_to include(@job)
     end
   end
 

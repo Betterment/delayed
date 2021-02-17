@@ -12,6 +12,7 @@ module Delayed
     DEFAULT_LOG_LEVEL        = 'info'.freeze
     DEFAULT_SLEEP_DELAY      = 5
     DEFAULT_MAX_ATTEMPTS     = 25
+    DEFAULT_MAX_CLAIMS       = 1
     DEFAULT_MAX_RUN_TIME     = 4.hours
     DEFAULT_DEFAULT_PRIORITY = 0
     DEFAULT_DELAY_JOBS       = true
@@ -22,7 +23,7 @@ module Delayed
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
                    :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
                    :read_ahead, :plugins, :destroy_failed_jobs, :exit_on_complete,
-                   :default_log_level
+                   :default_log_level, :max_claims
 
     # Named queue into which jobs are enqueued by default
     cattr_accessor :default_queue_name
@@ -36,6 +37,7 @@ module Delayed
       self.default_log_level = DEFAULT_LOG_LEVEL
       self.sleep_delay       = DEFAULT_SLEEP_DELAY
       self.max_attempts      = DEFAULT_MAX_ATTEMPTS
+      self.max_claims        = DEFAULT_MAX_CLAIMS
       self.max_run_time      = DEFAULT_MAX_RUN_TIME
       self.default_priority  = DEFAULT_DEFAULT_PRIORITY
       self.delay_jobs        = DEFAULT_DELAY_JOBS
@@ -128,10 +130,9 @@ module Delayed
     end
 
     def initialize(options = {})
-      @quiet = options.key?(:quiet) ? options[:quiet] : true
       @failed_reserve_count = 0
 
-      [:min_priority, :max_priority, :sleep_delay, :read_ahead, :queues, :exit_on_complete].each do |option|
+      [:min_priority, :max_claims, :max_priority, :sleep_delay, :read_ahead, :queues, :exit_on_complete].each do |option|
         self.class.send("#{option}=", options[option]) if options.key?(option)
       end
 
@@ -210,13 +211,15 @@ module Delayed
       failure = 0
 
       num.times do
-        case reserve_and_run_one_job
-        when true
-          success += 1
-        when false
-          failure += 1
-        else
-          break # leave if no work could be done
+        jobs = reserve_jobs
+        break if jobs.empty?
+
+        jobs.each do |job|
+          if run_job(job)
+            success += 1
+          else
+            failure += 1
+          end
         end
         break if stop? # leave if we're exiting
       end
@@ -225,12 +228,22 @@ module Delayed
     end
 
     def run(job)
-      job_say job, 'RUNNING'
+      metadata = {
+        :status => 'RUNNING',
+        :name => job.name,
+        :run_at => job.run_at,
+        :created_at => job.created_at,
+        :priority => job.priority,
+        :queue => job.queue,
+        :attempts => job.attempts,
+        :enqueued_for => (Time.current - job.created_at).round
+      }
+      job_say job, metadata.to_json
       runtime = Benchmark.realtime do
         Timeout.timeout(max_run_time(job).to_i, WorkerTimeout) { job.invoke_job }
         job.destroy
       end
-      job_say job, format('COMPLETED after %.4f', runtime)
+      job_say job, format('COMPLETED after %.4f seconds', runtime)
       return true # did work
     rescue DeserializationError => error
       job_say job, "FAILED permanently with #{error.class.name}: #{error.message}", 'error'
@@ -276,7 +289,6 @@ module Delayed
 
     def say(text, level = default_log_level)
       text = "[Worker(#{name})] #{text}"
-      puts text unless @quiet
       return unless logger
       # TODO: Deprecate use of Fixnum log levels
       unless level.is_a?(String)
@@ -305,23 +317,23 @@ module Delayed
       reschedule(job)
     end
 
-    # Run the next job we can get an exclusive lock on.
-    # If no jobs are left we return nil
-    def reserve_and_run_one_job
-      job = reserve_job
-      self.class.lifecycle.run_callbacks(:perform, self, job) { run(job) } if job
+    def run_job(job)
+      self.class.lifecycle.run_callbacks(:perform, self, job) { run(job) }
     end
 
-    def reserve_job
-      job = Delayed::Job.reserve(self)
+    # The backend adapter may return either a list or a single job
+    # In some backends, this can be controlled with the `max_claims` config
+    # Either way, we map this to an array of job instances
+    def reserve_jobs
+      jobs = [Delayed::Job.reserve(self)].compact.flatten(1)
       @failed_reserve_count = 0
-      job
+      jobs
     rescue ::Exception => error # rubocop:disable RescueException
-      say "Error while reserving job: #{error}"
+      say "Error while reserving job(s): #{error}"
       Delayed::Job.recover_from(error)
       @failed_reserve_count += 1
       raise FatalBackendError if @failed_reserve_count >= 10
-      nil
+      []
     end
 
     def reload!

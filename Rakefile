@@ -7,9 +7,16 @@ RSpec::Core::RakeTask.new do |r|
   r.verbose = false
 end
 
-task :test => :spec
-
 require 'rubocop/rake_task'
 RuboCop::RakeTask.new
 
-task :default => [:spec, :rubocop]
+if ENV['APPRAISAL_INITIALIZED'] || ENV['CI']
+  tasks = [:spec]
+  tasks += [:rubocop] unless ENV['CI']
+
+  task :default => tasks
+else
+  require 'appraisal'
+  Appraisal::Task.new
+  task :default => :appraisal
+end
