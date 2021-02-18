@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "helper"
 require "delayed/backend/active_record"
 
@@ -29,10 +27,14 @@ describe Delayed::Backend::ActiveRecord::Job do
   describe "reserve_with_scope" do
     let(:relation_class) { Delayed::Job.limit(1).class }
     let(:worker) { instance_double(Delayed::Worker, name: "worker01", read_ahead: 1) }
-    let(:limit) { instance_double(relation_class, update_all: 0) }
-    let(:where) { instance_double(relation_class, update_all: 0) }
-    let(:scope) { instance_double(relation_class, limit: limit, where: where) }
-    let(:job) { instance_double(Delayed::Job, id: 1) }
+    let(:scope) do
+      instance_double(relation_class, update_all: nil, detect: job).tap do |s|
+        allow(s).to receive(:where).and_return(s)
+        allow(s).to receive(:limit).and_return(s)
+        allow(s).to receive(:to_a).and_return(s)
+      end
+    end
+    let(:job) { instance_double(Delayed::Job, id: 1, assign_attributes: true, changes_applied: true) }
 
     before do
       allow(Delayed::Backend::ActiveRecord::Job.connection).to receive(:adapter_name).at_least(:once).and_return(dbms)

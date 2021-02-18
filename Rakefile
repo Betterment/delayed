@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "bundler/gem_helper"
 Bundler::GemHelper.install_tasks
 
@@ -18,22 +16,20 @@ ADAPTERS.each do |adapter|
   end
 end
 
-task :coverage do
-  ENV["COVERAGE"] = "true"
-end
-
 task :adapter do
   ENV["ADAPTER"] = nil
-end
-
-Rake::Task[:spec].enhance do
-  require "simplecov"
-  require "coveralls"
-
-  Coveralls::SimpleCov::Formatter.new.format(SimpleCov.result)
 end
 
 require "rubocop/rake_task"
 RuboCop::RakeTask.new
 
-task default: ([:coverage] + ADAPTERS + [:adapter] + [:rubocop])
+if ENV["APPRAISAL_INITIALIZED"] || ENV["CI"]
+  tasks = ADAPTERS + [:adapter]
+  tasks += [:rubocop] unless ENV["CI"]
+
+  task default: tasks
+else
+  require "appraisal"
+  Appraisal::Task.new
+  task default: :appraisal
+end

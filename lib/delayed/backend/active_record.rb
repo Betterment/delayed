@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "active_record/version"
 module Delayed
   module Backend
@@ -45,6 +43,8 @@ module Delayed
 
         before_save :set_default_run_at
 
+        REENQUEUE_BUFFER = 30.seconds
+
         def self.set_delayed_job_table_name
           delayed_job_table_name = "#{::ActiveRecord::Base.table_name_prefix}delayed_jobs"
           self.table_name = delayed_job_table_name
@@ -56,7 +56,7 @@ module Delayed
           where(
             "((run_at <= ? AND (locked_at IS NULL OR locked_at < ?)) OR locked_by = ?) AND failed_at IS NULL",
             db_time_now,
-            db_time_now - max_run_time,
+            db_time_now - (max_run_time + REENQUEUE_BUFFER),
             worker_name
           )
         end
@@ -130,9 +130,11 @@ module Delayed
           # SQL for Postgres if we use a .limit() filter, but it would not
           # use 'FOR UPDATE' and we would have many locking conflicts
           quoted_name = connection.quote_table_name(table_name)
-          subquery    = ready_scope.limit(1).lock(true).select("id").to_sql
-          sql         = "UPDATE #{quoted_name} SET locked_at = ?, locked_by = ? WHERE id IN (#{subquery}) RETURNING *"
-          reserved    = find_by_sql([sql, now, worker.name])
+
+          subquery = ready_scope.limit(1).lock("FOR UPDATE SKIP LOCKED").select("ctid").to_sql
+          sql = "UPDATE #{quoted_name} SET locked_at = ?, locked_by = ? WHERE ctid IN (#{subquery}) RETURNING *"
+
+          reserved = find_by_sql([sql, now, worker.name]).sort_by(&:priority)
           reserved[0]
         end
 
@@ -143,12 +145,32 @@ module Delayed
           # while updating. But during the where clause, for mysql(>=5.6.4),
           # it queries with precision as well. So removing the precision
           now = now.change(usec: 0)
-          # This works on MySQL and possibly some other DBs that support
-          # UPDATE...LIMIT. It uses separate queries to lock and return the job
-          count = ready_scope.limit(1).update_all(locked_at: now, locked_by: worker.name)
-          return nil if count == 0
+          # Despite MySQL's support of UPDATE...LIMIT, it has an optimizer bug
+          # that results in filesorts rather than index scans, which is very
+          # expensive with a large number of jobs in the table:
+          # http://bugs.mysql.com/bug.php?id=74049
+          # The PostgreSQL and MSSQL reserve strategies, while valid syntax in
+          # MySQL, result in deadlocks so we use a SELECT then UPDATE strategy
+          # that is more likely to false-negative when attempting to reserve
+          # jobs in parallel but doesn't rely on subselects or transactions.
 
-          where(locked_at: now, locked_by: worker.name, failed_at: nil).first
+          # Also, we are fetching multiple candidate_jobs at a time to try to
+          # avoid the situation where multiple workers try to grab the same
+          # job at the same time. That previously had caused poor performance
+          # since ready_scope.where(id: job.id) would return nothing even
+          # though there was a large number of jobs on the queue.
+          attrs = { locked_at: now, locked_by: worker.name }
+          candidate_jobs = ready_scope.limit(64).to_a
+          return nil if candidate_jobs.blank?
+
+          claimed_job = candidate_jobs.detect do |job|
+            ready_scope.where(id: job.id).update_all(attrs) == 1
+          end
+          return nil unless claimed_job
+
+          claimed_job.assign_attributes(attrs)
+          claimed_job.send(:changes_applied)
+          claimed_job
         end
 
         def self.reserve_with_scope_using_optimized_mssql(ready_scope, worker, now)
@@ -175,7 +197,7 @@ module Delayed
           elsif ::ActiveRecord::Base.default_timezone == :utc
             Time.now.utc
           else
-            Time.now # rubocop:disable Rails/TimeZone
+            Time.current
           end
         end
 

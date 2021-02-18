@@ -40,6 +40,9 @@ Layout/EndAlignment:
 Layout/LineLength:
   Max: 120
 
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
 Style/SignalException:
   EnforcedStyle: only_raise
 
