@@ -116,10 +116,17 @@ module Delayed
           # Instead of reading the entire job record for our detect loop, we select only the id,
           # and only read the full job record after we've successfully locked the job.
           # This can have a noticable impact on large read_ahead configurations and large payload jobs.
-          ready_scope.limit(worker.read_ahead).select(:id).detect do |job|
-            count = ready_scope.where(id: job.id).update_all(locked_at: now, locked_by: worker.name)
-            count == 1 && job.reload
+          attrs = { locked_at: now, locked_by: worker.name }
+
+          jobs = []
+          ready_scope.limit(worker.read_ahead).select(:id).each do |job|
+            break if jobs.count >= worker.max_claims
+            next unless ready_scope.where(id: job.id).update_all(attrs) == 1
+
+            jobs << job.reload
           end
+
+          jobs
         end
 
         def self.reserve_with_scope_using_optimized_postgres(ready_scope, worker, now)
@@ -131,11 +138,10 @@ module Delayed
           # use 'FOR UPDATE' and we would have many locking conflicts
           quoted_name = connection.quote_table_name(table_name)
 
-          subquery = ready_scope.limit(1).lock("FOR UPDATE SKIP LOCKED").select("ctid").to_sql
+          subquery = ready_scope.limit(worker.max_claims).lock("FOR UPDATE SKIP LOCKED").select("ctid").to_sql
           sql = "UPDATE #{quoted_name} SET locked_at = ?, locked_by = ? WHERE ctid IN (#{subquery}) RETURNING *"
 
-          reserved = find_by_sql([sql, now, worker.name]).sort_by(&:priority)
-          reserved[0]
+          find_by_sql([sql, now, worker.name]).sort_by(&:priority)
         end
 
         def self.reserve_with_scope_using_optimized_mysql(ready_scope, worker, now)
@@ -160,17 +166,18 @@ module Delayed
           # since ready_scope.where(id: job.id) would return nothing even
           # though there was a large number of jobs on the queue.
           attrs = { locked_at: now, locked_by: worker.name }
-          candidate_jobs = ready_scope.limit(64).to_a
-          return nil if candidate_jobs.blank?
 
-          claimed_job = candidate_jobs.detect do |job|
-            ready_scope.where(id: job.id).update_all(attrs) == 1
+          jobs = []
+          ready_scope.limit(worker.read_ahead).each do |job|
+            break if jobs.count >= worker.max_claims
+            next unless ready_scope.where(id: job.id).update_all(attrs) == 1
+
+            job.assign_attributes(attrs)
+            job.send(:changes_applied)
+            jobs << job
           end
-          return nil unless claimed_job
 
-          claimed_job.assign_attributes(attrs)
-          claimed_job.send(:changes_applied)
-          claimed_job
+          jobs
         end
 
         def self.reserve_with_scope_using_optimized_mssql(ready_scope, worker, now)
@@ -182,10 +189,10 @@ module Delayed
           quoted_table_name = connection.quote_table_name(table_name)
           sql = "UPDATE #{quoted_table_name} SET locked_at = ?, locked_by = ? WHERE id IN (#{subquery_sql})"
           count = connection.execute(sanitize_sql([sql, now, worker.name]))
-          return nil if count == 0
+          return [] if count == 0
 
           # MSSQL JDBC doesn't support OUTPUT INSERTED.* for returning a result set, so query locked row
-          where(locked_at: now, locked_by: worker.name, failed_at: nil).first
+          where(locked_at: now, locked_by: worker.name, failed_at: nil)
         end
 
         # Get the current time (GMT or local depending on DB)
