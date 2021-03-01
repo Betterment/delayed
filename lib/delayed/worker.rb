@@ -240,7 +240,9 @@ module Delayed
       }
       job_say job, metadata.to_json
       runtime = Benchmark.realtime do
-        Timeout.timeout(max_run_time(job).to_i, WorkerTimeout) { job.invoke_job }
+        Timeout.timeout(max_run_time(job).to_i, WorkerTimeout) do
+          job.invoke_job
+        end
         job.destroy
       end
       job_say job, format('COMPLETED after %.4f seconds', runtime)
