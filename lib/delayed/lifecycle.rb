@@ -9,6 +9,7 @@ module Delayed
       :perform    => [:worker, :job],
       :error      => [:worker, :job],
       :failure    => [:worker, :job],
+      :thread     => [:worker, :job],
       :invoke_job => [:job]
     }.freeze
 

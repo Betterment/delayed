@@ -180,4 +180,24 @@ describe Delayed::Worker do
       expect(performances).to eq(1)
     end
   end
+
+  describe 'thread callback' do
+    it 'wraps code after thread is checked out' do
+      performances = Concurrent::AtomicFixnum.new(0)
+      plugin = Class.new(Delayed::Plugin) do
+        callbacks do |lifecycle|
+          lifecycle.before(:thread) { performances.increment }
+        end
+      end
+      Delayed::Worker.plugins << plugin
+
+      Delayed::Job.delete_all
+      Delayed::Job.enqueue SimpleJob.new
+      worker = Delayed::Worker.new
+
+      worker.work_off
+
+      expect(performances.value).to eq(1)
+    end
+  end
 end

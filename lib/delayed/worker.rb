@@ -6,6 +6,7 @@ require 'active_support/hash_with_indifferent_access'
 require 'active_support/core_ext/hash/indifferent_access'
 require 'logger'
 require 'benchmark'
+require 'concurrent'
 
 module Delayed
   class Worker # rubocop:disable ClassLength
@@ -207,24 +208,39 @@ module Delayed
     # Do num jobs and return stats on success/failure.
     # Exit early if interrupted.
     def work_off(num = 100)
-      success = 0
-      failure = 0
+      success = Concurrent::AtomicFixnum.new(0)
+      failure = Concurrent::AtomicFixnum.new(0)
 
       num.times do
         jobs = reserve_jobs
         break if jobs.empty?
 
+        pool = Concurrent::FixedThreadPool.new(jobs.length)
         jobs.each do |job|
-          if run_job(job)
-            success += 1
-          else
-            failure += 1
+          pool.post do
+            run_thread_callbacks(job) do
+              if run_job(job)
+                success.increment
+              else
+                failure.increment
+              end
+            end
           end
         end
+
+        pool.shutdown
+        pool.wait_for_termination
+
         break if stop? # leave if we're exiting
       end
 
-      [success, failure]
+      [success, failure].map(&:value)
+    end
+
+    def run_thread_callbacks(job)
+      self.class.lifecycle.run_callbacks(:thread, self, job) do
+        yield
+      end
     end
 
     def run(job)
