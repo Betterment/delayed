@@ -129,17 +129,23 @@ module Delayed
           jobs
         end
 
-        def self.reserve_with_scope_using_optimized_postgres(ready_scope, worker, now)
+        def self.reserve_with_scope_using_optimized_postgres(ready_scope, worker, now) # rubocop:disable Metrics/AbcSize
           # Custom SQL required for PostgreSQL because postgres does not support UPDATE...LIMIT
           # This locks the single record 'FOR UPDATE' in the subquery
           # http://www.postgresql.org/docs/9.0/static/sql-select.html#SQL-FOR-UPDATE-SHARE
           # Note: active_record would attempt to generate UPDATE...LIMIT like
           # SQL for Postgres if we use a .limit() filter, but it would not
           # use 'FOR UPDATE' and we would have many locking conflicts
-          quoted_name = connection.quote_table_name(table_name)
+          table = connection.quote_table_name(table_name)
 
-          subquery = ready_scope.limit(worker.max_claims).lock("FOR UPDATE SKIP LOCKED").select("ctid").to_sql
-          sql = "UPDATE #{quoted_name} SET locked_at = ?, locked_by = ? WHERE ctid IN (#{subquery}) RETURNING *"
+          # Rather than relying on a primary key, we use "WHERE ctid =", resulting in a fast 'Tid Scan'.
+          if worker.max_claims > 1
+            subquery = ready_scope.limit(worker.max_claims).lock("FOR UPDATE SKIP LOCKED").select("ctid").to_sql
+            sql = "UPDATE #{table} SET locked_at = ?, locked_by = ? WHERE ctid = ANY (ARRAY (#{subquery})) RETURNING *"
+          else
+            subquery = ready_scope.limit(1).lock("FOR UPDATE SKIP LOCKED").select("ctid").to_sql
+            sql = "UPDATE #{table} SET locked_at = ?, locked_by = ? WHERE ctid = (#{subquery}) RETURNING *"
+          end
 
           find_by_sql([sql, now, worker.name]).sort_by(&:priority)
         end
