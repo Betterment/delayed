@@ -2,6 +2,16 @@ require "active_record/version"
 module Delayed
   module Backend
     module ActiveRecord
+      class ConnectionPlugin < Delayed::Plugin
+        callbacks do |lifecycle|
+          lifecycle.around(:thread) do |worker, job, &block|
+            ::ActiveRecord::Base.connection_pool.with_connection do
+              block.call(worker, job)
+            end
+          end
+        end
+      end
+
       class Configuration
         attr_reader :reserve_sql_strategy
 
