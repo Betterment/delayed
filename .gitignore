@@ -6,3 +6,5 @@
 /coverage
 Gemfile.lock
 gemfiles/*.lock
+pkg/*
+*.sqlite

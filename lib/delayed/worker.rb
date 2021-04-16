@@ -13,7 +13,7 @@ module Delayed
     DEFAULT_LOG_LEVEL        = 'info'.freeze
     DEFAULT_SLEEP_DELAY      = 5
     DEFAULT_MAX_ATTEMPTS     = 25
-    DEFAULT_MAX_CLAIMS       = 1
+    DEFAULT_MAX_CLAIMS       = 2
     DEFAULT_MAX_RUN_TIME     = 4.hours
     DEFAULT_DEFAULT_PRIORITY = 0
     DEFAULT_DELAY_JOBS       = true
@@ -51,9 +51,9 @@ module Delayed
     # Add or remove plugins in this list before the worker is instantiated
     self.plugins = [Delayed::Plugins::ClearLocks]
 
-    # By default failed jobs are destroyed after too many attempts. If you want to keep them around
-    # (perhaps to inspect the reason for the failure), set this to false.
-    self.destroy_failed_jobs = true
+    # By default failed jobs are not destroyed. This means you must monitor for them
+    # and have a process for addressing them, or your table will continually expand.
+    self.destroy_failed_jobs = false
 
     # By default, Signals INT and TERM set @exit, and the worker exits upon completion of the current job.
     # If you would prefer to raise a SignalException and exit immediately you can use this.

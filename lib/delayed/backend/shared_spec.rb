@@ -477,12 +477,12 @@ shared_examples_for 'a delayed_job backend' do
       end
 
       it 'is not defined' do
-        expect(@job.destroy_failed_jobs?).to be true
+        expect(@job.destroy_failed_jobs?).to be false
       end
 
       it 'uses the destroy failed jobs value on the payload when defined' do
-        expect(@job.payload_object).to receive(:destroy_failed_jobs?).and_return(false)
-        expect(@job.destroy_failed_jobs?).to be false
+        expect(@job.payload_object).to receive(:destroy_failed_jobs?).and_return(true)
+        expect(@job.destroy_failed_jobs?).to be true
       end
     end
 
@@ -493,7 +493,7 @@ shared_examples_for 'a delayed_job backend' do
 
       it 'falls back reasonably' do
         expect(YAML).to receive(:load_dj).and_raise(ArgumentError)
-        expect(@job.destroy_failed_jobs?).to be true
+        expect(@job.destroy_failed_jobs?).to be false
       end
     end
   end

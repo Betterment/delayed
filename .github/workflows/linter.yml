@@ -1,4 +1,4 @@
-name: RuboCop
+name: Linter
 
 on: [push, pull_request]
 
@@ -18,13 +18,13 @@ jobs:
       uses: actions/cache@v1
       with:
         path: vendor/bundle
-        key: ${{ runner.os }}-rubocop-${{ hashFiles('**/Gemfile.lock') }}
+        key: ${{ runner.os }}-linter-${{ hashFiles('**/Gemfile.lock') }}
         restore-keys: |
-          ${{ runner.os }}-rubocop-
+          ${{ runner.os }}-linter-
     - name: Install gems
       run: |
         bundle config path vendor/bundle
         bundle config set without 'default test'
         bundle install --jobs 4 --retry 3
-    - name: Run RuboCop
+    - name: Run Linter
       run: bundle exec rubocop --parallel
