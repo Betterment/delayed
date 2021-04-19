@@ -9,7 +9,7 @@ require 'benchmark'
 require 'concurrent'
 
 module Delayed
-  class Worker # rubocop:disable ClassLength
+  class Worker # rubocop:disable Metrics/ClassLength
     DEFAULT_LOG_LEVEL        = 'info'.freeze
     DEFAULT_SLEEP_DELAY      = 5
     DEFAULT_MAX_ATTEMPTS     = 25
@@ -70,11 +70,11 @@ module Delayed
         require "delayed/backend/#{backend}"
         backend = "Delayed::Backend::#{backend.to_s.classify}::Job".constantize
       end
-      @@backend = backend # rubocop:disable ClassVars
+      @@backend = backend # rubocop:disable Style/ClassVars
       silence_warnings { ::Delayed.const_set(:Job, backend) }
     end
 
-    # rubocop:disable ClassVars
+    # rubocop:disable Style/ClassVars
     def self.queue_attributes=(val)
       @@queue_attributes = val.with_indifferent_access
     end
@@ -97,11 +97,9 @@ module Delayed
     def self.after_fork
       # Re-open file handles
       @files_to_reopen.each do |file|
-        begin
-          file.reopen file.path, 'a+'
-          file.sync = true
-        rescue ::Exception # rubocop:disable HandleExceptions, RescueException
-        end
+        file.reopen file.path, 'a+'
+        file.sync = true
+      rescue ::Exception # rubocop:disable Lint/RescueException
       end
       backend.after_fork
     end
@@ -133,7 +131,7 @@ module Delayed
     def initialize(options = {})
       @failed_reserve_count = 0
 
-      [:min_priority, :max_claims, :max_priority, :sleep_delay, :read_ahead, :queues, :exit_on_complete].each do |option|
+      %i(min_priority max_claims max_priority sleep_delay read_ahead queues exit_on_complete).each do |option|
         self.class.send("#{option}=", options[option]) if options.key?(option)
       end
 
@@ -148,14 +146,19 @@ module Delayed
     # it crashed before.
     def name
       return @name unless @name.nil?
-      "#{@name_prefix}host:#{Socket.gethostname} pid:#{Process.pid}" rescue "#{@name_prefix}pid:#{Process.pid}"
+
+      begin
+        "#{@name_prefix}host:#{Socket.gethostname} pid:#{Process.pid}"
+      rescue StandardError
+        "#{@name_prefix}pid:#{Process.pid}"
+      end
     end
 
     # Sets the name of the worker.
     # Setting the name to nil will reset the default worker name
     attr_writer :name
 
-    def start # rubocop:disable CyclomaticComplexity, PerceivedComplexity
+    def start # rubocop:disable Metrics/PerceivedComplexity
       trap('TERM') do
         Thread.new { say 'Exiting...' }
         stop
@@ -237,22 +240,20 @@ module Delayed
       [success, failure].map(&:value)
     end
 
-    def run_thread_callbacks(job)
-      self.class.lifecycle.run_callbacks(:thread, self, job) do
-        yield
-      end
+    def run_thread_callbacks(job, &block)
+      self.class.lifecycle.run_callbacks(:thread, self, job, &block)
     end
 
     def run(job)
       metadata = {
-        :status => 'RUNNING',
-        :name => job.name,
-        :run_at => job.run_at,
-        :created_at => job.created_at,
-        :priority => job.priority,
-        :queue => job.queue,
-        :attempts => job.attempts,
-        :enqueued_for => (Time.current - job.created_at).round
+        status: 'RUNNING',
+        name: job.name,
+        run_at: job.run_at,
+        created_at: job.created_at,
+        priority: job.priority,
+        queue: job.queue,
+        attempts: job.attempts,
+        enqueued_for: (Time.current - job.created_at).round,
       }
       job_say job, metadata.to_json
       runtime = Benchmark.realtime do
@@ -262,15 +263,15 @@ module Delayed
         job.destroy
       end
       job_say job, format('COMPLETED after %.4f seconds', runtime)
-      return true # did work
-    rescue DeserializationError => error
-      job_say job, "FAILED permanently with #{error.class.name}: #{error.message}", 'error'
+      true # did work
+    rescue DeserializationError => e
+      job_say job, "FAILED permanently with #{e.class.name}: #{e.message}", 'error'
 
-      job.error = error
+      job.error = e
       failed(job)
-    rescue Exception => error # rubocop:disable RescueException
-      self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, error) }
-      return false # work failed
+    rescue Exception => e # rubocop:disable Lint/RescueException
+      self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, e) }
+      false # work failed
     end
 
     # Reschedule the job in the future (when a job fails).
@@ -289,14 +290,12 @@ module Delayed
 
     def failed(job)
       self.class.lifecycle.run_callbacks(:failure, self, job) do
-        begin
-          job.hook(:failure)
-        rescue => error
-          say "Error when running failure callback: #{error}", 'error'
-          say error.backtrace.join("\n"), 'error'
-        ensure
-          job.destroy_failed_jobs? ? job.destroy : job.fail!
-        end
+        job.hook(:failure)
+      rescue StandardError => e
+        say "Error when running failure callback: #{e}", 'error'
+        say e.backtrace.join("\n"), 'error'
+      ensure
+        job.destroy_failed_jobs? ? job.destroy : job.fail!
       end
     end
 
@@ -308,10 +307,9 @@ module Delayed
     def say(text, level = default_log_level)
       text = "[Worker(#{name})] #{text}"
       return unless logger
+
       # TODO: Deprecate use of Fixnum log levels
-      unless level.is_a?(String)
-        level = Logger::Severity.constants.detect { |i| Logger::Severity.const_get(i) == level }.to_s.downcase
-      end
+      level = Logger::Severity.constants.detect { |i| Logger::Severity.const_get(i) == level }.to_s.downcase unless level.is_a?(String)
       logger.send(level, "#{Time.now.strftime('%FT%T%z')}: #{text}")
     end
 
@@ -323,7 +321,7 @@ module Delayed
       job.max_run_time || self.class.max_run_time
     end
 
-  protected
+    protected
 
     def say_queue(queue)
       " (queue=#{queue})" if queue
@@ -346,16 +344,18 @@ module Delayed
       jobs = [Delayed::Job.reserve(self)].compact.flatten(1)
       @failed_reserve_count = 0
       jobs
-    rescue ::Exception => error # rubocop:disable RescueException
-      say "Error while reserving job(s): #{error}"
-      Delayed::Job.recover_from(error)
+    rescue ::Exception => e # rubocop:disable Lint/RescueException
+      say "Error while reserving job(s): #{e}"
+      Delayed::Job.recover_from(e)
       @failed_reserve_count += 1
       raise FatalBackendError if @failed_reserve_count >= 10
+
       []
     end
 
     def reload!
       return unless self.class.reload_app?
+
       if defined?(ActiveSupport::Reloader)
         Rails.application.reloader.reload!
       else

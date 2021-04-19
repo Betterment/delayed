@@ -10,16 +10,16 @@ require 'optparse'
 require 'pathname'
 
 module Delayed
-  class Command # rubocop:disable ClassLength
+  class Command
     attr_accessor :worker_count, :worker_pools
 
     DIR_PWD = Pathname.new Dir.pwd
 
-    def initialize(args) # rubocop:disable MethodLength
+    def initialize(args)
       @options = {
-        :quiet => true,
-        :pid_dir => "#{root}/tmp/pids",
-        :log_dir => "#{root}/log"
+        quiet: true,
+        pid_dir: "#{root}/tmp/pids",
+        log_dir: "#{root}/log",
       }
 
       @worker_count = 1
@@ -32,8 +32,9 @@ module Delayed
           puts opt
           exit 1
         end
-        opt.on('-e', '--environment=NAME', 'Specifies the environment to run this delayed jobs under (test/development/production).') do |_e|
-          STDERR.puts 'The -e/--environment option has been deprecated and has no effect. Use RAILS_ENV and see http://github.com/collectiveidea/delayed_job/issues/7'
+        opt.on('-e', '--environment=NAME',
+               'Specifies the environment to run this delayed jobs under (test/development/production).') do |_e|
+          warn 'The -e/--environment option has been deprecated and has no effect. Use RAILS_ENV and see http://github.com/collectiveidea/delayed_job/issues/7'
         end
         opt.on('--min-priority N', 'Minimum priority of jobs to run.') do |n|
           @options[:min_priority] = n
@@ -42,7 +43,11 @@ module Delayed
           @options[:max_priority] = n
         end
         opt.on('-n', '--number_of_workers=workers', 'Number of unique workers to spawn') do |worker_count|
-          @worker_count = worker_count.to_i rescue 1
+          @worker_count = begin
+            worker_count.to_i
+          rescue StandardError
+            1
+          end
         end
         opt.on('--pid-dir=DIR', 'Specifies an alternate directory in which to store the process ids.') do |dir|
           @options[:pid_dir] = dir
@@ -77,7 +82,8 @@ module Delayed
         opt.on('--pool=queue1[,queue2][:worker_count]', 'Specify queues and number of workers for a worker pool') do |pool|
           parse_worker_pool(pool)
         end
-        opt.on('--exit-on-complete', 'Exit when no more jobs are available to run. This will exit if all jobs are scheduled to run in the future.') do
+        opt.on('--exit-on-complete',
+               'Exit when no more jobs are available to run. This will exit if all jobs are scheduled to run in the future.') do
           @options[:exit_on_complete] = true
         end
         opt.on('--daemon-options a, b, c', Array, 'options to be passed through to daemons gem') do |daemon_options|
@@ -87,20 +93,18 @@ module Delayed
       @args = opts.parse!(args) + (@daemon_options || [])
     end
 
-    def daemonize # rubocop:disable PerceivedComplexity
+    def daemonize
       dir = @options[:pid_dir]
       FileUtils.mkdir_p(dir) unless File.exist?(dir)
 
       if worker_pools
         setup_pools
       elsif @options[:identifier]
-        # rubocop:disable GuardClause
         if worker_count > 1
           raise ArgumentError, 'Cannot specify both --number-of-workers and --identifier'
         else
           run_process("delayed_job.#{@options[:identifier]}", @options)
         end
-        # rubocop:enable GuardClause
       else
         worker_count.times do |worker_index|
           process_name = worker_count == 1 ? 'delayed_job' : "delayed_job.#{worker_index}"
@@ -112,7 +116,7 @@ module Delayed
     def setup_pools
       worker_index = 0
       @worker_pools.each do |queues, worker_count|
-        options = @options.merge(:queues => queues)
+        options = @options.merge(queues: queues)
         worker_count.times do
           process_name = "delayed_job.#{worker_index}"
           run_process(process_name, options)
@@ -123,7 +127,7 @@ module Delayed
 
     def run_process(process_name, options = {})
       Delayed::Worker.before_fork
-      Daemons.run_proc(process_name, :dir => options[:pid_dir], :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*_args|
+      Daemons.run_proc(process_name, dir: options[:pid_dir], dir_mode: :normal, monitor: @monitor, ARGV: @args) do |*_args|
         $0 = File.join(options[:prefix], process_name) if @options[:prefix]
         run process_name, options
       end
@@ -138,21 +142,25 @@ module Delayed
       worker = Delayed::Worker.new(options)
       worker.name_prefix = "#{worker_name} "
       worker.start
-    rescue => e
-      STDERR.puts e.message
-      STDERR.puts e.backtrace
+    rescue StandardError => e
+      $stderr.puts e.message
+      $stderr.puts e.backtrace
       ::Rails.logger.fatal(e) if rails_logger_defined?
       exit_with_error_status
     end
 
-  private
+    private
 
     def parse_worker_pool(pool)
       @worker_pools ||= []
 
       queues, worker_count = pool.split(':')
       queues = ['*', '', nil].include?(queues) ? [] : queues.split(',')
-      worker_count = (worker_count || 1).to_i rescue 1
+      worker_count = begin
+        (worker_count || 1).to_i
+      rescue StandardError
+        1
+      end
       @worker_pools << [queues, worker_count]
     end
 

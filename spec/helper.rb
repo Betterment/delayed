@@ -9,7 +9,7 @@ require 'delayed_job_active_record'
 require 'delayed/backend/shared_spec'
 
 if ENV['DEBUG_LOGS']
-  Delayed::Worker.logger = Logger.new(STDOUT)
+  Delayed::Worker.logger = Logger.new($stdout)
 else
   require 'tempfile'
 
@@ -40,12 +40,12 @@ ActiveRecord::Migration.verbose = false
 # https://stackoverflow.com/a/34555109
 if db_adapter == "mysql2"
   types = if defined?(ActiveRecord::ConnectionAdapters::AbstractMysqlAdapter)
-    # ActiveRecord 3.2+
-    ActiveRecord::ConnectionAdapters::AbstractMysqlAdapter::NATIVE_DATABASE_TYPES
-  else
-    # ActiveRecord < 3.2
-    ActiveRecord::ConnectionAdapters::Mysql2Adapter::NATIVE_DATABASE_TYPES
-  end
+            # ActiveRecord 3.2+
+            ActiveRecord::ConnectionAdapters::AbstractMysqlAdapter::NATIVE_DATABASE_TYPES
+          else
+            # ActiveRecord < 3.2
+            ActiveRecord::ConnectionAdapters::Mysql2Adapter::NATIVE_DATABASE_TYPES
+          end
   types[:primary_key] = types[:primary_key].sub(" DEFAULT NULL", "")
 end
 

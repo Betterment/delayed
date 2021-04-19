@@ -5,10 +5,10 @@ module Delayed
   class Railtie < Rails::Railtie
     initializer :after_initialize do
       Delayed::Worker.logger ||= if defined?(Rails)
-        Rails.logger
-      elsif defined?(RAILS_DEFAULT_LOGGER)
-        RAILS_DEFAULT_LOGGER
-      end
+                                   Rails.logger
+                                 elsif defined?(RAILS_DEFAULT_LOGGER)
+                                   RAILS_DEFAULT_LOGGER
+                                 end
     end
 
     rake_tasks do

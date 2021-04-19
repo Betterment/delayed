@@ -1,7 +1,6 @@
-# -*- encoding: utf-8 -*-
-
 Gem::Specification.new do |spec|
-  spec.authors        = ['Nathan Griffith', 'Rowan McDonald', 'Cyrus Eslami', 'John Mileham', 'Brandon Keepers', 'Brian Ryckbost', 'Chris Gaffney', 'David Genord II', 'Erik Michaels-Ober', 'Matt Griffin', 'Steve Richert', 'Tobias Lütke']
+  spec.authors        = ['Nathan Griffith', 'Rowan McDonald', 'Cyrus Eslami', 'John Mileham', 'Brandon Keepers', 'Brian Ryckbost',
+                         'Chris Gaffney', 'David Genord II', 'Erik Michaels-Ober', 'Matt Griffin', 'Steve Richert', 'Tobias Lütke']
   spec.description    = <<~MSG
     `Delayed` is a multi-threaded, database-backed queue used at Betterment to process millions of background jobs per day.
 
@@ -10,7 +9,7 @@ Gem::Specification.new do |spec|
     This gem is a hard fork of both `delayed_job` and `delayed_job_active_record` and is API-compatible with ActiveJob's `:delayed_job` queue adapter.
   MSG
   spec.email          = ['nathan@betterment.com']
-  spec.files          = %w[CHANGELOG.md CONTRIBUTING.md LICENSE.md README.md Rakefile delayed.gemspec]
+  spec.files          = %w(CHANGELOG.md CONTRIBUTING.md LICENSE.md README.md Rakefile delayed.gemspec)
   spec.files          += Dir.glob('{contrib,lib,recipes,spec}/**/*') # rubocop:disable Layout/SpaceAroundOperators
   spec.homepage       = 'http://github.com/betterment/delayed'
   spec.licenses       = ['MIT']
@@ -23,7 +22,7 @@ Gem::Specification.new do |spec|
   spec.metadata       = {
     'changelog_uri' => 'https://github.com/betterment/delayed/blob/main/CHANGELOG.md',
     'bug_tracker_uri' => 'https://github.com/betterment/delayed/issues',
-    'source_code_uri' => 'https://github.com/betterment/delayed'
+    'source_code_uri' => 'https://github.com/betterment/delayed',
   }
   spec.required_ruby_version = '>= 2.6'
 
@@ -33,10 +32,10 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'actionmailer'
   spec.add_development_dependency 'activerecord'
   spec.add_development_dependency 'appraisal'
+  spec.add_development_dependency 'mysql2'
+  spec.add_development_dependency 'pg'
   spec.add_development_dependency 'rake'
   spec.add_development_dependency 'rspec'
-  spec.add_development_dependency 'rubocop'
-  spec.add_development_dependency 'pg'
-  spec.add_development_dependency 'mysql2'
+  spec.add_development_dependency 'rubocop-betterment', '>= 2.0.0.pre'
   spec.add_development_dependency 'sqlite3'
 end

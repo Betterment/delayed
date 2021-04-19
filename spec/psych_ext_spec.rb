@@ -1,7 +1,7 @@
 require 'helper'
 require 'active_support/core_ext/string/strip'
 
-describe 'Psych::Visitors::ToRuby', :if => defined?(Psych::Visitors::ToRuby) do
+describe 'Psych::Visitors::ToRuby', if: defined?(Psych::Visitors::ToRuby) do
   context BigDecimal do
     it 'deserializes correctly' do
       deserialized = YAML.load_dj("--- !ruby/object:BigDecimal 18:0.1337E2\n...\n")
@@ -51,7 +51,7 @@ describe 'Psych::Visitors::ToRuby', :if => defined?(Psych::Visitors::ToRuby) do
         - !ruby/object:SingletonClass {}
       YML
       deserialized = YAML.load_dj(
-        YAML.load_dj(serialized).to_yaml
+        YAML.load_dj(serialized).to_yaml,
       )
 
       expect(deserialized).to contain_exactly(SingletonClass.instance, SingletonClass.instance)
@@ -63,7 +63,7 @@ describe 'Psych::Visitors::ToRuby', :if => defined?(Psych::Visitors::ToRuby) do
         - !ruby/object:ActiveModel::NullMutationTracker {}
       YML
       deserialized = YAML.load_dj(
-        YAML.load_dj(serialized).to_yaml
+        YAML.load_dj(serialized).to_yaml,
       )
 
       expect(deserialized).to contain_exactly(ActiveModel::NullMutationTracker.instance, ActiveModel::NullMutationTracker.instance)

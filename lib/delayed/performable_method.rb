@@ -30,17 +30,15 @@ module Delayed
       object.method(sym)
     end
 
-    # rubocop:disable MethodMissing
     def method_missing(symbol, *args)
       object.send(symbol, *args)
     end
-    # rubocop:enable MethodMissing
 
     def respond_to?(symbol, include_private = false)
       super || object.respond_to?(symbol, include_private)
     end
 
-  private
+    private
 
     def her_model?(object)
       object.class.respond_to?(:save_existing)

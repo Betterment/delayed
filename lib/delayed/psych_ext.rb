@@ -5,7 +5,7 @@ module Delayed
       coder.map = {
         'object' => object,
         'method_name' => method_name,
-        'args' => args
+        'args' => args,
       }
     end
   end
@@ -55,7 +55,7 @@ module Delayed
         end
       end
 
-      def visit_Psych_Nodes_Mapping(object) # rubocop:disable CyclomaticComplexity, MethodName, PerceivedComplexity
+      def visit_Psych_Nodes_Mapping(object) # rubocop:disable Metrics/CyclomaticComplexity, Naming/MethodName, Metrics/PerceivedComplexity
         klass = Psych.load_tags[object.tag]
         if klass
           # Implementation changed here https://github.com/ruby/psych/commit/2c644e184192975b261a81f486a04defa3172b3f
@@ -65,50 +65,50 @@ module Delayed
         end
 
         case object.tag
-        when %r{^!ruby/object}
-          result = super
-          if jruby_is_seriously_borked && result.is_a?(ActiveRecord::Base)
-            klass = result.class
-            id = result[klass.primary_key]
+          when %r{^!ruby/object}
+            result = super
+            if jruby_is_seriously_borked && result.is_a?(ActiveRecord::Base)
+              klass = result.class
+              id = result[klass.primary_key]
+              begin
+                klass.unscoped.find(id)
+              rescue ActiveRecord::RecordNotFound => e
+                raise Delayed::DeserializationError, "ActiveRecord::RecordNotFound, class: #{klass}, primary key: #{id} (#{e.message})"
+              end
+            else
+              result
+            end
+          when %r{^!ruby/ActiveRecord:(.+)$}
+            klass = resolve_class(Regexp.last_match[1])
+            payload = Hash[*object.children.map { |c| accept c }]
+            id = payload['attributes'][klass.primary_key]
+            id = id.value if defined?(ActiveRecord::Attribute) && id.is_a?(ActiveRecord::Attribute)
             begin
               klass.unscoped.find(id)
-            rescue ActiveRecord::RecordNotFound => error # rubocop:disable BlockNesting
-              raise Delayed::DeserializationError, "ActiveRecord::RecordNotFound, class: #{klass}, primary key: #{id} (#{error.message})"
+            rescue ActiveRecord::RecordNotFound => e
+              raise Delayed::DeserializationError, "ActiveRecord::RecordNotFound, class: #{klass}, primary key: #{id} (#{e.message})"
+            end
+          when %r{^!ruby/Mongoid:(.+)$}
+            klass = resolve_class(Regexp.last_match[1])
+            payload = Hash[*object.children.map { |c| accept c }]
+            id = payload['attributes']['_id']
+            begin
+              klass.find(id)
+            rescue Mongoid::Errors::DocumentNotFound => e
+              raise Delayed::DeserializationError, "Mongoid::Errors::DocumentNotFound, class: #{klass}, primary key: #{id} (#{e.message})"
+            end
+          when %r{^!ruby/DataMapper:(.+)$}
+            klass = resolve_class(Regexp.last_match[1])
+            payload = Hash[*object.children.map { |c| accept c }]
+            begin
+              primary_keys = klass.properties.select(&:key?)
+              key_names = primary_keys.map { |p| p.name.to_s }
+              klass.get!(*key_names.map { |k| payload['attributes'][k] })
+            rescue DataMapper::ObjectNotFoundError => e
+              raise Delayed::DeserializationError, "DataMapper::ObjectNotFoundError, class: #{klass} (#{e.message})"
             end
           else
-            result
-          end
-        when %r{^!ruby/ActiveRecord:(.+)$}
-          klass = resolve_class(Regexp.last_match[1])
-          payload = Hash[*object.children.map { |c| accept c }]
-          id = payload['attributes'][klass.primary_key]
-          id = id.value if defined?(ActiveRecord::Attribute) && id.is_a?(ActiveRecord::Attribute)
-          begin
-            klass.unscoped.find(id)
-          rescue ActiveRecord::RecordNotFound => error
-            raise Delayed::DeserializationError, "ActiveRecord::RecordNotFound, class: #{klass}, primary key: #{id} (#{error.message})"
-          end
-        when %r{^!ruby/Mongoid:(.+)$}
-          klass = resolve_class(Regexp.last_match[1])
-          payload = Hash[*object.children.map { |c| accept c }]
-          id = payload['attributes']['_id']
-          begin
-            klass.find(id)
-          rescue Mongoid::Errors::DocumentNotFound => error
-            raise Delayed::DeserializationError, "Mongoid::Errors::DocumentNotFound, class: #{klass}, primary key: #{id} (#{error.message})"
-          end
-        when %r{^!ruby/DataMapper:(.+)$}
-          klass = resolve_class(Regexp.last_match[1])
-          payload = Hash[*object.children.map { |c| accept c }]
-          begin
-            primary_keys = klass.properties.select(&:key?)
-            key_names = primary_keys.map { |p| p.name.to_s }
-            klass.get!(*key_names.map { |k| payload['attributes'][k] })
-          rescue DataMapper::ObjectNotFoundError => error
-            raise Delayed::DeserializationError, "DataMapper::ObjectNotFoundError, class: #{klass} (#{error.message})"
-          end
-        else
-          super
+            super
         end
       end
 
@@ -120,9 +120,10 @@ module Delayed
       end
 
       def resolve_class(klass_name)
-        return nil if !klass_name || klass_name.empty?
+        return nil if klass_name.blank?
+
         klass_name.constantize
-      rescue
+      rescue StandardError
         super
       end
 

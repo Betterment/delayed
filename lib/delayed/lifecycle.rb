@@ -3,14 +3,14 @@ module Delayed
 
   class Lifecycle
     EVENTS = {
-      :enqueue    => [:job],
-      :execute    => [:worker],
-      :loop       => [:worker],
-      :perform    => [:worker, :job],
-      :error      => [:worker, :job],
-      :failure    => [:worker, :job],
-      :thread     => [:worker, :job],
-      :invoke_job => [:job]
+      enqueue: [:job],
+      execute: [:worker],
+      loop: [:worker],
+      perform: %i(worker job),
+      error: %i(worker job),
+      failure: %i(worker job),
+      thread: %i(worker job),
+      invoke_job: [:job],
     }.freeze
 
     def initialize
@@ -41,7 +41,7 @@ module Delayed
       @callbacks[event].execute(*args, &block)
     end
 
-  private
+    private
 
     def add(type, event, &block)
       missing_callback(event) unless @callbacks.key?(event)
@@ -71,15 +71,15 @@ module Delayed
 
     def add(type, &callback)
       case type
-      when :before
-        @before << callback
-      when :after
-        @after << callback
-      when :around
-        chain = @around # use a local variable so that the current chain is closed over in the following lambda
-        @around = lambda { |*a, &block| chain.call(*a) { |*b| callback.call(*b, &block) } }
-      else
-        raise InvalidCallback, "Invalid callback type: #{type}"
+        when :before
+          @before << callback
+        when :after
+          @after << callback
+        when :around
+          chain = @around # use a local variable so that the current chain is closed over in the following lambda
+          @around = lambda { |*a, &block| chain.call(*a) { |*b| callback.call(*b, &block) } }
+        else
+          raise InvalidCallback, "Invalid callback type: #{type}"
       end
     end
   end

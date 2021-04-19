@@ -50,6 +50,7 @@ module Delayed
       end
 
       attr_reader :error
+
       def error=(error)
         @error = error
         self.last_error = "#{error.message}\n#{error.backtrace.join("\n")}" if respond_to?(:last_error=)
@@ -58,9 +59,9 @@ module Delayed
       def failed?
         !!failed_at
       end
-      alias_method :failed, :failed?
+      alias failed failed?
 
-      ParseObjectFromYaml = %r{\!ruby/\w+\:([^\s]+)} # rubocop:disable ConstantName
+      ParseObjectFromYaml = %r{!ruby/\w+:([^\s]+)}.freeze # rubocop:disable Naming/ConstantName
 
       def name
         @name ||= payload_object.respond_to?(:display_name) ? payload_object.display_name : payload_object.class.name
@@ -81,16 +82,14 @@ module Delayed
 
       def invoke_job
         Delayed::Worker.lifecycle.run_callbacks(:invoke_job, self) do
-          begin
-            hook :before
-            payload_object.perform
-            hook :success
-          rescue Exception => e # rubocop:disable RescueException
-            hook :error, e
-            raise e
-          ensure
-            hook :after
-          end
+          hook :before
+          payload_object.perform
+          hook :success
+        rescue Exception => e # rubocop:disable Lint/RescueException
+          hook :error, e
+          raise e
+        ensure
+          hook :after
         end
       end
 
@@ -105,7 +104,7 @@ module Delayed
           method = payload_object.method(name)
           method.arity.zero? ? method.call : method.call(self, *args)
         end
-      rescue DeserializationError # rubocop:disable HandleExceptions
+      rescue DeserializationError
       end
 
       def reschedule_at
@@ -142,7 +141,7 @@ module Delayed
         save!
       end
 
-    protected
+      protected
 
       def set_default_run_at
         self.run_at ||= self.class.db_time_now

@@ -16,7 +16,7 @@ module Delayed
         options
       end
 
-    private
+      private
 
       def set_payload
         options[:payload_object] ||= args.shift
@@ -36,15 +36,15 @@ module Delayed
       end
 
       def handle_deprecation
-        if args.size > 0
+        if args.size.positive?
           warn '[DEPRECATION] Passing multiple arguments to `#enqueue` is deprecated. Pass a hash with :priority and :run_at.'
           options[:priority] = args.first || options[:priority]
           options[:run_at]   = args[1]
         end
 
-        # rubocop:disable GuardClause
         unless options[:payload_object].respond_to?(:perform)
-          raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
+          raise ArgumentError,
+                'Cannot enqueue items which do not respond to perform'
         end
         # rubocop:enabled GuardClause
       end

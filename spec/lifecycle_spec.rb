@@ -1,10 +1,10 @@
 require 'helper'
 
 describe Delayed::Lifecycle do
-  let(:lifecycle) { Delayed::Lifecycle.new }
+  let(:lifecycle) { described_class.new }
   let(:callback) { lambda { |*_args| } }
   let(:arguments) { [1] }
-  let(:behavior) { double(Object, :before! => nil, :after! => nil, :inside! => nil) }
+  let(:behavior) { double(Object, before!: nil, after!: nil, inside!: nil) }
   let(:wrapped_block) { proc { behavior.inside! } }
 
   describe 'before callbacks' do

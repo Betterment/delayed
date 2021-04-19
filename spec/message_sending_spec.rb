@@ -19,19 +19,19 @@ describe Delayed::MessageSending do
 
     it 'creates a PerformableMethod' do
       story = Story.create
-      expect do
+      expect {
         job = story.tell!(1)
         expect(job.payload_object.class).to eq(Delayed::PerformableMethod)
         expect(job.payload_object.method_name).to eq(:tell_without_delay!)
         expect(job.payload_object.args).to eq([1])
-      end.to(change { Delayed::Job.count })
+      }.to(change { Delayed::Job.count })
     end
 
     describe 'with options' do
       class Fable
         cattr_accessor :importance
         def tell; end
-        handle_asynchronously :tell, :priority => proc { importance }
+        handle_asynchronously :tell, priority: proc { importance }
       end
 
       it 'sets the priority based on the Fable importance' do
@@ -47,8 +47,9 @@ describe Delayed::MessageSending do
       describe 'using a proc with parameters' do
         class Yarn
           attr_accessor :importance
+
           def spin; end
-          handle_asynchronously :spin, :priority => proc { |y| y.importance }
+          handle_asynchronously :spin, priority: proc { |y| y.importance }
         end
 
         it 'sets the priority based on the Fable importance' do
@@ -65,6 +66,7 @@ describe Delayed::MessageSending do
   context 'delay' do
     class FairyTail
       attr_accessor :happy_ending
+
       def self.princesses; end
 
       def tell
@@ -77,12 +79,12 @@ describe Delayed::MessageSending do
     end
 
     it 'creates a new PerformableMethod job' do
-      expect do
+      expect {
         job = 'hello'.delay.count('l')
         expect(job.payload_object.class).to eq(Delayed::PerformableMethod)
         expect(job.payload_object.method_name).to eq(:count)
         expect(job.payload_object.args).to eq(['l'])
-      end.to change { Delayed::Job.count }.by(1)
+      }.to change { Delayed::Job.count }.by(1)
     end
 
     it 'sets default priority' do
@@ -99,7 +101,7 @@ describe Delayed::MessageSending do
 
     it 'sets job options' do
       run_at = Time.parse('2010-05-03 12:55 AM')
-      job = FairyTail.delay(:priority => 20, :run_at => run_at).to_s
+      job = FairyTail.delay(priority: 20, run_at: run_at).to_s
       expect(job.run_at).to eq(run_at)
       expect(job.priority).to eq(20)
     end
@@ -107,41 +109,41 @@ describe Delayed::MessageSending do
     it 'does not delay the job when delay_jobs is false' do
       Delayed::Worker.delay_jobs = false
       fairy_tail = FairyTail.new
-      expect do
-        expect do
+      expect {
+        expect {
           fairy_tail.delay.tell
-        end.to change(fairy_tail, :happy_ending).from(nil).to(true)
-      end.not_to(change { Delayed::Job.count })
+        }.to change(fairy_tail, :happy_ending).from(nil).to(true)
+      }.not_to(change { Delayed::Job.count })
     end
 
     it 'does delay the job when delay_jobs is true' do
       Delayed::Worker.delay_jobs = true
       fairy_tail = FairyTail.new
-      expect do
-        expect do
+      expect {
+        expect {
           fairy_tail.delay.tell
-        end.not_to change(fairy_tail, :happy_ending)
-      end.to change { Delayed::Job.count }.by(1)
+        }.not_to change(fairy_tail, :happy_ending)
+      }.to change { Delayed::Job.count }.by(1)
     end
 
     it 'does delay when delay_jobs is a proc returning true' do
       Delayed::Worker.delay_jobs = ->(_job) { true }
       fairy_tail = FairyTail.new
-      expect do
-        expect do
+      expect {
+        expect {
           fairy_tail.delay.tell
-        end.not_to change(fairy_tail, :happy_ending)
-      end.to change { Delayed::Job.count }.by(1)
+        }.not_to change(fairy_tail, :happy_ending)
+      }.to change { Delayed::Job.count }.by(1)
     end
 
     it 'does not delay the job when delay_jobs is a proc returning false' do
       Delayed::Worker.delay_jobs = ->(_job) { false }
       fairy_tail = FairyTail.new
-      expect do
-        expect do
+      expect {
+        expect {
           fairy_tail.delay.tell
-        end.to change(fairy_tail, :happy_ending).from(nil).to(true)
-      end.not_to(change { Delayed::Job.count })
+        }.to change(fairy_tail, :happy_ending).from(nil).to(true)
+      }.not_to(change { Delayed::Job.count })
     end
   end
 end

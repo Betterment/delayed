@@ -3,7 +3,7 @@ Bundler::GemHelper.install_tasks
 
 require 'rspec/core/rake_task'
 
-ADAPTERS = %w[mysql2 postgresql sqlite3].freeze
+ADAPTERS = %w(mysql2 postgresql sqlite3).freeze
 
 ADAPTERS.each do |adapter|
   desc "Run RSpec code examples for #{adapter} adapter"
@@ -27,9 +27,9 @@ if ENV['APPRAISAL_INITIALIZED'] || ENV['CI']
   tasks = ADAPTERS + [:adapter]
   tasks += [:rubocop] unless ENV['CI']
 
-  task :default => tasks
+  task default: tasks
 else
   require 'appraisal'
   Appraisal::Task.new
-  task :default => :appraisal
+  task default: :appraisal
 end
