@@ -4,6 +4,11 @@ inherit_gem:
   rubocop-betterment:
     - config/default.yml
 
+inherit_mode:
+  merge:
+    - Exclude
+
 AllCops:
   Exclude:
     - 'lib/generators/delayed_job/templates/*.rb'
+  NewCops: enable

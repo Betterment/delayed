@@ -173,7 +173,7 @@ describe Delayed::Worker do
 
       described_class.new
       described_class.new
-      described_class.lifecycle.run_callbacks(:enqueue, nil) {}
+      described_class.lifecycle.run_callbacks(:enqueue, nil) {} # no-op
 
       expect(performances).to eq(1)
     end

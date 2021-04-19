@@ -15,7 +15,7 @@ jobs:
     - name: Generate lockfile for cache key
       run: bundle lock
     - name: Cache gems
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       with:
         path: vendor/bundle
         key: ${{ runner.os }}-linter-${{ hashFiles('**/Gemfile.lock') }}

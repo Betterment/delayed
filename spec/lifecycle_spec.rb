@@ -70,6 +70,8 @@ describe Delayed::Lifecycle do
 
   it 'raises if callback is executed with wrong number of parameters' do
     lifecycle.before(:execute, &callback)
-    expect { lifecycle.run_callbacks(:execute, 1, 2, 3) {} }.to raise_error(ArgumentError, /1 parameter/)
+    expect {
+      lifecycle.run_callbacks(:execute, 1, 2, 3) {} # no-op
+    }.to raise_error(ArgumentError, /1 parameter/)
   end
 end
