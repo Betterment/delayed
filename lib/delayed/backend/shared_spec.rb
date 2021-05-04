@@ -265,6 +265,11 @@ shared_examples_for 'a delayed_job backend' do
       expect(described_class.create(payload_object: ErrorJob.new).name).to eq('ErrorJob')
     end
 
+    it 'is the class name of the performable job if it is an ActiveJob' do
+      job_wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
+      expect(described_class.create(payload_object: job_wrapper).name).to eq('ActiveJobJob')
+    end
+
     it 'is the method that will be called if its a performable method object' do
       job = described_class.new(payload_object: NamedJob.new)
       expect(job.name).to eq('named_job')

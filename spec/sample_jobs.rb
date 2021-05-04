@@ -6,8 +6,7 @@ class NamedJob
 end
 
 class SimpleJob
-  cattr_accessor :runs
-  @runs = 0
+  cattr_accessor(:runs) { 0 }
   def perform
     self.class.runs += 1
   end
@@ -20,17 +19,21 @@ class NamedQueueJob < SimpleJob
 end
 
 class ErrorJob
-  cattr_accessor :runs
-  @runs = 0
+  cattr_accessor(:runs) { 0 }
   def perform
     raise StandardError, 'did not work'
   end
 end
 
+class FailureJob < ErrorJob
+  def max_attempts
+    1
+  end
+end
+
 CustomRescheduleJob = Struct.new(:offset)
 class CustomRescheduleJob
-  cattr_accessor :runs
-  @runs = 0
+  cattr_accessor(:runs) { 0 }
   def perform
     raise 'did not work'
   end
@@ -64,8 +67,7 @@ end
 
 module M
   class ModuleJob
-    cattr_accessor :runs
-    @runs = 0
+    cattr_accessor(:runs) { 0 }
     def perform
       self.class.runs += 1
     end
@@ -108,4 +110,8 @@ class EnqueueJobMod < SimpleJob
   def enqueue(job)
     job.run_at = 20.minutes.from_now
   end
+end
+
+class ActiveJobJob < ActiveJob::Base # rubocop:disable Rails/ApplicationJob
+  def perform; end
 end

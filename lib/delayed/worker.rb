@@ -49,7 +49,10 @@ module Delayed
     end
 
     # Add or remove plugins in this list before the worker is instantiated
-    self.plugins = [Delayed::Plugins::ClearLocks]
+    self.plugins = [
+      Delayed::Plugins::ClearLocks,
+      Delayed::Plugins::Instrumentation,
+    ]
 
     # By default failed jobs are not destroyed. This means you must monitor for them
     # and have a process for addressing them, or your table will continually expand.

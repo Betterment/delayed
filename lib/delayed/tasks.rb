@@ -1,19 +1,4 @@
-namespace :jobs do
-  desc 'Clear the delayed_job queue.'
-  task clear: :environment do
-    Delayed::Job.delete_all
-  end
-
-  desc 'Start a delayed_job worker.'
-  task work: :environment_options do
-    Delayed::Worker.new(@worker_options).start
-  end
-
-  desc 'Start a delayed_job worker and exit when all available jobs are complete.'
-  task workoff: :environment_options do
-    Delayed::Worker.new(@worker_options.merge(exit_on_complete: true)).start
-  end
-
+namespace :delayed do
   task environment_options: :environment do
     @worker_options = {
       min_priority: ENV['MIN_PRIORITY'],
@@ -27,12 +12,18 @@ namespace :jobs do
     @worker_options[:max_claims] = ENV['MAX_CLAIMS'].to_i if ENV['MAX_CLAIMS']
   end
 
-  desc "Exit with error status if any jobs older than max_age seconds haven't been attempted yet."
-  task :check, [:max_age] => :environment do |_, args|
-    args.with_defaults(max_age: 300)
-
-    unprocessed_jobs = Delayed::Job.where('attempts = 0 AND created_at < ?', Time.now - args[:max_age].to_i).count
-
-    raise "#{unprocessed_jobs} jobs older than #{args[:max_age]} seconds have not been processed yet" if unprocessed_jobs.positive?
+  desc 'start a delayed worker'
+  task work: :environment_options do
+    Delayed::Worker.new(@worker_options).start
   end
+
+  desc 'monitor job queue and emit metrics at an interval'
+  task monitor: [:environment] do
+    Delayed::Monitor.new.start
+  end
+end
+
+# For backwards compatibility:
+namespace :jobs do
+  task work: %i(delayed:work)
 end

@@ -26,10 +26,11 @@ Gem::Specification.new do |spec|
   }
   spec.required_ruby_version = '>= 2.6'
 
-  spec.add_dependency 'activesupport', '>= 5.2'
+  spec.add_dependency 'activerecord', '>= 5.2'
   spec.add_dependency 'concurrent-ruby'
 
   spec.add_development_dependency 'actionmailer'
+  spec.add_development_dependency 'activejob'
   spec.add_development_dependency 'activerecord'
   spec.add_development_dependency 'appraisal'
   spec.add_development_dependency 'mysql2'
@@ -38,4 +39,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rspec'
   spec.add_development_dependency 'rubocop-betterment', '>= 2.0.0.pre'
   spec.add_development_dependency 'sqlite3'
+  spec.add_development_dependency 'timecop'
 end

@@ -63,8 +63,10 @@ module Delayed
 
       ParseObjectFromYaml = %r{!ruby/\w+:([^\s]+)}.freeze # rubocop:disable Naming/ConstantName
 
-      def name
-        @name ||= payload_object.respond_to?(:display_name) ? payload_object.display_name : payload_object.class.name
+      def name # rubocop:disable Metrics/AbcSize
+        @name ||= payload_object.job_data['job_class'] if payload_object.respond_to?(:job_data)
+        @name ||= payload_object.display_name if payload_object.respond_to?(:display_name)
+        @name ||= payload_object.class.name
       rescue DeserializationError
         ParseObjectFromYaml.match(handler)[1]
       end

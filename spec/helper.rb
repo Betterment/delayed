@@ -1,7 +1,9 @@
 require 'logger'
 require 'rspec'
+require 'timecop'
 
 require 'action_mailer'
+require 'active_job'
 require 'active_record'
 
 require 'delayed_job'
@@ -104,6 +106,7 @@ end
 RSpec.configure do |config|
   config.after(:each) do
     Delayed::Worker.reset
+    Delayed::Job.delete_all
   end
 
   config.expect_with :rspec do |c|
@@ -113,3 +116,53 @@ end
 
 # Add this directory so the ActiveSupport autoloading works
 ActiveSupport::Dependencies.autoload_paths << File.dirname(__FILE__)
+
+RSpec::Matchers.define :emit_notification do |expected_event_name|
+  attr_reader :actual, :expected
+
+  def supports_block_expectations?
+    true
+  end
+
+  chain :with_payload, :expected_payload
+  diffable
+
+  match do |block|
+    @expected = { event_name: expected_event_name, payload: expected_payload }
+    @actuals = []
+    callback = ->(name, _started, _finished, _unique_id, payload) do
+      @actuals << { event_name: name, payload: payload }
+    end
+
+    ActiveSupport::Notifications.subscribed(callback, expected_event_name, &block)
+
+    unless expected_payload
+      @actuals.each { |a| a.delete(:payload) }
+      @expected.delete(:payload)
+    end
+
+    @actual = @actuals.find { |a| values_match?(@expected, a) } || @actuals.last
+    values_match?(@expected, @actual)
+  end
+
+  failure_message do
+    <<~MSG
+      Expected the code block to emit:
+        #{@expected.inspect}
+      But instead, the following were emitted:
+        #{@actuals.map(&:inspect).join("\n  ")}
+    MSG
+  end
+end
+
+def current_adapter
+  ENV.fetch('ADAPTER', 'sqlite3')
+end
+
+def current_database
+  if current_adapter == 'sqlite3'
+    a_string_ending_with('tmp/database.sqlite')
+  else
+    'delayed_job_test'
+  end
+end
