@@ -51,6 +51,12 @@ shared_examples_for 'a delayed_job backend' do
         expect(job.priority).to eq(5)
       end
 
+      it 'is able to set priority by symbol name' do
+        job = described_class.enqueue SimpleJob.new, priority: :eventual
+        expect(job.priority).to be_eventual
+        expect(job.priority).to eq(20)
+      end
+
       it 'uses default priority' do
         job = described_class.enqueue payload_object: SimpleJob.new
         expect(job.priority).to eq(99)

@@ -71,6 +71,14 @@ module Delayed
         ParseObjectFromYaml.match(handler)[1]
       end
 
+      def priority
+        Priority.new(super)
+      end
+
+      def priority=(value)
+        super(Priority.new(value))
+      end
+
       def payload_object=(object)
         @payload_object = object
         self.handler = YAML.dump_dj(object)

@@ -12,12 +12,10 @@ module Delayed
       workable_count
     ).freeze
 
-    DEFAULT_PRIORITIES = [0, 10, 20, 30].map { |i| [i, 0] }.to_h
-
     cattr_accessor(:sleep_interval) { 60 }
 
     def initialize
-      @jobs = Job.group(:priority).where(priority: DEFAULT_PRIORITIES.keys)
+      @jobs = Job.group(priority_case_statement).where(Job.arel_table[:priority].gteq(0))
       @as_of = Job.db_time_now
     end
 
@@ -40,7 +38,8 @@ module Delayed
 
     def emit!
       METRICS.each do |metric|
-        send("#{metric}_by_priority").reverse_merge(DEFAULT_PRIORITIES).each do |priority, value|
+        default_results = Priority.names.transform_keys(&:to_s).transform_values { |_| 0 }
+        send("#{metric}_by_priority").reverse_merge(default_results).each do |priority, value|
           ActiveSupport::Notifications.instrument(
             "delayed.job.#{metric}",
             default_tags.merge(priority: priority, value: value),
@@ -91,13 +90,13 @@ module Delayed
 
     def max_lock_age_by_priority
       oldest_locked_job_by_priority.each_with_object({}) do |job, metrics|
-        metrics[job.priority] = as_of - job.locked_at
+        metrics[job.priority_name] = as_of - job.locked_at
       end
     end
 
     def max_age_by_priority
       oldest_workable_job_by_priority.each_with_object({}) do |job, metrics|
-        metrics[job.priority] = as_of - job.run_at
+        metrics[job.priority_name] = as_of - job.run_at
       end
     end
 
@@ -110,11 +109,25 @@ module Delayed
     end
 
     def oldest_locked_job_by_priority
-      jobs.working.select('priority, MIN(locked_at) AS locked_at')
+      jobs.working.select("#{priority_case_statement} AS priority_name, MIN(locked_at) AS locked_at")
     end
 
     def oldest_workable_job_by_priority
-      jobs.workable(as_of).select('priority, MIN(run_at) AS run_at')
+      jobs.workable(as_of).select("#{priority_case_statement} AS priority_name, MIN(run_at) AS run_at")
+    end
+
+    def priority_case_statement
+      [
+        'CASE',
+        Priority.ranges.map do |(name, range)|
+          [
+            "WHEN priority >= #{range.first.to_i}",
+            ("AND priority < #{range.last.to_i}" unless range.last.infinite?),
+            "THEN '#{name}'",
+          ].compact
+        end,
+        'END',
+      ].flatten.join(' ')
     end
   end
 end

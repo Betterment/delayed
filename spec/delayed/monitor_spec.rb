@@ -11,42 +11,73 @@ RSpec.describe Delayed::Monitor do
 
   it 'emits empty metrics for all default priorities' do
     expect { subject.emit! }
-      .to emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 0, value: 0))
-      .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 10, value: 0))
-      .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 20, value: 0))
-      .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 30, value: 0))
-      .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 0, value: 0))
-      .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 10, value: 0))
-      .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 20, value: 0))
-      .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 30, value: 0))
-      .and emit_notification("delayed.job.locked_count").with_payload(default_payload.merge(priority: 0, value: 0))
-      .and emit_notification("delayed.job.locked_count").with_payload(default_payload.merge(priority: 10, value: 0))
-      .and emit_notification("delayed.job.locked_count").with_payload(default_payload.merge(priority: 20, value: 0))
-      .and emit_notification("delayed.job.locked_count").with_payload(default_payload.merge(priority: 30, value: 0))
-      .and emit_notification("delayed.job.erroring_count").with_payload(default_payload.merge(priority: 0, value: 0))
-      .and emit_notification("delayed.job.erroring_count").with_payload(default_payload.merge(priority: 10, value: 0))
-      .and emit_notification("delayed.job.erroring_count").with_payload(default_payload.merge(priority: 20, value: 0))
-      .and emit_notification("delayed.job.erroring_count").with_payload(default_payload.merge(priority: 30, value: 0))
-      .and emit_notification("delayed.job.failed_count").with_payload(default_payload.merge(priority: 0, value: 0))
-      .and emit_notification("delayed.job.failed_count").with_payload(default_payload.merge(priority: 10, value: 0))
-      .and emit_notification("delayed.job.failed_count").with_payload(default_payload.merge(priority: 20, value: 0))
-      .and emit_notification("delayed.job.failed_count").with_payload(default_payload.merge(priority: 30, value: 0))
-      .and emit_notification("delayed.job.working_count").with_payload(default_payload.merge(priority: 0, value: 0))
-      .and emit_notification("delayed.job.working_count").with_payload(default_payload.merge(priority: 10, value: 0))
-      .and emit_notification("delayed.job.working_count").with_payload(default_payload.merge(priority: 20, value: 0))
-      .and emit_notification("delayed.job.working_count").with_payload(default_payload.merge(priority: 30, value: 0))
-      .and emit_notification("delayed.job.workable_count").with_payload(default_payload.merge(priority: 0, value: 0))
-      .and emit_notification("delayed.job.workable_count").with_payload(default_payload.merge(priority: 10, value: 0))
-      .and emit_notification("delayed.job.workable_count").with_payload(default_payload.merge(priority: 20, value: 0))
-      .and emit_notification("delayed.job.workable_count").with_payload(default_payload.merge(priority: 30, value: 0))
-      .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 0, value: 0))
-      .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 10, value: 0))
-      .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 20, value: 0))
-      .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 30, value: 0))
-      .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 0, value: 0))
-      .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 10, value: 0))
-      .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 20, value: 0))
-      .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 30, value: 0))
+      .to emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+      .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
+      .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'eventual', value: 0))
+      .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'reporting', value: 0))
+      .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+      .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
+      .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 'eventual', value: 0))
+      .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 'reporting', value: 0))
+      .and emit_notification("delayed.job.locked_count").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+      .and emit_notification("delayed.job.locked_count").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
+      .and emit_notification("delayed.job.locked_count").with_payload(default_payload.merge(priority: 'eventual', value: 0))
+      .and emit_notification("delayed.job.locked_count").with_payload(default_payload.merge(priority: 'reporting', value: 0))
+      .and emit_notification("delayed.job.erroring_count").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+      .and emit_notification("delayed.job.erroring_count").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
+      .and emit_notification("delayed.job.erroring_count").with_payload(default_payload.merge(priority: 'eventual', value: 0))
+      .and emit_notification("delayed.job.erroring_count").with_payload(default_payload.merge(priority: 'reporting', value: 0))
+      .and emit_notification("delayed.job.failed_count").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+      .and emit_notification("delayed.job.failed_count").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
+      .and emit_notification("delayed.job.failed_count").with_payload(default_payload.merge(priority: 'eventual', value: 0))
+      .and emit_notification("delayed.job.failed_count").with_payload(default_payload.merge(priority: 'reporting', value: 0))
+      .and emit_notification("delayed.job.working_count").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+      .and emit_notification("delayed.job.working_count").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
+      .and emit_notification("delayed.job.working_count").with_payload(default_payload.merge(priority: 'eventual', value: 0))
+      .and emit_notification("delayed.job.working_count").with_payload(default_payload.merge(priority: 'reporting', value: 0))
+      .and emit_notification("delayed.job.workable_count").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+      .and emit_notification("delayed.job.workable_count").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
+      .and emit_notification("delayed.job.workable_count").with_payload(default_payload.merge(priority: 'eventual', value: 0))
+      .and emit_notification("delayed.job.workable_count").with_payload(default_payload.merge(priority: 'reporting', value: 0))
+      .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+      .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
+      .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 'eventual', value: 0))
+      .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 'reporting', value: 0))
+      .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+      .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
+      .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'eventual', value: 0))
+      .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'reporting', value: 0))
+  end
+
+  context 'when named priorities are customized' do
+    around do |example|
+      Delayed::Priority.names = { high: 0, low: 7 }
+      example.run
+    ensure
+      Delayed::Priority.names = nil
+    end
+
+    it 'emits empty metrics for all custom priorities' do
+      expect { subject.emit! }
+        .to emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'high', value: 0))
+        .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'low', value: 0))
+        .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 'high', value: 0))
+        .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 'low', value: 0))
+        .and emit_notification("delayed.job.locked_count").with_payload(default_payload.merge(priority: 'high', value: 0))
+        .and emit_notification("delayed.job.locked_count").with_payload(default_payload.merge(priority: 'low', value: 0))
+        .and emit_notification("delayed.job.erroring_count").with_payload(default_payload.merge(priority: 'high', value: 0))
+        .and emit_notification("delayed.job.erroring_count").with_payload(default_payload.merge(priority: 'low', value: 0))
+        .and emit_notification("delayed.job.failed_count").with_payload(default_payload.merge(priority: 'high', value: 0))
+        .and emit_notification("delayed.job.failed_count").with_payload(default_payload.merge(priority: 'low', value: 0))
+        .and emit_notification("delayed.job.working_count").with_payload(default_payload.merge(priority: 'high', value: 0))
+        .and emit_notification("delayed.job.working_count").with_payload(default_payload.merge(priority: 'low', value: 0))
+        .and emit_notification("delayed.job.workable_count").with_payload(default_payload.merge(priority: 'high', value: 0))
+        .and emit_notification("delayed.job.workable_count").with_payload(default_payload.merge(priority: 'low', value: 0))
+        .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 'high', value: 0))
+        .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 'low', value: 0))
+        .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'high', value: 0))
+        .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'low', value: 0))
+    end
   end
 
   context 'when there are jobs in the queue' do
@@ -58,14 +89,14 @@ RSpec.describe Delayed::Monitor do
         attempts: 0,
       }
     end
-    let(:p0_attributes) { job_attributes.merge(priority: 0) }
-    let(:p10_attributes) { job_attributes.merge(priority: 10) }
-    let(:p20_attributes) { job_attributes.merge(priority: 20) }
-    let(:p30_attributes) { job_attributes.merge(priority: 30) }
-    let(:p0_payload) { default_payload.merge(priority: 0) }
-    let(:p10_payload) { default_payload.merge(priority: 10) }
-    let(:p20_payload) { default_payload.merge(priority: 20) }
-    let(:p30_payload) { default_payload.merge(priority: 30) }
+    let(:p0_attributes) { job_attributes.merge(priority: 1) }
+    let(:p10_attributes) { job_attributes.merge(priority: 13) }
+    let(:p20_attributes) { job_attributes.merge(priority: 23) }
+    let(:p30_attributes) { job_attributes.merge(priority: 999) }
+    let(:p0_payload) { default_payload.merge(priority: 'interactive') }
+    let(:p10_payload) { default_payload.merge(priority: 'user_visible') }
+    let(:p20_payload) { default_payload.merge(priority: 'eventual') }
+    let(:p30_payload) { default_payload.merge(priority: 'reporting') }
     let!(:p0_workable_job) { Delayed::Job.create! p0_attributes.merge(run_at: now - 1.hour) }
     let!(:p0_failed_job) { Delayed::Job.create! p0_attributes.merge(run_at: now, last_error: '123', failed_at: now, attempts: 4) }
     let!(:p0_future_job) { Delayed::Job.create! p0_attributes.merge(run_at: now + 1.hour) }
@@ -82,7 +113,6 @@ RSpec.describe Delayed::Monitor do
     let!(:p30_failed_job) { Delayed::Job.create! p30_attributes.merge(run_at: now, last_error: '123', failed_at: now, attempts: 4) }
     let!(:p30_future_job) { Delayed::Job.create! p30_attributes.merge(run_at: now + 1.hour) }
     let!(:p30_working_job) { Delayed::Job.create! p30_attributes.merge(locked_at: now - 11.minutes) }
-    let!(:job_in_another_priority) { Delayed::Job.create! job_attributes.merge(priority: 2, run_at: now - 1.year) }
 
     around do |example|
       Timecop.freeze(now) { example.run }
@@ -126,6 +156,39 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.workable_count").with_payload(p30_payload.merge(value: 1))
         .and emit_notification("delayed.job.max_age").with_payload(p30_payload.merge(value: 4.hours))
         .and emit_notification("delayed.job.max_lock_age").with_payload(p30_payload.merge(value: 11.minutes))
+    end
+
+    context 'when named priorities are customized' do
+      around do |example|
+        Delayed::Priority.names = { high: 0, low: 20 }
+        example.run
+      ensure
+        Delayed::Priority.names = nil
+      end
+      let(:p0_payload) { default_payload.merge(priority: 'high') }
+      let(:p20_payload) { default_payload.merge(priority: 'low') }
+
+      it 'emits the expected results for each metric' do
+        expect { subject.emit! }
+          .to emit_notification("delayed.job.count").with_payload(p0_payload.merge(value: 8))
+          .and emit_notification("delayed.job.future_count").with_payload(p0_payload.merge(value: 2))
+          .and emit_notification("delayed.job.locked_count").with_payload(p0_payload.merge(value: 2))
+          .and emit_notification("delayed.job.erroring_count").with_payload(p0_payload.merge(value: 2))
+          .and emit_notification("delayed.job.failed_count").with_payload(p0_payload.merge(value: 2))
+          .and emit_notification("delayed.job.working_count").with_payload(p0_payload.merge(value: 2))
+          .and emit_notification("delayed.job.workable_count").with_payload(p0_payload.merge(value: 2))
+          .and emit_notification("delayed.job.max_age").with_payload(p0_payload.merge(value: 2.hours))
+          .and emit_notification("delayed.job.max_lock_age").with_payload(p0_payload.merge(value: 7.minutes))
+          .and emit_notification("delayed.job.count").with_payload(p20_payload.merge(value: 8))
+          .and emit_notification("delayed.job.future_count").with_payload(p20_payload.merge(value: 2))
+          .and emit_notification("delayed.job.locked_count").with_payload(p20_payload.merge(value: 2))
+          .and emit_notification("delayed.job.erroring_count").with_payload(p20_payload.merge(value: 2))
+          .and emit_notification("delayed.job.failed_count").with_payload(p20_payload.merge(value: 2))
+          .and emit_notification("delayed.job.working_count").with_payload(p20_payload.merge(value: 2))
+          .and emit_notification("delayed.job.workable_count").with_payload(p20_payload.merge(value: 2))
+          .and emit_notification("delayed.job.max_age").with_payload(p20_payload.merge(value: 4.hours))
+          .and emit_notification("delayed.job.max_lock_age").with_payload(p20_payload.merge(value: 11.minutes))
+      end
     end
   end
 end
