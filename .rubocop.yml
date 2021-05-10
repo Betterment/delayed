@@ -1,7 +1,7 @@
 inherit_from: .rubocop_todo.yml
 
 inherit_gem:
-  rubocop-betterment:
+  betterlint:
     - config/default.yml
 
 inherit_mode:
@@ -12,3 +12,6 @@ AllCops:
   Exclude:
     - 'lib/generators/delayed_job/templates/*.rb'
   NewCops: enable
+
+Rails/EnvironmentVariableAccess:
+  Enabled: false
