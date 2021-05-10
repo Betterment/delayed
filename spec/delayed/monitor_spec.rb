@@ -10,8 +10,9 @@ RSpec.describe Delayed::Monitor do
   end
 
   it 'emits empty metrics for all default priorities' do
-    expect { subject.emit! }
-      .to emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+    expect { subject.run! }
+      .to emit_notification("delayed.monitor.run").with_payload(default_payload)
+      .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'interactive', value: 0))
       .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
       .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'eventual', value: 0))
       .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'reporting', value: 0))
@@ -58,8 +59,9 @@ RSpec.describe Delayed::Monitor do
     end
 
     it 'emits empty metrics for all custom priorities' do
-      expect { subject.emit! }
-        .to emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'high', value: 0))
+      expect { subject.run! }
+        .to emit_notification("delayed.monitor.run").with_payload(default_payload)
+        .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'high', value: 0))
         .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'low', value: 0))
         .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 'high', value: 0))
         .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 'low', value: 0))
@@ -119,8 +121,9 @@ RSpec.describe Delayed::Monitor do
     end
 
     it 'emits the expected results for each metric' do
-      expect { subject.emit! }
-        .to emit_notification("delayed.job.count").with_payload(p0_payload.merge(value: 4))
+      expect { subject.run! }
+        .to emit_notification("delayed.monitor.run").with_payload(default_payload)
+        .and emit_notification("delayed.job.count").with_payload(p0_payload.merge(value: 4))
         .and emit_notification("delayed.job.future_count").with_payload(p0_payload.merge(value: 1))
         .and emit_notification("delayed.job.locked_count").with_payload(p0_payload.merge(value: 1))
         .and emit_notification("delayed.job.erroring_count").with_payload(p0_payload.merge(value: 1))
@@ -169,8 +172,9 @@ RSpec.describe Delayed::Monitor do
       let(:p20_payload) { default_payload.merge(priority: 'low') }
 
       it 'emits the expected results for each metric' do
-        expect { subject.emit! }
-          .to emit_notification("delayed.job.count").with_payload(p0_payload.merge(value: 8))
+        expect { subject.run! }
+          .to emit_notification("delayed.monitor.run").with_payload(default_payload)
+          .and emit_notification("delayed.job.count").with_payload(p0_payload.merge(value: 8))
           .and emit_notification("delayed.job.future_count").with_payload(p0_payload.merge(value: 2))
           .and emit_notification("delayed.job.locked_count").with_payload(p0_payload.merge(value: 2))
           .and emit_notification("delayed.job.erroring_count").with_payload(p0_payload.merge(value: 2))

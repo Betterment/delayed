@@ -15,7 +15,7 @@ module Delayed
     cattr_accessor(:sleep_interval) { 60 }
 
     def initialize
-      @jobs = Job.group(priority_case_statement).where(Job.arel_table[:priority].gteq(0))
+      @jobs = Job.group(priority_case_statement)
       @as_of = Job.db_time_now
     end
 
@@ -26,7 +26,7 @@ module Delayed
       say 'Starting job queue monitor'
 
       loop do
-        emit!
+        run!
         sleep(sleep_interval)
       end
     end
@@ -36,21 +36,25 @@ module Delayed
       exit # rubocop:disable Rails/Exit
     end
 
-    def emit!
-      METRICS.each do |metric|
-        default_results = Priority.names.transform_keys(&:to_s).transform_values { |_| 0 }
-        send("#{metric}_by_priority").reverse_merge(default_results).each do |priority, value|
-          ActiveSupport::Notifications.instrument(
-            "delayed.job.#{metric}",
-            default_tags.merge(priority: priority, value: value),
-          )
-        end
+    def run!
+      ActiveSupport::Notifications.instrument('delayed.monitor.run', default_tags) do
+        METRICS.each { |metric| emit_metric!(metric) }
       end
     end
 
     private
 
     attr_reader :jobs, :as_of
+
+    def emit_metric!(metric)
+      default_results = Priority.names.transform_keys(&:to_s).transform_values { |_| 0 }
+      send("#{metric}_by_priority").reverse_merge(default_results).each do |priority, value|
+        ActiveSupport::Notifications.instrument(
+          "delayed.job.#{metric}",
+          default_tags.merge(priority: priority, value: value),
+        )
+      end
+    end
 
     def say(message)
       Worker.logger.send(Worker.default_log_level, message)
