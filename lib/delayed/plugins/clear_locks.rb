@@ -3,9 +3,9 @@ module Delayed
     class ClearLocks < Plugin
       callbacks do |lifecycle|
         lifecycle.around(:execute) do |worker, &block|
-            block.call(worker)
-          ensure
-            Delayed::Job.clear_locks!(worker.name)
+          block.call(worker)
+        ensure
+          Delayed::Job.clear_locks!(worker.name)
         end
       end
     end

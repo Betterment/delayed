@@ -6,12 +6,13 @@ RSpec.describe Delayed::Monitor do
       table: 'delayed_jobs',
       database: current_database,
       database_adapter: current_adapter,
+      queue: 'default_tracking',
     }
   end
 
   it 'emits empty metrics for all default priorities' do
     expect { subject.run! }
-      .to emit_notification("delayed.monitor.run").with_payload(default_payload)
+      .to emit_notification("delayed.monitor.run").with_payload(default_payload.except(:queue))
       .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'interactive', value: 0))
       .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
       .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'eventual', value: 0))
@@ -60,7 +61,7 @@ RSpec.describe Delayed::Monitor do
 
     it 'emits empty metrics for all custom priorities' do
       expect { subject.run! }
-        .to emit_notification("delayed.monitor.run").with_payload(default_payload)
+        .to emit_notification("delayed.monitor.run").with_payload(default_payload.except(:queue))
         .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'high', value: 0))
         .and emit_notification("delayed.job.count").with_payload(default_payload.merge(priority: 'low', value: 0))
         .and emit_notification("delayed.job.future_count").with_payload(default_payload.merge(priority: 'high', value: 0))
@@ -87,6 +88,7 @@ RSpec.describe Delayed::Monitor do
     let(:job_attributes) do
       {
         run_at: now,
+        queue: 'default_tracking',
         handler: "--- !ruby/object:SimpleJob\n",
         attempts: 0,
       }
@@ -115,6 +117,7 @@ RSpec.describe Delayed::Monitor do
     let!(:p30_failed_job) { Delayed::Job.create! p30_attributes.merge(run_at: now, last_error: '123', failed_at: now, attempts: 4) }
     let!(:p30_future_job) { Delayed::Job.create! p30_attributes.merge(run_at: now + 1.hour) }
     let!(:p30_working_job) { Delayed::Job.create! p30_attributes.merge(locked_at: now - 11.minutes) }
+    let!(:p30_workable_job_in_other_queue) { Delayed::Job.create! p30_attributes.merge(run_at: now - 4.hours, queue: 'banana') }
 
     around do |example|
       Timecop.freeze(now) { example.run }
@@ -122,7 +125,7 @@ RSpec.describe Delayed::Monitor do
 
     it 'emits the expected results for each metric' do
       expect { subject.run! }
-        .to emit_notification("delayed.monitor.run").with_payload(default_payload)
+        .to emit_notification("delayed.monitor.run").with_payload(default_payload.except(:queue))
         .and emit_notification("delayed.job.count").with_payload(p0_payload.merge(value: 4))
         .and emit_notification("delayed.job.future_count").with_payload(p0_payload.merge(value: 1))
         .and emit_notification("delayed.job.locked_count").with_payload(p0_payload.merge(value: 1))
@@ -159,6 +162,8 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.workable_count").with_payload(p30_payload.merge(value: 1))
         .and emit_notification("delayed.job.max_age").with_payload(p30_payload.merge(value: 4.hours))
         .and emit_notification("delayed.job.max_lock_age").with_payload(p30_payload.merge(value: 11.minutes))
+        .and emit_notification("delayed.job.workable_count").with_payload(p30_payload.merge(value: 1, queue: 'banana'))
+        .and emit_notification("delayed.job.max_age").with_payload(p30_payload.merge(value: 4.hours, queue: 'banana'))
     end
 
     context 'when named priorities are customized' do
@@ -173,7 +178,7 @@ RSpec.describe Delayed::Monitor do
 
       it 'emits the expected results for each metric' do
         expect { subject.run! }
-          .to emit_notification("delayed.monitor.run").with_payload(default_payload)
+          .to emit_notification("delayed.monitor.run").with_payload(default_payload.except(:queue))
           .and emit_notification("delayed.job.count").with_payload(p0_payload.merge(value: 8))
           .and emit_notification("delayed.job.future_count").with_payload(p0_payload.merge(value: 2))
           .and emit_notification("delayed.job.locked_count").with_payload(p0_payload.merge(value: 2))
@@ -192,6 +197,44 @@ RSpec.describe Delayed::Monitor do
           .and emit_notification("delayed.job.workable_count").with_payload(p20_payload.merge(value: 2))
           .and emit_notification("delayed.job.max_age").with_payload(p20_payload.merge(value: 4.hours))
           .and emit_notification("delayed.job.max_lock_age").with_payload(p20_payload.merge(value: 11.minutes))
+          .and emit_notification("delayed.job.workable_count").with_payload(p20_payload.merge(value: 1, queue: 'banana'))
+          .and emit_notification("delayed.job.max_age").with_payload(p20_payload.merge(value: 4.hours, queue: 'banana'))
+      end
+    end
+
+    context 'when worker queues are specified' do
+      around do |example|
+        Delayed::Worker.queues = %w(banana gram)
+        Delayed::Priority.names = { interactive: 0 } # avoid splitting by priority for simplicity
+        example.run
+      ensure
+        Delayed::Priority.names = nil
+        Delayed::Worker.queues = []
+      end
+      let(:banana_payload) { default_payload.merge(queue: 'banana', priority: 'interactive') }
+      let(:gram_payload) { default_payload.merge(queue: 'gram', priority: 'interactive') }
+
+      it 'emits the expected results for each queue' do
+        expect { subject.run! }
+          .to emit_notification("delayed.monitor.run").with_payload(default_payload.except(:queue))
+          .and emit_notification("delayed.job.count").with_payload(banana_payload.merge(value: 1))
+          .and emit_notification("delayed.job.future_count").with_payload(banana_payload.merge(value: 0))
+          .and emit_notification("delayed.job.locked_count").with_payload(banana_payload.merge(value: 0))
+          .and emit_notification("delayed.job.erroring_count").with_payload(banana_payload.merge(value: 0))
+          .and emit_notification("delayed.job.failed_count").with_payload(banana_payload.merge(value: 0))
+          .and emit_notification("delayed.job.working_count").with_payload(banana_payload.merge(value: 0))
+          .and emit_notification("delayed.job.workable_count").with_payload(banana_payload.merge(value: 1))
+          .and emit_notification("delayed.job.max_age").with_payload(banana_payload.merge(value: 4.hours))
+          .and emit_notification("delayed.job.max_lock_age").with_payload(banana_payload.merge(value: 0))
+          .and emit_notification("delayed.job.count").with_payload(gram_payload.merge(value: 0))
+          .and emit_notification("delayed.job.future_count").with_payload(gram_payload.merge(value: 0))
+          .and emit_notification("delayed.job.locked_count").with_payload(gram_payload.merge(value: 0))
+          .and emit_notification("delayed.job.erroring_count").with_payload(gram_payload.merge(value: 0))
+          .and emit_notification("delayed.job.failed_count").with_payload(gram_payload.merge(value: 0))
+          .and emit_notification("delayed.job.working_count").with_payload(gram_payload.merge(value: 0))
+          .and emit_notification("delayed.job.workable_count").with_payload(gram_payload.merge(value: 0))
+          .and emit_notification("delayed.job.max_age").with_payload(gram_payload.merge(value: 0))
+          .and emit_notification("delayed.job.max_lock_age").with_payload(gram_payload.merge(value: 0))
       end
     end
   end
