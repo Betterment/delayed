@@ -9,31 +9,31 @@ describe Delayed::Lifecycle do
 
   describe 'before callbacks' do
     before(:each) do
-      lifecycle.before(:execute, &callback)
+      lifecycle.before(:enqueue, &callback)
     end
 
-    it 'executes before wrapped block' do
+    it 'enqueues before wrapped block' do
       expect(callback).to receive(:call).with(*arguments).ordered
       expect(behavior).to receive(:inside!).ordered
-      lifecycle.run_callbacks :execute, *arguments, &wrapped_block
+      lifecycle.run_callbacks :enqueue, *arguments, &wrapped_block
     end
   end
 
   describe 'after callbacks' do
     before(:each) do
-      lifecycle.after(:execute, &callback)
+      lifecycle.after(:enqueue, &callback)
     end
 
-    it 'executes after wrapped block' do
+    it 'enqueues after wrapped block' do
       expect(behavior).to receive(:inside!).ordered
       expect(callback).to receive(:call).with(*arguments).ordered
-      lifecycle.run_callbacks :execute, *arguments, &wrapped_block
+      lifecycle.run_callbacks :enqueue, *arguments, &wrapped_block
     end
   end
 
   describe 'around callbacks' do
     before(:each) do
-      lifecycle.around(:execute) do |*args, &block|
+      lifecycle.around(:enqueue) do |*args, &block|
         behavior.before!
         block.call(*args)
         behavior.after!
@@ -44,34 +44,34 @@ describe Delayed::Lifecycle do
       expect(behavior).to receive(:before!).ordered
       expect(behavior).to receive(:inside!).ordered
       expect(behavior).to receive(:after!).ordered
-      lifecycle.run_callbacks :execute, *arguments, &wrapped_block
+      lifecycle.run_callbacks :enqueue, *arguments, &wrapped_block
     end
 
-    it 'executes multiple callbacks in order' do
+    it 'enqueues multiple callbacks in order' do
       expect(behavior).to receive(:one).ordered
       expect(behavior).to receive(:two).ordered
       expect(behavior).to receive(:three).ordered
 
-      lifecycle.around(:execute) do |*args, &block|
+      lifecycle.around(:enqueue) do |*args, &block|
         behavior.one
         block.call(*args)
       end
-      lifecycle.around(:execute) do |*args, &block|
+      lifecycle.around(:enqueue) do |*args, &block|
         behavior.two
         block.call(*args)
       end
-      lifecycle.around(:execute) do |*args, &block|
+      lifecycle.around(:enqueue) do |*args, &block|
         behavior.three
         block.call(*args)
       end
-      lifecycle.run_callbacks(:execute, *arguments, &wrapped_block)
+      lifecycle.run_callbacks(:enqueue, *arguments, &wrapped_block)
     end
   end
 
-  it 'raises if callback is executed with wrong number of parameters' do
-    lifecycle.before(:execute, &callback)
+  it 'raises if callback is enqueued with wrong number of parameters' do
+    lifecycle.before(:enqueue, &callback)
     expect {
-      lifecycle.run_callbacks(:execute, 1, 2, 3) {} # no-op
+      lifecycle.run_callbacks(:enqueue, 1, 2, 3) {} # no-op
     }.to raise_error(ArgumentError, /1 parameter/)
   end
 end

@@ -69,32 +69,7 @@ describe Delayed::Worker do
     end
   end
 
-  context 'worker exit on complete' do
-    before do
-      described_class.exit_on_complete = true
-    end
-
-    after do
-      described_class.exit_on_complete = false
-    end
-
-    it 'exits the loop when no jobs are available' do
-      worker = described_class.new
-      Timeout.timeout(2) do
-        worker.start
-      end
-    end
-  end
-
   context 'worker job reservation' do
-    before do
-      described_class.exit_on_complete = true
-    end
-
-    after do
-      described_class.exit_on_complete = false
-    end
-
     it 'handles error during job reservation' do
       expect(Delayed::Job).to receive(:reserve).and_raise(Exception)
       described_class.new.work_off

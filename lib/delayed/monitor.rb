@@ -1,5 +1,7 @@
 module Delayed
   class Monitor
+    include Runnable
+
     METRICS = %w(
       count
       future_count
@@ -12,29 +14,12 @@ module Delayed
       workable_count
     ).freeze
 
-    cattr_accessor(:sleep_interval) { 60 }
+    cattr_accessor(:sleep_delay) { 60 }
 
     def initialize
       @jobs = Job.group(priority_case_statement).group(:queue)
       @jobs = @jobs.where(queue: Worker.queues) if Worker.queues.any?
       @as_of = Job.db_time_now
-    end
-
-    def start
-      trap('TERM') { quit! }
-      trap('INT') { quit! }
-
-      say 'Starting job queue monitor'
-
-      loop do
-        run!
-        sleep(sleep_interval)
-      end
-    end
-
-    def quit!
-      Thread.new { say 'Exiting...' }.join
-      exit # rubocop:disable Rails/Exit
     end
 
     def run!

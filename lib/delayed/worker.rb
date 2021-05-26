@@ -10,6 +10,8 @@ require 'concurrent'
 
 module Delayed
   class Worker # rubocop:disable Metrics/ClassLength
+    include Runnable
+
     DEFAULT_LOG_LEVEL        = 'info'.freeze
     DEFAULT_SLEEP_DELAY      = 5
     DEFAULT_MAX_ATTEMPTS     = 25
@@ -23,7 +25,7 @@ module Delayed
 
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
                    :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
-                   :read_ahead, :plugins, :destroy_failed_jobs, :exit_on_complete,
+                   :read_ahead, :plugins, :destroy_failed_jobs,
                    :default_log_level, :max_claims
 
     # Named queue into which jobs are enqueued by default
@@ -50,22 +52,12 @@ module Delayed
 
     # Add or remove plugins in this list before the worker is instantiated
     self.plugins = [
-      Delayed::Plugins::ClearLocks,
       Delayed::Plugins::Instrumentation,
     ]
 
     # By default failed jobs are not destroyed. This means you must monitor for them
     # and have a process for addressing them, or your table will continually expand.
     self.destroy_failed_jobs = false
-
-    # By default, Signals INT and TERM set @exit, and the worker exits upon completion of the current job.
-    # If you would prefer to raise a SignalException and exit immediately you can use this.
-    # Be aware daemons uses TERM to stop and restart
-    # false - No exceptions will be raised
-    # :term - Will only raise an exception on TERM signals but INT will wait for the current job to finish
-    # true - Will raise an exception on TERM and INT
-    cattr_accessor :raise_signal_exceptions
-    self.raise_signal_exceptions = false
 
     def self.backend=(backend)
       if backend.is_a? Symbol
@@ -134,7 +126,7 @@ module Delayed
     def initialize(options = {})
       @failed_reserve_count = 0
 
-      %i(min_priority max_claims max_priority sleep_delay read_ahead queues exit_on_complete).each do |option|
+      %i(min_priority max_claims max_priority sleep_delay read_ahead queues).each do |option|
         self.class.send("#{option}=", options[option]) if options.key?(option)
       end
 
@@ -161,54 +153,19 @@ module Delayed
     # Setting the name to nil will reset the default worker name
     attr_writer :name
 
-    def start # rubocop:disable Metrics/PerceivedComplexity
-      trap('TERM') do
-        Thread.new { say 'Exiting...' }
-        stop
-        raise SignalException, 'TERM' if self.class.raise_signal_exceptions
+    def run!
+      @realtime = Benchmark.realtime do
+        @result = work_off
       end
 
-      trap('INT') do
-        Thread.new { say 'Exiting...' }
-        stop
-        raise SignalException, 'INT' if self.class.raise_signal_exceptions && self.class.raise_signal_exceptions != :term
-      end
+      count = @result[0] + @result[1]
+      say format("#{count} jobs processed at %.4f j/s, %d failed", count / @realtime, @result.last) if count.positive?
 
-      say 'Starting job worker'
-
-      self.class.lifecycle.run_callbacks(:execute, self) do
-        loop do
-          self.class.lifecycle.run_callbacks(:loop, self) do
-            @realtime = Benchmark.realtime do
-              @result = work_off
-            end
-          end
-
-          count = @result[0] + @result[1]
-
-          if count.zero?
-            if self.class.exit_on_complete
-              say 'No more jobs available. Exiting'
-              break
-            elsif !stop?
-              sleep(self.class.sleep_delay)
-              reload!
-            end
-          else
-            say format("#{count} jobs processed at %.4f j/s, %d failed", count / @realtime, @result.last)
-          end
-
-          break if stop?
-        end
-      end
+      reload! unless stop?
     end
 
-    def stop
-      @exit = true
-    end
-
-    def stop?
-      !!@exit
+    def on_exit!
+      Delayed::Job.clear_locks!(name)
     end
 
     # Do num jobs and return stats on success/failure.
