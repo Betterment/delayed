@@ -17,7 +17,7 @@ require 'delayed/railtie' if defined?(Rails::Railtie)
 
 ActiveSupport.on_load(:active_record) do
   require 'delayed/serialization/active_record'
-  require 'delayed/backend/active_record'
+  require 'delayed/job'
 end
 
 ActiveSupport.on_load(:action_mailer) do

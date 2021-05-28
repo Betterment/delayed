@@ -1,8 +1,6 @@
-require File.expand_path('../../../spec/sample_jobs', __dir__)
+require 'helper'
 
-require 'active_support/core_ext/numeric/time'
-
-shared_examples_for 'a delayed_job backend' do
+describe Delayed::Job do
   let(:worker) { Delayed::Worker.new }
 
   def create_job(opts = {})
@@ -41,6 +39,12 @@ shared_examples_for 'a delayed_job backend' do
   end
 
   describe 'enqueue' do
+    it "allows enqueue hook to modify job at DB level" do
+      later = described_class.db_time_now + 20.minutes
+      job = described_class.enqueue payload_object: EnqueueJobMod.new
+      expect(described_class.find(job.id).run_at).to be_within(1).of(later)
+    end
+
     context 'with a hash' do
       it "raises ArgumentError when handler doesn't respond_to :perform" do
         expect { described_class.enqueue(payload_object: Object.new) }.to raise_error(ArgumentError)
@@ -539,14 +543,14 @@ shared_examples_for 'a delayed_job backend' do
 
   describe 'worker integration' do
     before do
-      Delayed::Job.delete_all
+      described_class.delete_all
       SimpleJob.runs = 0
     end
 
     describe 'running a job' do
       it 'fails after Worker.max_run_time' do
         Delayed::Worker.max_run_time = 1.second
-        job = Delayed::Job.create payload_object: LongRunningJob.new
+        job = described_class.create payload_object: LongRunningJob.new
         worker.run(job)
         expect(job.error).not_to be_nil
         expect(job.reload.last_error).to match(/expired/)
@@ -572,7 +576,7 @@ shared_examples_for 'a delayed_job backend' do
 
     describe 'failed jobs' do
       before do
-        @job = Delayed::Job.enqueue(ErrorJob.new, run_at: described_class.db_time_now - 1)
+        @job = described_class.enqueue(ErrorJob.new, run_at: described_class.db_time_now - 1)
       end
 
       after do
@@ -597,18 +601,18 @@ shared_examples_for 'a delayed_job backend' do
         expect(@job.last_error).to match(/did not work/)
         expect(@job.last_error).to match(/sample_jobs.rb:\d+:in `perform'/)
         expect(@job.attempts).to eq(1)
-        expect(@job.run_at).to be > Delayed::Job.db_time_now - 10.minutes
-        expect(@job.run_at).to be < Delayed::Job.db_time_now + 10.minutes
+        expect(@job.run_at).to be > described_class.db_time_now - 10.minutes
+        expect(@job.run_at).to be < described_class.db_time_now + 10.minutes
         expect(@job.locked_by).to be_nil
         expect(@job.locked_at).to be_nil
       end
 
       it 're-schedules jobs with handler provided time if present' do
-        job = Delayed::Job.enqueue(CustomRescheduleJob.new(99.minutes))
+        job = described_class.enqueue(CustomRescheduleJob.new(99.minutes))
         worker.run(job)
         job.reload
 
-        expect((Delayed::Job.db_time_now + 99.minutes - job.run_at).abs).to be < 1
+        expect((described_class.db_time_now + 99.minutes - job.run_at).abs).to be < 1
       end
 
       it "does not fail when the triggered error doesn't have a message" do
@@ -621,13 +625,13 @@ shared_examples_for 'a delayed_job backend' do
 
     context 'reschedule' do
       before do
-        @job = Delayed::Job.create payload_object: SimpleJob.new
+        @job = described_class.create payload_object: SimpleJob.new
       end
 
       shared_examples_for 'any failure more than Worker.max_attempts times' do
         context "when the job's payload has a #failure hook" do
           before do
-            @job = Delayed::Job.create payload_object: OnPermanentFailureJob.new
+            @job = described_class.create payload_object: OnPermanentFailureJob.new
             expect(@job.payload_object).to respond_to(:failure)
           end
 
@@ -734,6 +738,84 @@ shared_examples_for 'a delayed_job backend' do
           end
         end
       end
+    end
+  end
+
+  describe "reserve_with_scope" do
+    let(:relation_class) { described_class.limit(1).class }
+    let(:worker) { instance_double(Delayed::Worker, name: "worker01", read_ahead: 1, max_claims: 1) }
+    let(:scope) do
+      instance_double(relation_class, update_all: nil, limit: [job]).tap do |s|
+        allow(s).to receive(:where).and_return(s)
+      end
+    end
+    let(:job) { instance_double(described_class, id: 1, assign_attributes: true, changes_applied: true) }
+
+    before do
+      allow(described_class.connection).to receive(:adapter_name).at_least(:once).and_return(dbms)
+    end
+
+    context "for mysql adapters" do
+      let(:dbms) { "MySQL" }
+
+      it "uses the optimized sql version" do
+        allow(described_class).to receive(:reserve_with_scope_using_default_sql)
+        described_class.reserve_with_scope(scope, worker, Time.current)
+        expect(described_class).not_to have_received(:reserve_with_scope_using_default_sql)
+      end
+    end
+
+    context "for a dbms without a specific implementation" do
+      let(:dbms) { "OtherDB" }
+
+      it "uses the plain sql version" do
+        allow(described_class).to receive(:reserve_with_scope_using_default_sql)
+        described_class.reserve_with_scope(scope, worker, Time.current)
+        expect(described_class).to have_received(:reserve_with_scope_using_default_sql).once
+      end
+    end
+  end
+
+  context "db_time_now" do
+    after do
+      Time.zone = nil
+      ActiveRecord::Base.default_timezone = :local
+    end
+
+    it "returns time in current time zone if set" do
+      Time.zone = "Arizona"
+      expect(described_class.db_time_now.zone).to eq("MST")
+    end
+
+    it "returns UTC time if that is the AR default" do
+      Time.zone = nil
+      ActiveRecord::Base.default_timezone = :utc
+      expect(described_class.db_time_now.zone).to eq "UTC"
+    end
+
+    it "returns local time if that is the AR default" do
+      Time.zone = "Arizona"
+      ActiveRecord::Base.default_timezone = :local
+      expect(described_class.db_time_now.zone).to eq("MST")
+    end
+  end
+
+  context "ActiveRecord::Base.table_name_prefix" do
+    it "when prefix is not set, use 'delayed_jobs' as table name" do
+      ::ActiveRecord::Base.table_name_prefix = nil
+      described_class.set_delayed_job_table_name
+
+      expect(described_class.table_name).to eq "delayed_jobs"
+    end
+
+    it "when prefix is set, prepend it before default table name" do
+      ::ActiveRecord::Base.table_name_prefix = "custom_"
+      described_class.set_delayed_job_table_name
+
+      expect(described_class.table_name).to eq "custom_delayed_jobs"
+
+      ::ActiveRecord::Base.table_name_prefix = nil
+      described_class.set_delayed_job_table_name
     end
   end
 end

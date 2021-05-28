@@ -7,7 +7,7 @@ require 'active_job'
 require 'active_record'
 
 require 'delayed'
-require 'delayed/backend/shared_example'
+require 'sample_jobs'
 
 if ENV['DEBUG_LOGS']
   Delayed::Worker.logger = Logger.new($stdout)
