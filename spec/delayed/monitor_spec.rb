@@ -1,6 +1,10 @@
 require 'helper'
 
 RSpec.describe Delayed::Monitor do
+  before do
+    described_class.sleep_delay = 0
+  end
+
   let(:default_payload) do
     {
       table: 'delayed_jobs',

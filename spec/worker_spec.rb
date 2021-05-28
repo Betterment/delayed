@@ -1,6 +1,77 @@
 require 'helper'
 
 describe Delayed::Worker do
+  before do
+    described_class.sleep_delay = 0
+  end
+
+  # rubocop:disable RSpec/SubjectStub
+  describe '#run!' do
+    before do
+      allow(described_class.logger).to receive(:info).and_call_original
+      allow(subject).to receive(:interruptable_sleep).and_call_original
+    end
+
+    context 'when there are no jobs' do
+      before do
+        allow(Delayed::Job).to receive(:reserve).and_return([])
+      end
+
+      it 'does not log and then sleeps' do
+        subject.run!
+        expect(described_class.logger).not_to have_received(:info)
+        expect(subject).to have_received(:interruptable_sleep)
+      end
+    end
+
+    context 'when there is a job worked off' do
+      around do |example|
+        described_class.max_claims = max_claims
+        example.run
+      ensure
+        described_class.max_claims = described_class::DEFAULT_MAX_CLAIMS
+      end
+
+      before do
+        allow(Delayed::Job).to receive(:reserve).and_return([job], [])
+      end
+
+      let(:max_claims) { 1 }
+      let(:job) do
+        instance_double(
+          Delayed::Job,
+          id: 123,
+          max_run_time: 10,
+          name: 'MyJob',
+          run_at: Delayed::Job.db_time_now,
+          created_at: Delayed::Job.db_time_now,
+          priority: Delayed::Priority.interactive,
+          queue: 'testqueue',
+          attempts: 0,
+          invoke_job: true,
+          destroy: true,
+        )
+      end
+
+      it 'logs the count and does not sleep' do
+        subject.run!
+        expect(described_class.logger).to have_received(:info).with(/1 jobs processed/)
+        expect(subject).not_to have_received(:interruptable_sleep)
+      end
+
+      context 'when max_claims is 2' do
+        let(:max_claims) { 2 }
+
+        it 'logs the count and sleeps' do
+          subject.run!
+          expect(described_class.logger).to have_received(:info).with(/1 jobs processed/)
+          expect(subject).to have_received(:interruptable_sleep)
+        end
+      end
+    end
+  end
+  # rubocop:enable RSpec/SubjectStub
+
   describe 'backend=' do
     before do
       @clazz = Class.new

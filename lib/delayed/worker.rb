@@ -9,7 +9,7 @@ require 'benchmark'
 require 'concurrent'
 
 module Delayed
-  class Worker # rubocop:disable Metrics/ClassLength
+  class Worker
     include Runnable
 
     DEFAULT_LOG_LEVEL        = 'info'.freeze
@@ -159,7 +159,9 @@ module Delayed
       end
 
       count = @result[0] + @result[1]
+
       say format("#{count} jobs processed at %.4f j/s, %d failed", count / @realtime, @result.last) if count.positive?
+      interruptable_sleep(self.class.sleep_delay) if count < max_claims
 
       reload! unless stop?
     end

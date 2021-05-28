@@ -8,7 +8,6 @@ module Delayed
 
       loop do
         run!
-        interruptable_sleep(self.class.sleep_delay)
         break if stop?
       end
     ensure

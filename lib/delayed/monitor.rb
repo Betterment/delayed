@@ -26,6 +26,7 @@ module Delayed
       ActiveSupport::Notifications.instrument('delayed.monitor.run', default_tags) do
         METRICS.each { |metric| emit_metric!(metric) }
       end
+      interruptable_sleep(self.class.sleep_delay)
     end
 
     private
