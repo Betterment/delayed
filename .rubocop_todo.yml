@@ -72,19 +72,19 @@ Metrics/AbcSize:
 # Offense count: 2
 RSpec/AnyInstance:
   Exclude:
-    - 'lib/delayed/backend/shared_spec.rb'
+    - 'spec/delayed/backend/shared_example.rb'
     - 'spec/delayed/command_spec.rb'
 
 # Offense count: 2
 RSpec/ExpectInHook:
   Exclude:
-    - 'lib/delayed/backend/shared_spec.rb'
+    - 'spec/delayed/backend/shared_example.rb'
 
 # Offense count: 104
 # Configuration parameters: AssignmentOnly.
 RSpec/InstanceVariable:
   Exclude:
-    - 'lib/delayed/backend/shared_spec.rb'
+    - 'spec/delayed/backend/shared_example.rb'
     - 'spec/performable_method_spec.rb'
     - 'spec/worker_spec.rb'
 
@@ -96,7 +96,7 @@ RSpec/LeakyConstantDeclaration:
 # Offense count: 18
 RSpec/StubbedMock:
   Exclude:
-    - 'lib/delayed/backend/shared_spec.rb'
+    - 'spec/delayed/backend/shared_example.rb'
     - 'spec/performable_method_spec.rb'
     - 'spec/worker_spec.rb'
 

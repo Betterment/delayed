@@ -31,8 +31,7 @@ module Delayed
       end
 
       def set_priority
-        queue_attribute = Delayed::Worker.queue_attributes[options[:queue]]
-        options[:priority] ||= (queue_attribute && queue_attribute[:priority]) || Delayed::Worker.default_priority
+        options[:priority] ||= Delayed::Worker.default_priority
       end
 
       def handle_deprecation

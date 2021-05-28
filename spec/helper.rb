@@ -6,9 +6,8 @@ require 'action_mailer'
 require 'active_job'
 require 'active_record'
 
-require 'delayed_job'
-require 'delayed_job_active_record'
-require 'delayed/backend/shared_spec'
+require 'delayed'
+require 'delayed/backend/shared_example'
 
 if ENV['DEBUG_LOGS']
   Delayed::Worker.logger = Logger.new($stdout)

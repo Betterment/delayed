@@ -72,26 +72,6 @@ describe Delayed::Worker do
   end
   # rubocop:enable RSpec/SubjectStub
 
-  describe 'backend=' do
-    before do
-      @clazz = Class.new
-      described_class.backend = @clazz
-    end
-
-    after do
-      described_class.backend = :active_record
-    end
-
-    it 'sets the Delayed::Job constant to the backend' do
-      expect(Delayed::Job).to eq(@clazz)
-    end
-
-    it 'sets backend with a symbol' do
-      described_class.backend = :active_record
-      expect(described_class.backend).to eq(Delayed::Backend::ActiveRecord::Job)
-    end
-  end
-
   describe 'job_say' do
     before do
       @worker = described_class.new

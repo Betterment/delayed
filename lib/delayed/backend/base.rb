@@ -37,12 +37,6 @@ module Delayed
         # Allow the backend to attempt recovery from reserve errors
         def recover_from(_error); end
 
-        # Hook method that is called before a new worker is forked
-        def before_fork; end
-
-        # Hook method that is called after a new worker is forked
-        def after_fork; end
-
         def work_off(num = 100)
           warn '[DEPRECATION] `Delayed::Job.work_off` is deprecated. Use `Delayed::Worker.new.work_off instead.'
           Delayed::Worker.new.work_off(num)

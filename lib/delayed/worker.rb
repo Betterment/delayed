@@ -20,7 +20,6 @@ module Delayed
     DEFAULT_DEFAULT_PRIORITY = 0
     DEFAULT_DELAY_JOBS       = true
     DEFAULT_QUEUES           = [].freeze
-    DEFAULT_QUEUE_ATTRIBUTES = HashWithIndifferentAccess.new.freeze
     DEFAULT_READ_AHEAD       = 5
 
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
@@ -30,8 +29,6 @@ module Delayed
 
     # Named queue into which jobs are enqueued by default
     cattr_accessor :default_queue_name
-
-    cattr_reader :backend, :queue_attributes
 
     # name_prefix is ignored if name is set directly
     attr_accessor :name_prefix
@@ -45,7 +42,6 @@ module Delayed
       self.default_priority  = DEFAULT_DEFAULT_PRIORITY
       self.delay_jobs        = DEFAULT_DELAY_JOBS
       self.queues            = DEFAULT_QUEUES
-      self.queue_attributes  = DEFAULT_QUEUE_ATTRIBUTES
       self.read_ahead        = DEFAULT_READ_AHEAD
       @lifecycle             = nil
     end
@@ -53,51 +49,12 @@ module Delayed
     # Add or remove plugins in this list before the worker is instantiated
     self.plugins = [
       Delayed::Plugins::Instrumentation,
+      Delayed::Plugins::Connection,
     ]
 
     # By default failed jobs are not destroyed. This means you must monitor for them
     # and have a process for addressing them, or your table will continually expand.
     self.destroy_failed_jobs = false
-
-    def self.backend=(backend)
-      if backend.is_a? Symbol
-        require "delayed/serialization/#{backend}"
-        require "delayed/backend/#{backend}"
-        backend = "Delayed::Backend::#{backend.to_s.classify}::Job".constantize
-      end
-      @@backend = backend # rubocop:disable Style/ClassVars
-      silence_warnings { ::Delayed.const_set(:Job, backend) }
-    end
-
-    # rubocop:disable Style/ClassVars
-    def self.queue_attributes=(val)
-      @@queue_attributes = val.with_indifferent_access
-    end
-
-    def self.guess_backend
-      warn '[DEPRECATION] guess_backend is deprecated. Please remove it from your code.'
-    end
-
-    def self.before_fork
-      unless @files_to_reopen
-        @files_to_reopen = []
-        ObjectSpace.each_object(File) do |file|
-          @files_to_reopen << file unless file.closed?
-        end
-      end
-
-      backend.before_fork
-    end
-
-    def self.after_fork
-      # Re-open file handles
-      @files_to_reopen.each do |file|
-        file.reopen file.path, 'a+'
-        file.sync = true
-      rescue ::Exception # rubocop:disable Lint/RescueException
-      end
-      backend.after_fork
-    end
 
     def self.lifecycle
       # In case a worker has not been set up, job enqueueing needs a lifecycle.

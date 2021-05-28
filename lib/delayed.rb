@@ -1,5 +1,4 @@
 require 'active_support'
-require 'delayed/compatibility'
 require 'delayed/exceptions'
 require 'delayed/message_sending'
 require 'delayed/performable_method'
@@ -9,12 +8,17 @@ require 'delayed/runnable'
 require 'delayed/priority'
 require 'delayed/monitor'
 require 'delayed/plugin'
+require 'delayed/plugins/connection'
 require 'delayed/plugins/instrumentation'
 require 'delayed/backend/base'
 require 'delayed/backend/job_preparer'
 require 'delayed/worker'
-require 'delayed/deserialization_error'
 require 'delayed/railtie' if defined?(Rails::Railtie)
+
+ActiveSupport.on_load(:active_record) do
+  require 'delayed/serialization/active_record'
+  require 'delayed/backend/active_record'
+end
 
 ActiveSupport.on_load(:action_mailer) do
   require 'delayed/performable_mailer'
@@ -28,12 +32,3 @@ end
 
 Object.include Delayed::MessageSending
 Module.include Delayed::MessageSendingClassMethods
-
-if defined?(Rails::Railtie)
-  require 'delayed/backend/active_record/railtie'
-else
-  require 'active_record'
-  require 'delayed/backend/active_record'
-
-  Delayed::Worker.backend = :active_record
-end

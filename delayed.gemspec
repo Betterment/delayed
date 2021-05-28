@@ -9,14 +9,13 @@ Gem::Specification.new do |spec|
     This gem is a hard fork of both `delayed_job` and `delayed_job_active_record` and is API-compatible with ActiveJob's `:delayed_job` queue adapter.
   MSG
   spec.email          = ['nathan@betterment.com']
-  spec.files          = %w(CHANGELOG.md CONTRIBUTING.md LICENSE.md README.md Rakefile delayed.gemspec)
-  spec.files          += Dir.glob('{contrib,lib,recipes,spec}/**/*') # rubocop:disable Layout/SpaceAroundOperators
+  spec.files          = Dir['{app,config,db,lib}/**/*', 'LICENSE', 'Rakefile', 'README.md']
+  spec.test_files     = Dir['spec/**/*']
   spec.homepage       = 'http://github.com/betterment/delayed'
   spec.licenses       = ['MIT']
   spec.name           = 'delayed'
   spec.require_paths  = ['lib']
   spec.summary        = 'Database-backed asynchronous priority queue system -- extracted from Shopify, forked by Betterment'
-  spec.test_files     = Dir.glob('spec/**/*')
 
   spec.version        = '0.1.0'
   spec.metadata       = {

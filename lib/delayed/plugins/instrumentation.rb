@@ -1,6 +1,6 @@
 module Delayed
   module Plugins
-    class Instrumentation < ::Delayed::Plugin
+    class Instrumentation < Plugin
       callbacks do |lifecycle|
         lifecycle.around(:invoke_job) do |job, *args, &block|
           ActiveSupport::Notifications.instrument('delayed.job.run', active_support_notifications_tags(job)) do

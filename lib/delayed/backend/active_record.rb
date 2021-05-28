@@ -1,48 +1,8 @@
-require "active_record/version"
 module Delayed
   module Backend
     module ActiveRecord
-      class ConnectionPlugin < Delayed::Plugin
-        callbacks do |lifecycle|
-          lifecycle.around(:thread) do |worker, job, &block|
-            ::ActiveRecord::Base.connection_pool.with_connection do
-              block.call(worker, job)
-            end
-          end
-        end
-      end
-
-      class Configuration
-        attr_reader :reserve_sql_strategy
-
-        def initialize
-          self.reserve_sql_strategy = :optimized_sql
-        end
-
-        def reserve_sql_strategy=(val)
-          raise ArgumentError, "allowed values are :optimized_sql or :default_sql" unless %i(optimized_sql default_sql).include?(val)
-
-          @reserve_sql_strategy = val
-        end
-      end
-
-      def self.configuration
-        @configuration ||= Configuration.new
-      end
-
-      def self.configure
-        yield(configuration)
-      end
-
-      # A job object that is persisted to the database.
-      # Contains the work object as a YAML field.
       class Job < ::ActiveRecord::Base
         include Delayed::Backend::Base
-
-        if ::ActiveRecord::VERSION::MAJOR < 4 || defined?(::ActiveRecord::MassAssignmentSecurity)
-          attr_accessible :priority, :run_at, :queue, :payload_object,
-                          :failed_at, :locked_at, :locked_by, :handler
-        end
 
         scope :by_priority, lambda { order("priority ASC, run_at ASC") }
         scope :min_priority, lambda { where("priority >= ?", Worker.min_priority) if Worker.min_priority }
@@ -77,14 +37,6 @@ module Delayed
           )
         end
 
-        def self.before_fork
-          ::ActiveRecord::Base.clear_all_connections!
-        end
-
-        def self.after_fork
-          ::ActiveRecord::Base.establish_connection
-        end
-
         # When a worker is exiting, make sure we don't have any locked jobs.
         def self.clear_locks!(worker_name)
           where(locked_by: worker_name).update_all(locked_by: nil, locked_at: nil)
@@ -102,18 +54,6 @@ module Delayed
         end
 
         def self.reserve_with_scope(ready_scope, worker, now)
-          case Delayed::Backend::ActiveRecord.configuration.reserve_sql_strategy
-            # Optimizations for faster lookups on some common databases
-            when :optimized_sql
-              reserve_with_scope_using_optimized_sql(ready_scope, worker, now)
-            # Slower but in some cases more unproblematic strategy to lookup records
-            # See https://github.com/collectiveidea/delayed_job_active_record/pull/89 for more details.
-            when :default_sql
-              reserve_with_scope_using_default_sql(ready_scope, worker, now)
-          end
-        end
-
-        def self.reserve_with_scope_using_optimized_sql(ready_scope, worker, now)
           case connection.adapter_name
             when "PostgreSQL", "PostGIS"
               reserve_with_scope_using_optimized_postgres(ready_scope, worker, now)
@@ -238,3 +178,5 @@ module Delayed
     end
   end
 end
+
+Delayed::Job = Delayed::Backend::ActiveRecord::Job
