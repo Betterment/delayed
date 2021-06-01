@@ -1,4 +1,3 @@
-require 'logger'
 require 'rspec'
 require 'timecop'
 
@@ -10,12 +9,12 @@ require 'delayed'
 require 'sample_jobs'
 
 if ENV['DEBUG_LOGS']
-  Delayed::Worker.logger = Logger.new($stdout)
+  Delayed.logger = Logger.new($stdout)
 else
   require 'tempfile'
 
   tf = Tempfile.new('dj.log')
-  Delayed::Worker.logger = Logger.new(tf.path)
+  Delayed.logger = Logger.new(tf.path)
   tf.unlink
 end
 ENV['RAILS_ENV'] = 'test'
@@ -33,7 +32,7 @@ end
 
 config = YAML.load(ERB.new(File.read("spec/database.yml")).result)
 ActiveRecord::Base.establish_connection config[db_adapter]
-ActiveRecord::Base.logger = Delayed::Worker.logger
+ActiveRecord::Base.logger = Delayed.logger
 ActiveRecord::Migration.verbose = false
 
 # MySQL 5.7 no longer supports null default values for the primary key

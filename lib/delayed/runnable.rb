@@ -6,9 +6,11 @@ module Delayed
 
       say "Starting #{self.class.name}"
 
-      loop do
-        run!
-        break if stop?
+      Delayed.lifecycle.run_callbacks(:execute, nil) do
+        loop do
+          run!
+          break if stop?
+        end
       end
     ensure
       on_exit!

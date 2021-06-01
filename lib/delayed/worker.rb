@@ -4,7 +4,6 @@ require 'active_support/core_ext/numeric/time'
 require 'active_support/core_ext/class/attribute_accessors'
 require 'active_support/hash_with_indifferent_access'
 require 'active_support/core_ext/hash/indifferent_access'
-require 'logger'
 require 'benchmark'
 require 'concurrent'
 
@@ -12,7 +11,6 @@ module Delayed
   class Worker
     include Runnable
 
-    DEFAULT_LOG_LEVEL        = 'info'.freeze
     DEFAULT_SLEEP_DELAY      = 5
     DEFAULT_MAX_ATTEMPTS     = 25
     DEFAULT_MAX_CLAIMS       = 2
@@ -23,9 +21,8 @@ module Delayed
     DEFAULT_READ_AHEAD       = 5
 
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
-                   :default_priority, :sleep_delay, :logger, :delay_jobs, :queues,
-                   :read_ahead, :plugins, :destroy_failed_jobs,
-                   :default_log_level, :max_claims
+                   :default_priority, :sleep_delay, :delay_jobs, :queues,
+                   :read_ahead, :destroy_failed_jobs, :max_claims
 
     # Named queue into which jobs are enqueued by default
     cattr_accessor :default_queue_name
@@ -33,8 +30,12 @@ module Delayed
     # name_prefix is ignored if name is set directly
     attr_accessor :name_prefix
 
+    class << self
+      delegate :lifecycle, :plugins, :plugins=, :logger, :logger=,
+               :default_log_level, :default_log_level=, to: Delayed
+    end
+
     def self.reset
-      self.default_log_level = DEFAULT_LOG_LEVEL
       self.sleep_delay       = DEFAULT_SLEEP_DELAY
       self.max_attempts      = DEFAULT_MAX_ATTEMPTS
       self.max_claims        = DEFAULT_MAX_CLAIMS
@@ -43,30 +44,11 @@ module Delayed
       self.delay_jobs        = DEFAULT_DELAY_JOBS
       self.queues            = DEFAULT_QUEUES
       self.read_ahead        = DEFAULT_READ_AHEAD
-      @lifecycle             = nil
     end
-
-    # Add or remove plugins in this list before the worker is instantiated
-    self.plugins = [
-      Delayed::Plugins::Instrumentation,
-      Delayed::Plugins::Connection,
-    ]
 
     # By default failed jobs are not destroyed. This means you must monitor for them
     # and have a process for addressing them, or your table will continually expand.
     self.destroy_failed_jobs = false
-
-    def self.lifecycle
-      # In case a worker has not been set up, job enqueueing needs a lifecycle.
-      setup_lifecycle unless @lifecycle
-
-      @lifecycle
-    end
-
-    def self.setup_lifecycle
-      @lifecycle = Delayed::Lifecycle.new
-      plugins.each { |klass| klass.new }
-    end
 
     def self.reload_app?
       defined?(ActionDispatch::Reloader) && Rails.application.config.cache_classes == false
@@ -89,7 +71,7 @@ module Delayed
 
       # Reset lifecycle on the offhand chance that something lazily
       # triggered its creation before all plugins had been registered.
-      self.class.setup_lifecycle
+      Delayed.setup_lifecycle
     end
 
     # Every worker has a unique name which by default is the pid of the process. There are some
@@ -218,18 +200,14 @@ module Delayed
       end
     end
 
-    def job_say(job, text, level = default_log_level)
+    def job_say(job, text, level = Delayed.default_log_level)
       text = "Job #{job.name} (id=#{job.id})#{say_queue(job.queue)} #{text}"
       say text, level
     end
 
-    def say(text, level = default_log_level)
+    def say(text, level = Delayed.default_log_level)
       text = "[Worker(#{name})] #{text}"
-      return unless logger
-
-      # TODO: Deprecate use of Fixnum log levels
-      level = Logger::Severity.constants.detect { |i| Logger::Severity.const_get(i) == level }.to_s.downcase unless level.is_a?(String)
-      logger.send(level, "#{Time.now.strftime('%FT%T%z')}: #{text}")
+      Delayed.say("#{Time.now.strftime('%FT%T%z')}: #{text}", level)
     end
 
     def max_attempts(job)

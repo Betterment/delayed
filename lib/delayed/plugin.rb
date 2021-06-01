@@ -9,7 +9,7 @@ module Delayed
     end
 
     def initialize
-      self.class.callback_block.call(Delayed::Worker.lifecycle) if self.class.callback_block
+      self.class.callback_block.call(Delayed.lifecycle) if self.class.callback_block
     end
   end
 end

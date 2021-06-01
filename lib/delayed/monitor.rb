@@ -51,7 +51,7 @@ module Delayed
     end
 
     def say(message)
-      Worker.logger.send(Worker.default_log_level, message)
+      Delayed.say(message)
     end
 
     def default_tags
