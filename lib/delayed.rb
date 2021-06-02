@@ -20,6 +20,13 @@ ActiveSupport.on_load(:active_record) do
   require 'delayed/job'
 end
 
+ActiveSupport.on_load(:active_job) do
+  require 'delayed/active_job_adapter'
+  ActiveJob::QueueAdapters::DelayedAdapter = Delayed::ActiveJobAdapter
+
+  include Delayed::ActiveJobAdapter::EnqueuingPatch
+end
+
 ActiveSupport.on_load(:action_mailer) do
   require 'delayed/performable_mailer'
   ActionMailer::Base.extend(Delayed::DelayMail)

@@ -35,17 +35,10 @@ module Delayed
       end
 
       def handle_deprecation
-        if args.size.positive?
-          warn '[DEPRECATION] Passing multiple arguments to `#enqueue` is deprecated. Pass a hash with :priority and :run_at.'
-          options[:priority] = args.first || options[:priority]
-          options[:run_at]   = args[1]
-        end
-
         unless options[:payload_object].respond_to?(:perform)
           raise ArgumentError,
                 'Cannot enqueue items which do not respond to perform'
         end
-        # rubocop:enabled GuardClause
       end
     end
   end

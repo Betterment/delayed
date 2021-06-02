@@ -105,6 +105,12 @@ module Delayed
 
       def hook(name, *args)
         if payload_object.respond_to?(name)
+          if payload_object.is_a?(Delayed::JobWrapper)
+            return if name == :enqueue # this callback is not supported due to method naming conflicts.
+
+            warn '[DEPRECATION] Job hook methods (`before`, `after`, `success`, etc) are deprecated. Use ActiveJob callbacks instead.'
+          end
+
           method = payload_object.method(name)
           method.arity.zero? ? method.call : method.call(self, *args)
         end

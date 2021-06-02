@@ -98,24 +98,9 @@ describe Delayed::Job do
         expect(described_class.count).to eq(1)
       end
 
-      it 'is able to set priority [DEPRECATED]' do
-        silence_warnings do
-          job = described_class.enqueue SimpleJob.new, 5
-          expect(job.priority).to eq(5)
-        end
-      end
-
       it 'uses default priority when it is not set' do
         @job = described_class.enqueue SimpleJob.new
         expect(@job.priority).to eq(99)
-      end
-
-      it 'is able to set run_at [DEPRECATED]' do
-        silence_warnings do
-          later = described_class.db_time_now + 5.minutes
-          @job = described_class.enqueue SimpleJob.new, 5, later
-          expect(@job.run_at).to be_within(1).of(later)
-        end
       end
 
       it 'works with jobs in modules' do
