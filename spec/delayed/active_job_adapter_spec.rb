@@ -1,6 +1,7 @@
 require 'helper'
 
 RSpec.describe Delayed::ActiveJobAdapter do
+  let(:queue_adapter) { :delayed }
   let(:job_class) do
     Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
       def perform; end
@@ -13,7 +14,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
 
   around do |example|
     adapter_was = ActiveJob::Base.queue_adapter
-    ActiveJob::Base.queue_adapter = :delayed
+    ActiveJob::Base.queue_adapter = queue_adapter
     example.run
   ensure
     ActiveJob::Base.queue_adapter = adapter_was
@@ -121,6 +122,30 @@ RSpec.describe Delayed::ActiveJobAdapter do
         JobClass.perform_later
 
         expect(Delayed::Job.last.payload_object.arbitrary_method).to eq 'hello'
+      end
+    end
+
+    context 'when using the ActiveJob test adapter' do
+      let(:queue_adapter) { :test }
+
+      it 'applies the default queue and no priority' do
+        JobClass.perform_later
+
+        if ActiveJob.gem_version < Gem::Version.new('6')
+          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, queue: 'default')
+        else
+          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 0, queue: 'default')
+        end
+      end
+
+      it 'applies queue, priority, and wait_until' do
+        JobClass.set(queue: 'a', priority: 3, wait_until: arbitrary_time).perform_later
+
+        if ActiveJob.gem_version < Gem::Version.new('6')
+          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, queue: 'a', at: arbitrary_time.to_f)
+        else
+          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 3, queue: 'a', at: arbitrary_time.to_f)
+        end
       end
     end
   end

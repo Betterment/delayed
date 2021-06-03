@@ -29,8 +29,9 @@ module Delayed
         def enqueue(opts = {})
           raise "`:run_at` is not supported. Use `:wait_until` instead." if opts.key?(:run_at)
 
-          self.provider_attributes = opts.except(:wait, :wait_until, :queue)
-          super(opts.except(:priority)) # priority is included in the provider attributes (above) to avoid ActiveJob's type casting
+          self.provider_attributes = opts.except(:wait, :wait_until, :queue, :priority)
+          opts[:priority] = Delayed::Priority.new(opts[:priority])
+          super(opts)
         end
       end
     end

@@ -24,12 +24,6 @@ gemfile = ENV["BUNDLE_GEMFILE"]
 db_adapter ||= gemfile && gemfile[%r{gemfiles/(.*?)/}] && $1 # rubocop:disable Style/PerlBackrefs
 db_adapter ||= "sqlite3"
 
-module Rails
-  def self.root
-    '.'
-  end
-end
-
 config = YAML.load(ERB.new(File.read("spec/database.yml")).result)
 ActiveRecord::Base.establish_connection config[db_adapter]
 ActiveRecord::Base.logger = Delayed.logger
