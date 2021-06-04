@@ -14,7 +14,7 @@ module Delayed
     DEFAULT_SLEEP_DELAY      = 5
     DEFAULT_MAX_ATTEMPTS     = 25
     DEFAULT_MAX_CLAIMS       = 2
-    DEFAULT_MAX_RUN_TIME     = 4.hours
+    DEFAULT_MAX_RUN_TIME     = 20.minutes
     DEFAULT_DEFAULT_PRIORITY = 0
     DEFAULT_DELAY_JOBS       = true
     DEFAULT_QUEUES           = [].freeze

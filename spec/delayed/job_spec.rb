@@ -443,13 +443,13 @@ describe Delayed::Job do
     end
 
     it 'uses the max_run_time value on the payload when defined' do
-      expect(@job.payload_object).to receive(:max_run_time).and_return(30.minutes)
-      expect(@job.max_run_time).to eq(30.minutes)
+      expect(@job.payload_object).to receive(:max_run_time).and_return(10.minutes)
+      expect(@job.max_run_time).to eq(10.minutes)
     end
 
     it 'results in an overridden run time when defined' do
-      expect(@job.payload_object).to receive(:max_run_time).and_return(45.minutes)
-      expect(worker.max_run_time(@job)).to eq(45.minutes)
+      expect(@job.payload_object).to receive(:max_run_time).and_return(15.minutes)
+      expect(worker.max_run_time(@job)).to eq(15.minutes)
     end
 
     it 'job set max_run_time can not exceed default max run time' do
