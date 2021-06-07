@@ -12,6 +12,7 @@ module Delayed
       max_age
       working_count
       workable_count
+      alert_age_percent
     ).freeze
 
     cattr_accessor :sleep_delay, instance_writer: false, default: 60
@@ -37,15 +38,15 @@ module Delayed
       send("#{metric}_grouped").reverse_merge(default_results).each do |(priority, queue), value|
         ActiveSupport::Notifications.instrument(
           "delayed.job.#{metric}",
-          default_tags.merge(priority: priority, queue: queue, value: value),
+          default_tags.merge(priority: Priority.new(priority).to_s, queue: queue, value: value),
         )
       end
     end
 
     def default_results
-      @default_results ||= Priority.names.flat_map { |priority, _|
+      @default_results ||= Priority.names.values.flat_map { |priority|
         (Worker.queues.presence || [Worker.default_queue_name]).map do |queue|
-          [[priority.to_s, queue], 0]
+          [[priority, queue], 0]
         end
       }.to_h
     end
@@ -84,13 +85,20 @@ module Delayed
 
     def max_lock_age_grouped
       oldest_locked_job_grouped.each_with_object({}) do |job, metrics|
-        metrics[[job.priority_name, job.queue]] = as_of - job.locked_at
+        metrics[[job.priority, job.queue]] = as_of - job.locked_at
       end
     end
 
     def max_age_grouped
       oldest_workable_job_grouped.each_with_object({}) do |job, metrics|
-        metrics[[job.priority_name, job.queue]] = as_of - job.run_at
+        metrics[[job.priority, job.queue]] = as_of - job.run_at
+      end
+    end
+
+    def alert_age_percent_grouped
+      oldest_workable_job_grouped.each_with_object({}) do |job, metrics|
+        max_age = as_of - job.run_at
+        metrics[[job.priority, job.queue]] = max_age / job.priority.alert_age * 100 if job.priority.alert_age
       end
     end
 
@@ -103,21 +111,22 @@ module Delayed
     end
 
     def oldest_locked_job_grouped
-      jobs.working.select("#{priority_case_statement} AS priority_name, queue, MIN(locked_at) AS locked_at")
+      jobs.working.select("#{priority_case_statement} AS priority, queue, MIN(locked_at) AS locked_at")
     end
 
     def oldest_workable_job_grouped
-      jobs.workable(as_of).select("#{priority_case_statement} AS priority_name, queue, MIN(run_at) AS run_at")
+      @oldest_workable_job_grouped ||= jobs.workable(as_of)
+        .select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
     end
 
     def priority_case_statement
       [
         'CASE',
-        Priority.ranges.map do |(name, range)|
+        Priority.ranges.values.map do |range|
           [
             "WHEN priority >= #{range.first.to_i}",
             ("AND priority < #{range.last.to_i}" unless range.last.infinite?),
-            "THEN '#{name}'",
+            "THEN #{range.first.to_i}",
           ].compact
         end,
         'END',

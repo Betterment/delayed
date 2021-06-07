@@ -10,7 +10,7 @@ RSpec.describe Delayed::Monitor do
       table: 'delayed_jobs',
       database: current_database,
       database_adapter: current_adapter,
-      queue: 'default_tracking',
+      queue: nil,
     }
   end
 
@@ -53,6 +53,10 @@ RSpec.describe Delayed::Monitor do
       .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
       .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'eventual', value: 0))
       .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'reporting', value: 0))
+      .and emit_notification("delayed.job.alert_age_percent").with_payload(default_payload.merge(priority: 'interactive', value: 0))
+      .and emit_notification("delayed.job.alert_age_percent").with_payload(default_payload.merge(priority: 'user_visible', value: 0))
+      .and emit_notification("delayed.job.alert_age_percent").with_payload(default_payload.merge(priority: 'eventual', value: 0))
+      .and emit_notification("delayed.job.alert_age_percent").with_payload(default_payload.merge(priority: 'reporting', value: 0))
   end
 
   context 'when named priorities are customized' do
@@ -84,6 +88,8 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.max_age").with_payload(default_payload.merge(priority: 'low', value: 0))
         .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'high', value: 0))
         .and emit_notification("delayed.job.max_lock_age").with_payload(default_payload.merge(priority: 'low', value: 0))
+        .and emit_notification("delayed.job.alert_age_percent").with_payload(default_payload.merge(priority: 'high', value: 0))
+        .and emit_notification("delayed.job.alert_age_percent").with_payload(default_payload.merge(priority: 'low', value: 0))
     end
   end
 
@@ -92,7 +98,7 @@ RSpec.describe Delayed::Monitor do
     let(:job_attributes) do
       {
         run_at: now,
-        queue: 'default_tracking',
+        queue: nil,
         handler: "--- !ruby/object:SimpleJob\n",
         attempts: 0,
       }
@@ -139,6 +145,7 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.workable_count").with_payload(p0_payload.merge(value: 1))
         .and emit_notification("delayed.job.max_age").with_payload(p0_payload.merge(value: 1.hour))
         .and emit_notification("delayed.job.max_lock_age").with_payload(p0_payload.merge(value: 3.minutes))
+        .and emit_notification("delayed.job.alert_age_percent").with_payload(p0_payload.merge(value: 1.0.hour / 1.minute * 100))
         .and emit_notification("delayed.job.count").with_payload(p10_payload.merge(value: 4))
         .and emit_notification("delayed.job.future_count").with_payload(p10_payload.merge(value: 1))
         .and emit_notification("delayed.job.locked_count").with_payload(p10_payload.merge(value: 1))
@@ -148,6 +155,7 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.workable_count").with_payload(p10_payload.merge(value: 1))
         .and emit_notification("delayed.job.max_age").with_payload(p10_payload.merge(value: 2.hours))
         .and emit_notification("delayed.job.max_lock_age").with_payload(p10_payload.merge(value: 7.minutes))
+        .and emit_notification("delayed.job.alert_age_percent").with_payload(p10_payload.merge(value: 2.0.hours / 3.minutes * 100))
         .and emit_notification("delayed.job.count").with_payload(p20_payload.merge(value: 4))
         .and emit_notification("delayed.job.future_count").with_payload(p20_payload.merge(value: 1))
         .and emit_notification("delayed.job.locked_count").with_payload(p20_payload.merge(value: 1))
@@ -157,6 +165,7 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.workable_count").with_payload(p20_payload.merge(value: 1))
         .and emit_notification("delayed.job.max_age").with_payload(p20_payload.merge(value: 3.hours))
         .and emit_notification("delayed.job.max_lock_age").with_payload(p20_payload.merge(value: 9.minutes))
+        .and emit_notification("delayed.job.alert_age_percent").with_payload(p20_payload.merge(value: 3.hours / 1.5.hours * 100))
         .and emit_notification("delayed.job.count").with_payload(p30_payload.merge(value: 4))
         .and emit_notification("delayed.job.future_count").with_payload(p30_payload.merge(value: 1))
         .and emit_notification("delayed.job.locked_count").with_payload(p30_payload.merge(value: 1))
@@ -166,6 +175,7 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.workable_count").with_payload(p30_payload.merge(value: 1))
         .and emit_notification("delayed.job.max_age").with_payload(p30_payload.merge(value: 4.hours))
         .and emit_notification("delayed.job.max_lock_age").with_payload(p30_payload.merge(value: 11.minutes))
+        .and emit_notification("delayed.job.alert_age_percent").with_payload(p30_payload.merge(value: 100)) # 4 hours / 4 hours
         .and emit_notification("delayed.job.workable_count").with_payload(p30_payload.merge(value: 1, queue: 'banana'))
         .and emit_notification("delayed.job.max_age").with_payload(p30_payload.merge(value: 4.hours, queue: 'banana'))
     end
@@ -192,6 +202,7 @@ RSpec.describe Delayed::Monitor do
           .and emit_notification("delayed.job.workable_count").with_payload(p0_payload.merge(value: 2))
           .and emit_notification("delayed.job.max_age").with_payload(p0_payload.merge(value: 2.hours))
           .and emit_notification("delayed.job.max_lock_age").with_payload(p0_payload.merge(value: 7.minutes))
+          .and emit_notification("delayed.job.alert_age_percent").with_payload(p0_payload.merge(value: 0))
           .and emit_notification("delayed.job.count").with_payload(p20_payload.merge(value: 8))
           .and emit_notification("delayed.job.future_count").with_payload(p20_payload.merge(value: 2))
           .and emit_notification("delayed.job.locked_count").with_payload(p20_payload.merge(value: 2))
@@ -201,8 +212,24 @@ RSpec.describe Delayed::Monitor do
           .and emit_notification("delayed.job.workable_count").with_payload(p20_payload.merge(value: 2))
           .and emit_notification("delayed.job.max_age").with_payload(p20_payload.merge(value: 4.hours))
           .and emit_notification("delayed.job.max_lock_age").with_payload(p20_payload.merge(value: 11.minutes))
+          .and emit_notification("delayed.job.alert_age_percent").with_payload(p20_payload.merge(value: 0))
           .and emit_notification("delayed.job.workable_count").with_payload(p20_payload.merge(value: 1, queue: 'banana'))
           .and emit_notification("delayed.job.max_age").with_payload(p20_payload.merge(value: 4.hours, queue: 'banana'))
+      end
+
+      context 'when alert thresholds are specified' do
+        around do |example|
+          Delayed::Priority.alerts = { high: { age: 3.hours }, low: { age: 1.year } }
+          example.run
+        ensure
+          Delayed::Priority.alerts = nil
+        end
+
+        it 'emits the expected alert_age_percent results' do
+          expect { subject.run! }
+            .to emit_notification("delayed.job.alert_age_percent").with_payload(p0_payload.merge(value: 2.0.hours / 3.hours * 100))
+            .and emit_notification("delayed.job.alert_age_percent").with_payload(p20_payload.merge(value: 4.0.hours / 1.year * 100))
+        end
       end
     end
 
@@ -210,6 +237,7 @@ RSpec.describe Delayed::Monitor do
       around do |example|
         Delayed::Worker.queues = %w(banana gram)
         Delayed::Priority.names = { interactive: 0 } # avoid splitting by priority for simplicity
+        Delayed::Priority.alerts = { interactive: { age: 8.hours } }
         example.run
       ensure
         Delayed::Priority.names = nil
@@ -230,6 +258,7 @@ RSpec.describe Delayed::Monitor do
           .and emit_notification("delayed.job.workable_count").with_payload(banana_payload.merge(value: 1))
           .and emit_notification("delayed.job.max_age").with_payload(banana_payload.merge(value: 4.hours))
           .and emit_notification("delayed.job.max_lock_age").with_payload(banana_payload.merge(value: 0))
+          .and emit_notification("delayed.job.alert_age_percent").with_payload(banana_payload.merge(value: 4.0.hours / 8.hours * 100))
           .and emit_notification("delayed.job.count").with_payload(gram_payload.merge(value: 0))
           .and emit_notification("delayed.job.future_count").with_payload(gram_payload.merge(value: 0))
           .and emit_notification("delayed.job.locked_count").with_payload(gram_payload.merge(value: 0))
@@ -239,6 +268,7 @@ RSpec.describe Delayed::Monitor do
           .and emit_notification("delayed.job.workable_count").with_payload(gram_payload.merge(value: 0))
           .and emit_notification("delayed.job.max_age").with_payload(gram_payload.merge(value: 0))
           .and emit_notification("delayed.job.max_lock_age").with_payload(gram_payload.merge(value: 0))
+          .and emit_notification("delayed.job.alert_age_percent").with_payload(gram_payload.merge(value: 0))
       end
     end
   end

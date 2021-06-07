@@ -780,4 +780,109 @@ describe Delayed::Job do
       described_class.set_delayed_job_table_name
     end
   end
+
+  describe '#age_alert?' do
+    let(:now) { described_class.db_time_now }
+    let(:run_at) { now - 1.minute }
+    let(:locked_at) { nil }
+
+    around do |example|
+      Delayed::Priority.names = { high: 0 }
+      Delayed::Priority.alerts = { high: { age: 5.minutes } }
+      Timecop.freeze(now) { example.run }
+    ensure
+      Delayed::Priority.names = nil
+    end
+
+    subject { described_class.new(run_at: run_at, locked_at: locked_at) }
+
+    it 'returns false' do
+      expect(subject.alert_age).to be_within(1).of(5.minutes)
+      expect(subject.age).to be_within(1).of(1.minute)
+      expect(subject.age_alert?).to eq(false)
+    end
+
+    context 'when the job is older than specified alert age' do
+      let(:run_at) { now - 6.minutes }
+
+      it 'returns true' do
+        expect(subject.alert_age).to be_within(1).of(5.minutes)
+        expect(subject.age).to be_within(1).of(6.minutes)
+        expect(subject.age_alert?).to eq(true)
+      end
+    end
+
+    context 'when the job has been running for a long time but was picked up quickly' do
+      let(:run_at) { now - 1.hour - 1.minute }
+      let(:locked_at) { now - 1.hour }
+
+      it 'returns false' do
+        expect(subject.alert_age).to eq 5.minutes
+        expect(subject.age).to eq 1.minute
+        expect(subject.age_alert?).to eq(false)
+      end
+    end
+  end
+
+  describe '#run_time_alert?' do
+    let(:now) { described_class.db_time_now }
+    let(:locked_at) { now - 1.minute }
+
+    around do |example|
+      Delayed::Priority.names = { high: 0 }
+      Delayed::Priority.alerts = { high: { run_time: 5.minutes } }
+      Timecop.freeze(now) { example.run }
+    ensure
+      Delayed::Priority.names = nil
+    end
+
+    subject { described_class.new(locked_at: locked_at) }
+
+    it 'returns false' do
+      expect(subject.alert_run_time).to be_within(1).of(5.minutes)
+      expect(subject.run_time).to be_within(1).of(1.minute)
+      expect(subject.run_time_alert?).to eq(false)
+    end
+
+    context 'when the job has been running longer than specified alert run_time' do
+      let(:locked_at) { now - 6.minutes }
+
+      it 'returns true' do
+        expect(subject.alert_run_time).to be_within(1).of(5.minutes)
+        expect(subject.run_time).to be_within(1).of(6.minutes)
+        expect(subject.run_time_alert?).to eq(true)
+      end
+    end
+  end
+
+  describe '#attempts_alert?' do
+    let(:now) { described_class.db_time_now }
+    let(:attempts) { 1 }
+
+    around do |example|
+      Delayed::Priority.names = { high: 0 }
+      Delayed::Priority.alerts = { high: { attempts: 5 } }
+      Timecop.freeze(now) { example.run }
+    ensure
+      Delayed::Priority.names = nil
+    end
+
+    subject { described_class.new(attempts: attempts) }
+
+    it 'returns false' do
+      expect(subject.alert_attempts).to eq 5
+      expect(subject.attempts).to eq 1
+      expect(subject.attempts_alert?).to eq false
+    end
+
+    context 'when the job reaches the specified alert attempts' do
+      let(:attempts) { 6 }
+
+      it 'returns true' do
+        expect(subject.alert_attempts).to eq 5
+        expect(subject.attempts).to eq 6
+        expect(subject.attempts_alert?).to eq true
+      end
+    end
+  end
 end

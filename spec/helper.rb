@@ -102,6 +102,7 @@ RSpec.configure do |config|
     max_claims_was = Delayed::Worker.max_claims
     max_run_time_was = Delayed::Worker.max_run_time
     default_priority_was = Delayed::Worker.default_priority
+    default_queue_name_was = Delayed::Worker.default_queue_name
     delay_jobs_was = Delayed::Worker.delay_jobs
     queues_was = Delayed::Worker.queues
     read_ahead_was = Delayed::Worker.read_ahead
@@ -114,6 +115,7 @@ RSpec.configure do |config|
     Delayed::Worker.max_claims = max_claims_was
     Delayed::Worker.max_run_time = max_run_time_was
     Delayed::Worker.default_priority = default_priority_was
+    Delayed::Worker.default_queue_name = default_queue_name_was
     Delayed::Worker.delay_jobs = delay_jobs_was
     Delayed::Worker.queues = queues_was
     Delayed::Worker.read_ahead = read_ahead_was

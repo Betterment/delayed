@@ -134,13 +134,13 @@ module Delayed
         enqueued_for: (Time.current - job.created_at).round,
       }
       job_say job, metadata.to_json
-      runtime = Benchmark.realtime do
+      run_time = Benchmark.realtime do
         Timeout.timeout(max_run_time(job).to_i, WorkerTimeout) do
           job.invoke_job
         end
         job.destroy
       end
-      job_say job, format('COMPLETED after %.4f seconds', runtime)
+      job_say job, format('COMPLETED after %.4f seconds', run_time)
       true # did work
     rescue DeserializationError => e
       job_say job, "FAILED permanently with #{e.class.name}: #{e.message}", 'error'

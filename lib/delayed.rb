@@ -1,4 +1,5 @@
 require 'active_support'
+require 'active_support/core_ext/numeric/time'
 require 'delayed/exceptions'
 require 'delayed/message_sending'
 require 'delayed/performable_method'

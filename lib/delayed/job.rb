@@ -202,5 +202,27 @@ module Delayed
       reset
       super
     end
+
+    delegate :alert_age, :alert_run_time, :alert_attempts, to: :priority
+
+    def age
+      [(locked_at || self.class.db_time_now) - run_at, 0].max
+    end
+
+    def run_time
+      self.class.db_time_now - locked_at if locked_at
+    end
+
+    def age_alert?
+      alert_age&.<= age
+    end
+
+    def run_time_alert?
+      alert_run_time&.<= run_time
+    end
+
+    def attempts_alert?
+      alert_attempts&.<= attempts
+    end
   end
 end
