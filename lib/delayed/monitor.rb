@@ -57,13 +57,9 @@ module Delayed
     def default_tags
       @default_tags ||= {
         table: Job.table_name,
-        database: connection_config[:database],
-        database_adapter: connection_config[:adapter],
+        database: Job.database_name,
+        database_adapter: Job.database_adapter_name,
       }
-    end
-
-    def connection_config
-      Plugins::Instrumentation.connection_config(Job)
     end
 
     def count_grouped

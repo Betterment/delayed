@@ -206,7 +206,7 @@ describe Delayed::Worker do
 
       described_class.new
       described_class.new
-      described_class.lifecycle.run_callbacks(:enqueue, nil) {} # no-op
+      Delayed::Job.enqueue SimpleJob.new
 
       expect(performances).to eq(1)
     end

@@ -48,7 +48,9 @@ module Delayed
           .for_queues
           .by_priority
 
-      reserve_with_scope(ready_scope, worker, db_time_now)
+      ActiveSupport::Notifications.instrument('delayed.worker.reserve_jobs', worker_tags(worker)) do
+        reserve_with_scope(ready_scope, worker, db_time_now)
+      end
     end
 
     def self.reserve_with_scope(ready_scope, worker, now)
@@ -165,6 +167,34 @@ module Delayed
         Time.now.utc
       else
         Time.current
+      end
+    end
+
+    def self.worker_tags(worker)
+      {
+        min_priority: worker.min_priority,
+        max_priority: worker.max_priority,
+        max_claims: worker.max_claims,
+        read_ahead: worker.read_ahead,
+        queues: worker.queues,
+        table: table_name,
+        database: database_name,
+        database_adapter: database_adapter_name,
+        worker: worker,
+      }
+    end
+
+    def self.database_name
+      connection_config[:database]
+    end
+
+    def self.database_adapter_name
+      connection_config[:adapter]
+    end
+
+    if ActiveRecord.gem_version >= Gem::Version.new('6.1')
+      def self.connection_config
+        connection_db_config.configuration_hash
       end
     end
 
