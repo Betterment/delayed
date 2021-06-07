@@ -46,10 +46,11 @@ describe Delayed::Worker do
 
     context 'when there is a job worked off' do
       around do |example|
+        max_claims_was = described_class.max_claims
         described_class.max_claims = max_claims
         example.run
       ensure
-        described_class.max_claims = described_class::DEFAULT_MAX_CLAIMS
+        described_class.max_claims = max_claims_was
       end
 
       before do

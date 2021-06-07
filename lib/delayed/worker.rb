@@ -11,21 +11,17 @@ module Delayed
   class Worker
     include Runnable
 
-    DEFAULT_SLEEP_DELAY      = 5
-    DEFAULT_MAX_ATTEMPTS     = 25
-    DEFAULT_MAX_CLAIMS       = 2
-    DEFAULT_MAX_RUN_TIME     = 20.minutes
-    DEFAULT_DEFAULT_PRIORITY = 0
-    DEFAULT_DELAY_JOBS       = true
-    DEFAULT_QUEUES           = [].freeze
-    DEFAULT_READ_AHEAD       = 5
+    cattr_accessor :sleep_delay, instance_writer: false, default: 5
+    cattr_accessor :max_attempts, instance_writer: false, default: 25
+    cattr_accessor :max_claims, instance_writer: false, default: 5
+    cattr_accessor :max_run_time, instance_writer: false, default: 20.minutes
+    cattr_accessor :default_priority, instance_writer: false, default: 10
+    cattr_accessor :delay_jobs, instance_writer: false, default: true
+    cattr_accessor :queues, instance_writer: false, default: [].freeze
+    cattr_accessor :read_ahead, instance_writer: false, default: 5
+    cattr_accessor :destroy_failed_jobs, instance_writer: false, default: false
 
-    cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
-                   :default_priority, :sleep_delay, :delay_jobs, :queues,
-                   :read_ahead, :destroy_failed_jobs, :max_claims
-
-    # Named queue into which jobs are enqueued by default
-    cattr_accessor :default_queue_name
+    cattr_accessor :min_priority, :max_priority, :default_queue_name, instance_writer: false
 
     # name_prefix is ignored if name is set directly
     attr_accessor :name_prefix
@@ -34,21 +30,6 @@ module Delayed
       delegate :lifecycle, :plugins, :plugins=, :logger, :logger=,
                :default_log_level, :default_log_level=, to: Delayed
     end
-
-    def self.reset
-      self.sleep_delay       = DEFAULT_SLEEP_DELAY
-      self.max_attempts      = DEFAULT_MAX_ATTEMPTS
-      self.max_claims        = DEFAULT_MAX_CLAIMS
-      self.max_run_time      = DEFAULT_MAX_RUN_TIME
-      self.default_priority  = DEFAULT_DEFAULT_PRIORITY
-      self.delay_jobs        = DEFAULT_DELAY_JOBS
-      self.queues            = DEFAULT_QUEUES
-      self.read_ahead        = DEFAULT_READ_AHEAD
-    end
-
-    # By default failed jobs are not destroyed. This means you must monitor for them
-    # and have a process for addressing them, or your table will continually expand.
-    self.destroy_failed_jobs = false
 
     def self.reload_app?
       defined?(ActionDispatch::Reloader) && Rails.application.config.cache_classes == false
@@ -62,12 +43,8 @@ module Delayed
       end
     end
 
-    def initialize(options = {})
+    def initialize
       @failed_reserve_count = 0
-
-      %i(min_priority max_claims max_priority sleep_delay read_ahead queues).each do |option|
-        self.class.send("#{option}=", options[option]) if options.key?(option)
-      end
 
       # Reset lifecycle on the offhand chance that something lazily
       # triggered its creation before all plugins had been registered.
@@ -262,5 +239,3 @@ module Delayed
     end
   end
 end
-
-Delayed::Worker.reset

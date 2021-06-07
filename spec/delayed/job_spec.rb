@@ -17,10 +17,6 @@ describe Delayed::Job do
     described_class.delete_all
   end
 
-  after do
-    Delayed::Worker.reset
-  end
-
   it 'sets run_at automatically if not set' do
     expect(described_class.create(payload_object: ErrorJob.new).run_at).not_to be_nil
   end
@@ -365,8 +361,8 @@ describe Delayed::Job do
 
   context 'named queues' do
     context 'when worker has one queue set' do
-      before(:each) do
-        worker.queues = ['large']
+      before do
+        Delayed::Worker.queues = ['large']
       end
 
       it 'only works off jobs which are from its queue' do
@@ -381,8 +377,8 @@ describe Delayed::Job do
     end
 
     context 'when worker has two queue set' do
-      before(:each) do
-        worker.queues = %w(large small)
+      before do
+        Delayed::Worker.queues = %w(large small)
       end
 
       it 'only works off jobs which are from its queue' do
@@ -400,7 +396,7 @@ describe Delayed::Job do
 
     context 'when worker does not have queue set' do
       before(:each) do
-        worker.queues = []
+        Delayed::Worker.queues = []
       end
 
       it 'works off all jobs' do
@@ -439,7 +435,7 @@ describe Delayed::Job do
     end
 
     it 'results in a default run time when not defined' do
-      expect(worker.max_run_time(@job)).to eq(Delayed::Worker::DEFAULT_MAX_RUN_TIME)
+      expect(worker.max_run_time(@job)).to eq(20.minutes)
     end
 
     it 'uses the max_run_time value on the payload when defined' do
@@ -453,8 +449,8 @@ describe Delayed::Job do
     end
 
     it 'job set max_run_time can not exceed default max run time' do
-      expect(@job.payload_object).to receive(:max_run_time).and_return(Delayed::Worker::DEFAULT_MAX_RUN_TIME + 60)
-      expect(worker.max_run_time(@job)).to eq(Delayed::Worker::DEFAULT_MAX_RUN_TIME)
+      expect(@job.payload_object).to receive(:max_run_time).and_return(20.minutes + 60)
+      expect(worker.max_run_time(@job)).to eq(20.minutes)
     end
   end
 
@@ -544,12 +540,7 @@ describe Delayed::Job do
       end
 
       context 'when the job raises a deserialization error' do
-        after do
-          Delayed::Worker.destroy_failed_jobs = true
-        end
-
         it 'marks the job as failed' do
-          Delayed::Worker.destroy_failed_jobs = false
           job = described_class.create! handler: '--- !ruby/object:JobThatDoesNotExist {}'
           expect_any_instance_of(described_class).to receive(:destroy_failed_jobs?).and_return(false)
           worker.work_off
@@ -564,13 +555,7 @@ describe Delayed::Job do
         @job = described_class.enqueue(ErrorJob.new, run_at: described_class.db_time_now - 1)
       end
 
-      after do
-        # reset default
-        Delayed::Worker.destroy_failed_jobs = true
-      end
-
       it 'records last_error when destroy_failed_jobs = false, max_attempts = 1' do
-        Delayed::Worker.destroy_failed_jobs = false
         Delayed::Worker.max_attempts = 1
         worker.run(@job)
         @job.reload
@@ -657,7 +642,7 @@ describe Delayed::Job do
       end
 
       context 'and we want to destroy jobs' do
-        after do
+        before do
           Delayed::Worker.destroy_failed_jobs = true
         end
 
@@ -682,14 +667,6 @@ describe Delayed::Job do
       end
 
       context "and we don't want to destroy jobs" do
-        before do
-          Delayed::Worker.destroy_failed_jobs = false
-        end
-
-        after do
-          Delayed::Worker.destroy_failed_jobs = true
-        end
-
         it_behaves_like 'any failure more than Worker.max_attempts times'
 
         context 'and destroy failed jobs is false' do

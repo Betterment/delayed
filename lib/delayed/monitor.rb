@@ -14,7 +14,7 @@ module Delayed
       workable_count
     ).freeze
 
-    cattr_accessor(:sleep_delay) { 60 }
+    cattr_accessor :sleep_delay, instance_writer: false, default: 60
 
     def initialize
       @jobs = Job.group(priority_case_statement).group(:queue)
@@ -26,7 +26,7 @@ module Delayed
       ActiveSupport::Notifications.instrument('delayed.monitor.run', default_tags) do
         METRICS.each { |metric| emit_metric!(metric) }
       end
-      interruptable_sleep(self.class.sleep_delay)
+      interruptable_sleep(sleep_delay)
     end
 
     private

@@ -3,9 +3,9 @@ module Delayed
     include Delayed::Backend::Base
 
     scope :by_priority, lambda { order("priority ASC, run_at ASC") }
-    scope :min_priority, lambda { where("priority >= ?", Worker.min_priority) if Worker.min_priority }
-    scope :max_priority, lambda { where("priority <= ?", Worker.max_priority) if Worker.max_priority }
-    scope :for_queues, lambda { |queues = Worker.queues| where(queue: queues) if Array(queues).any? }
+    scope :min_priority, lambda { |priority| where("priority >= ?", priority) if priority }
+    scope :max_priority, lambda { |priority| where("priority <= ?", priority) if priority }
+    scope :for_queues, lambda { |queues| where(queue: queues) if queues.any? }
 
     scope :claimed, -> { where.not(locked_at: nil) }
     scope :erroring, -> { where.not(last_error: nil) }
@@ -43,9 +43,9 @@ module Delayed
     def self.reserve(worker, max_run_time = Worker.max_run_time)
       ready_scope =
         ready_to_run(worker.name, max_run_time)
-          .min_priority
-          .max_priority
-          .for_queues
+          .min_priority(worker.min_priority)
+          .max_priority(worker.max_priority)
+          .for_queues(worker.queues)
           .by_priority
 
       ActiveSupport::Notifications.instrument('delayed.worker.reserve_jobs', worker_tags(worker)) do

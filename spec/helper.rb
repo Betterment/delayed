@@ -96,8 +96,28 @@ class SingletonClass
 end
 
 RSpec.configure do |config|
-  config.after(:each) do
-    Delayed::Worker.reset
+  config.around(:each) do |example|
+    sleep_delay_was = Delayed::Worker.sleep_delay
+    max_attempts_was = Delayed::Worker.max_attempts
+    max_claims_was = Delayed::Worker.max_claims
+    max_run_time_was = Delayed::Worker.max_run_time
+    default_priority_was = Delayed::Worker.default_priority
+    delay_jobs_was = Delayed::Worker.delay_jobs
+    queues_was = Delayed::Worker.queues
+    read_ahead_was = Delayed::Worker.read_ahead
+    destroy_failed_jobs_was = Delayed::Worker.destroy_failed_jobs
+
+    example.run
+  ensure
+    Delayed::Worker.sleep_delay = sleep_delay_was
+    Delayed::Worker.max_attempts = max_attempts_was
+    Delayed::Worker.max_claims = max_claims_was
+    Delayed::Worker.max_run_time = max_run_time_was
+    Delayed::Worker.default_priority = default_priority_was
+    Delayed::Worker.delay_jobs = delay_jobs_was
+    Delayed::Worker.queues = queues_was
+    Delayed::Worker.read_ahead = read_ahead_was
+    Delayed::Worker.destroy_failed_jobs = destroy_failed_jobs_was
     Delayed::Job.delete_all
   end
 
