@@ -10,6 +10,7 @@ describe Delayed::Job do
   before do
     Delayed::Worker.max_priority = nil
     Delayed::Worker.min_priority = nil
+    Delayed::Worker.max_claims = 1 # disable multithreading because SimpleJob is not threadsafe
     Delayed::Worker.default_priority = 99
     Delayed::Worker.delay_jobs = true
     Delayed::Worker.default_queue_name = 'default_tracking'
