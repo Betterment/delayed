@@ -8,6 +8,8 @@ require 'active_record'
 require 'delayed'
 require 'sample_jobs'
 
+require 'rake'
+
 if ENV['DEBUG_LOGS']
   Delayed.logger = Logger.new($stdout)
 else
@@ -97,33 +99,38 @@ end
 
 RSpec.configure do |config|
   config.around(:each) do |example|
-    sleep_delay_was = Delayed::Worker.sleep_delay
-    max_attempts_was = Delayed::Worker.max_attempts
-    max_claims_was = Delayed::Worker.max_claims
-    max_run_time_was = Delayed::Worker.max_run_time
+    aj_priority_was = ActiveJob::Base.priority
+    aj_queue_name_was = ActiveJob::Base.queue_name
     default_priority_was = Delayed::Worker.default_priority
     default_queue_name_was = Delayed::Worker.default_queue_name
     delay_jobs_was = Delayed::Worker.delay_jobs
+    destroy_failed_jobs_was = Delayed::Worker.destroy_failed_jobs
+    max_attempts_was = Delayed::Worker.max_attempts
+    max_claims_was = Delayed::Worker.max_claims
+    max_priority_was = Delayed::Worker.max_priority
+    max_run_time_was = Delayed::Worker.max_run_time
+    min_priority_was = Delayed::Worker.min_priority
     queues_was = Delayed::Worker.queues
     read_ahead_was = Delayed::Worker.read_ahead
-    destroy_failed_jobs_was = Delayed::Worker.destroy_failed_jobs
-    aj_queue_name_was = ActiveJob::Base.queue_name
-    aj_priority_was = ActiveJob::Base.priority
+    sleep_delay_was = Delayed::Worker.sleep_delay
 
     example.run
   ensure
-    Delayed::Worker.sleep_delay = sleep_delay_was
-    Delayed::Worker.max_attempts = max_attempts_was
-    Delayed::Worker.max_claims = max_claims_was
-    Delayed::Worker.max_run_time = max_run_time_was
+    ActiveJob::Base.priority = aj_priority_was
+    ActiveJob::Base.queue_name = aj_queue_name_was
     Delayed::Worker.default_priority = default_priority_was
     Delayed::Worker.default_queue_name = default_queue_name_was
     Delayed::Worker.delay_jobs = delay_jobs_was
+    Delayed::Worker.destroy_failed_jobs = destroy_failed_jobs_was
+    Delayed::Worker.max_attempts = max_attempts_was
+    Delayed::Worker.max_claims = max_claims_was
+    Delayed::Worker.max_priority = max_priority_was
+    Delayed::Worker.max_run_time = max_run_time_was
+    Delayed::Worker.min_priority = min_priority_was
     Delayed::Worker.queues = queues_was
     Delayed::Worker.read_ahead = read_ahead_was
-    Delayed::Worker.destroy_failed_jobs = destroy_failed_jobs_was
-    ActiveJob::Base.queue_name = aj_queue_name_was
-    ActiveJob::Base.priority = aj_priority_was
+    Delayed::Worker.sleep_delay = sleep_delay_was
+
     Delayed::Job.delete_all
   end
 
