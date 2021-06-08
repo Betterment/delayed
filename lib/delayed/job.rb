@@ -203,7 +203,29 @@ module Delayed
       super
     end
 
-    delegate :alert_age, :alert_run_time, :alert_attempts, to: :priority
+    def alert_age
+      if payload_object.respond_to?(:alert_age)
+        payload_object.alert_age
+      else
+        priority.alert_age
+      end
+    end
+
+    def alert_run_time
+      if payload_object.respond_to?(:alert_run_time)
+        payload_object.alert_run_time
+      else
+        priority.alert_run_time
+      end
+    end
+
+    def alert_attempts
+      if payload_object.respond_to?(:alert_attempts)
+        payload_object.alert_attempts
+      else
+        priority.alert_attempts
+      end
+    end
 
     def age
       [(locked_at || self.class.db_time_now) - run_at, 0].max

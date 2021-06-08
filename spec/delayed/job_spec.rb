@@ -795,10 +795,10 @@ describe Delayed::Job do
       Delayed::Priority.names = nil
     end
 
-    subject { described_class.new(run_at: run_at, locked_at: locked_at) }
+    subject { described_class.enqueue(SimpleJob.new, run_at: run_at, locked_at: locked_at) }
 
     it 'returns false' do
-      expect(subject.alert_age).to be_within(1).of(5.minutes)
+      expect(subject.alert_age).to eq(5.minutes)
       expect(subject.age).to be_within(1).of(1.minute)
       expect(subject.age_alert?).to eq(false)
     end
@@ -807,7 +807,7 @@ describe Delayed::Job do
       let(:run_at) { now - 6.minutes }
 
       it 'returns true' do
-        expect(subject.alert_age).to be_within(1).of(5.minutes)
+        expect(subject.alert_age).to eq(5.minutes)
         expect(subject.age).to be_within(1).of(6.minutes)
         expect(subject.age_alert?).to eq(true)
       end
@@ -819,8 +819,26 @@ describe Delayed::Job do
 
       it 'returns false' do
         expect(subject.alert_age).to eq 5.minutes
-        expect(subject.age).to eq 1.minute
+        expect(subject.age).to be_within(1).of(1.minute)
         expect(subject.age_alert?).to eq(false)
+      end
+    end
+
+    context 'when the job class defines an alert_age override' do
+      before do
+        stub_const('JobWithAlertAge', Struct.new(:perform) do
+          def alert_age
+            30.seconds
+          end
+        end)
+      end
+
+      subject { described_class.enqueue(JobWithAlertAge.new, run_at: run_at, locked_at: locked_at) }
+
+      it 'obeys the override' do
+        expect(subject.alert_age).to eq(30.seconds)
+        expect(subject.age).to be_within(1).of(1.minute)
+        expect(subject.age_alert?).to eq(true)
       end
     end
   end
@@ -837,10 +855,10 @@ describe Delayed::Job do
       Delayed::Priority.names = nil
     end
 
-    subject { described_class.new(locked_at: locked_at) }
+    subject { described_class.enqueue(SimpleJob.new, locked_at: locked_at) }
 
     it 'returns false' do
-      expect(subject.alert_run_time).to be_within(1).of(5.minutes)
+      expect(subject.alert_run_time).to eq(5.minutes)
       expect(subject.run_time).to be_within(1).of(1.minute)
       expect(subject.run_time_alert?).to eq(false)
     end
@@ -849,8 +867,26 @@ describe Delayed::Job do
       let(:locked_at) { now - 6.minutes }
 
       it 'returns true' do
-        expect(subject.alert_run_time).to be_within(1).of(5.minutes)
+        expect(subject.alert_run_time).to eq(5.minutes)
         expect(subject.run_time).to be_within(1).of(6.minutes)
+        expect(subject.run_time_alert?).to eq(true)
+      end
+    end
+
+    context 'when the job class defines an alert_run_time override' do
+      before do
+        stub_const('JobWithAlertRunTime', Struct.new(:perform) do
+          def alert_run_time
+            30.seconds
+          end
+        end)
+      end
+
+      subject { described_class.enqueue(JobWithAlertRunTime.new, locked_at: locked_at) }
+
+      it 'obeys the override' do
+        expect(subject.alert_run_time).to eq(30.seconds)
+        expect(subject.run_time).to be_within(1).of(1.minute)
         expect(subject.run_time_alert?).to eq(true)
       end
     end
@@ -868,7 +904,7 @@ describe Delayed::Job do
       Delayed::Priority.names = nil
     end
 
-    subject { described_class.new(attempts: attempts) }
+    subject { described_class.enqueue(SimpleJob.new, attempts: attempts) }
 
     it 'returns false' do
       expect(subject.alert_attempts).to eq 5
@@ -882,6 +918,24 @@ describe Delayed::Job do
       it 'returns true' do
         expect(subject.alert_attempts).to eq 5
         expect(subject.attempts).to eq 6
+        expect(subject.attempts_alert?).to eq true
+      end
+    end
+
+    context 'when the job class defines an alert_attempts override' do
+      before do
+        stub_const('JobWithAlertAttempts', Struct.new(:perform) do
+          def alert_attempts
+            1
+          end
+        end)
+      end
+
+      subject { described_class.enqueue(JobWithAlertAttempts.new, attempts: attempts) }
+
+      it 'obeys the override' do
+        expect(subject.alert_attempts).to eq 1
+        expect(subject.attempts).to eq 1
         expect(subject.attempts_alert?).to eq true
       end
     end
