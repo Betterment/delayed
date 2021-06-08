@@ -23,14 +23,12 @@ module Delayed
       end
 
       def set_queue_name
-        if options[:queue].nil? && options[:payload_object].respond_to?(:queue_name)
-          options[:queue] = options[:payload_object].queue_name
-        else
-          options[:queue] ||= Delayed::Worker.default_queue_name
-        end
+        options[:queue] ||= options[:payload_object].queue_name if options[:payload_object].respond_to?(:queue_name)
+        options[:queue] ||= Delayed::Worker.default_queue_name
       end
 
       def set_priority
+        options[:priority] ||= options[:payload_object].priority if options[:payload_object].respond_to?(:priority)
         options[:priority] ||= Delayed::Worker.default_priority
       end
 

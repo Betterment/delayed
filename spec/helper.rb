@@ -107,6 +107,8 @@ RSpec.configure do |config|
     queues_was = Delayed::Worker.queues
     read_ahead_was = Delayed::Worker.read_ahead
     destroy_failed_jobs_was = Delayed::Worker.destroy_failed_jobs
+    aj_queue_name_was = ActiveJob::Base.queue_name
+    aj_priority_was = ActiveJob::Base.priority
 
     example.run
   ensure
@@ -120,6 +122,8 @@ RSpec.configure do |config|
     Delayed::Worker.queues = queues_was
     Delayed::Worker.read_ahead = read_ahead_was
     Delayed::Worker.destroy_failed_jobs = destroy_failed_jobs_was
+    ActiveJob::Base.queue_name = aj_queue_name_was
+    ActiveJob::Base.priority = aj_priority_was
     Delayed::Job.delete_all
   end
 

@@ -1,6 +1,9 @@
 require 'helper'
 
 RSpec.describe Delayed::ActiveJobAdapter do
+  let(:arbitrary_time) do
+    Time.parse('2021-01-05 03:34:33 UTC')
+  end
   let(:queue_adapter) { :delayed }
   let(:job_class) do
     Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
@@ -21,10 +24,6 @@ RSpec.describe Delayed::ActiveJobAdapter do
   end
 
   describe '.set' do
-    let(:arbitrary_time) do
-      Time.parse('2021-01-05 03:34:33 UTC')
-    end
-
     it 'supports priority as an integer' do
       JobClass.set(priority: 43).perform_later
 
@@ -124,21 +123,121 @@ RSpec.describe Delayed::ActiveJobAdapter do
         expect(Delayed::Job.last.payload_object.arbitrary_method).to eq 'hello'
       end
     end
+  end
+
+  describe '.perform_later' do
+    it 'applies the default ActiveJob queue and priority' do
+      JobClass.perform_later
+
+      expect(Delayed::Job.last.queue).to eq('default')
+      expect(Delayed::Job.last.priority).to eq(10)
+    end
+
+    it 'supports overriding queue and priority' do
+      JobClass.set(queue: 'a', priority: 3).perform_later
+
+      expect(Delayed::Job.last.queue).to eq('a')
+      expect(Delayed::Job.last.priority).to eq(3)
+    end
+
+    context 'when all default queues and priorities are nil' do
+      before do
+        ActiveJob::Base.queue_name = nil
+        ActiveJob::Base.priority = nil
+        Delayed::Worker.default_queue_name = nil
+        Delayed::Worker.default_priority = nil
+      end
+
+      it 'applies no queue or priority' do
+        JobClass.perform_later
+
+        expect(Delayed::Job.last.queue).to be_nil
+        expect(Delayed::Job.last.priority).to eq(0)
+      end
+
+      it 'supports overriding queue and priority' do
+        JobClass.set(queue: 'a', priority: 3).perform_later
+
+        expect(Delayed::Job.last.queue).to eq('a')
+        expect(Delayed::Job.last.priority).to eq(3)
+      end
+    end
+
+    context 'when there is a default Delayed queue and priority, but not ActiveJob' do
+      before do
+        ActiveJob::Base.queue_name = nil
+        ActiveJob::Base.priority = nil
+        Delayed::Worker.default_queue_name = 'dj_default'
+        Delayed::Worker.default_priority = 99
+      end
+
+      it 'applies the default Delayed queue and priority' do
+        JobClass.perform_later
+
+        expect(Delayed::Job.last.queue).to eq('dj_default')
+        expect(Delayed::Job.last.priority).to eq(99)
+      end
+
+      it 'supports overriding queue and priority' do
+        JobClass.set(queue: 'a', priority: 3).perform_later
+
+        expect(Delayed::Job.last.queue).to eq('a')
+        expect(Delayed::Job.last.priority).to eq(3)
+      end
+    end
+
+    context 'when ActiveJob specifies a different default queue and priority' do
+      before do
+        ActiveJob::Base.queue_name = 'aj_default'
+        ActiveJob::Base.priority = 11
+      end
+
+      it 'applies the default ActiveJob queue and priority' do
+        JobClass.perform_later
+
+        expect(Delayed::Job.last.queue).to eq('aj_default')
+        expect(Delayed::Job.last.priority).to eq(11)
+      end
+
+      it 'supports overriding queue and priority' do
+        JobClass.set(queue: 'a', priority: 3).perform_later
+
+        expect(Delayed::Job.last.queue).to eq('a')
+        expect(Delayed::Job.last.priority).to eq(3)
+      end
+    end
 
     context 'when using the ActiveJob test adapter' do
       let(:queue_adapter) { :test }
 
-      it 'applies the default queue and no priority' do
+      it 'applies the default ActiveJob queue and priority' do
         JobClass.perform_later
 
         if ActiveJob.gem_version < Gem::Version.new('6')
           expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, queue: 'default')
         else
-          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 0, queue: 'default')
+          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => nil, queue: 'default')
         end
       end
 
-      it 'applies queue, priority, and wait_until' do
+      context 'when ActiveJob specifies a different default queue and priority' do
+        before do
+          ActiveJob::Base.queue_name = 'aj_default'
+          ActiveJob::Base.priority = 11
+        end
+
+        it 'applies the default ActiveJob queue and priority' do
+          JobClass.perform_later
+
+          if ActiveJob.gem_version < Gem::Version.new('6')
+            expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, queue: 'aj_default')
+          else
+            expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 11, queue: 'aj_default')
+          end
+        end
+      end
+
+      it 'supports overriding queue, priority, and wait_until' do
         JobClass.set(queue: 'a', priority: 3, wait_until: arbitrary_time).perform_later
 
         if ActiveJob.gem_version < Gem::Version.new('6')
