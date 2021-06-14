@@ -2,7 +2,8 @@ namespace :delayed do
   task environment_options: :environment do
     Delayed::Worker.min_priority = ENV['MIN_PRIORITY'].to_i if ENV.key?('MIN_PRIORITY')
     Delayed::Worker.max_priority = ENV['MAX_PRIORITY'].to_i if ENV.key?('MAX_PRIORITY')
-    Delayed::Worker.queues = (ENV['QUEUES'] || ENV['QUEUE'] || '').split(',')
+    Delayed::Worker.queues = [ENV['QUEUE']] if ENV.key?('QUEUE')
+    Delayed::Worker.queues = ENV['QUEUES'].split(',') if ENV.key?('QUEUES')
     Delayed::Worker.sleep_delay = ENV['SLEEP_DELAY'].to_i if ENV.key?('SLEEP_DELAY')
     Delayed::Worker.read_ahead = ENV['READ_AHEAD'].to_i if ENV.key?('READ_AHEAD')
     Delayed::Worker.max_claims = ENV['MAX_CLAIMS'].to_i if ENV.key?('MAX_CLAIMS')

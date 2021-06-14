@@ -79,7 +79,7 @@ module Delayed
           raise "unknown priority name(s): #{unknown_names}" if unknown_names.any?
         end
 
-        @alerts = alerts&.sort_by { |k, _| names.index(k) }&.to_h
+        @alerts = alerts&.sort_by { |k, _| names.keys.index(k) }&.to_h
       end
 
       def ranges

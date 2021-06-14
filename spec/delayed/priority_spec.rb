@@ -129,7 +129,7 @@ RSpec.describe Delayed::Priority do
   it 'supports comparisons' do
     expect(described_class.new(3)).to be < described_class.new(5)
     expect(described_class.new(10)).to be >= described_class.new(10)
-    expect(described_class.new(101)).to eq described_class.new(101)
+    expect(described_class.new(101)).to eq described_class.new(101) # rubocop:disable RSpec/IdenticalEqualityAssertion
   end
 
   it 'suports coercion' do

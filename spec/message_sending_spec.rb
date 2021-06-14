@@ -112,7 +112,7 @@ describe Delayed::MessageSending do
       expect {
         expect {
           fairy_tail.delay.tell
-        }.to change(fairy_tail, :happy_ending).from(nil).to(true)
+        }.to change { fairy_tail.happy_ending }.from(nil).to(true)
       }.not_to(change { Delayed::Job.count })
     end
 
@@ -122,7 +122,7 @@ describe Delayed::MessageSending do
       expect {
         expect {
           fairy_tail.delay.tell
-        }.not_to change(fairy_tail, :happy_ending)
+        }.not_to change { fairy_tail.happy_ending }
       }.to change { Delayed::Job.count }.by(1)
     end
 
@@ -132,7 +132,7 @@ describe Delayed::MessageSending do
       expect {
         expect {
           fairy_tail.delay.tell
-        }.not_to change(fairy_tail, :happy_ending)
+        }.not_to change { fairy_tail.happy_ending }
       }.to change { Delayed::Job.count }.by(1)
     end
 
@@ -142,7 +142,7 @@ describe Delayed::MessageSending do
       expect {
         expect {
           fairy_tail.delay.tell
-        }.to change(fairy_tail, :happy_ending).from(nil).to(true)
+        }.to change { fairy_tail.happy_ending }.from(nil).to(true)
       }.not_to(change { Delayed::Job.count })
     end
   end
