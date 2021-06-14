@@ -23,7 +23,7 @@ end
 
 ActiveSupport.on_load(:active_job) do
   require 'delayed/active_job_adapter'
-  ActiveJob::QueueAdapters::DelayedAdapter = Delayed::ActiveJobAdapter
+  ActiveJob::QueueAdapters::DelayedAdapter = Class.new(Delayed::ActiveJobAdapter)
 
   include Delayed::ActiveJobAdapter::EnqueuingPatch
 end
