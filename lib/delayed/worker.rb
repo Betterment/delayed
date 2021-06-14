@@ -31,10 +31,6 @@ module Delayed
                :default_log_level, :default_log_level=, to: Delayed
     end
 
-    def self.reload_app?
-      defined?(ActionDispatch::Reloader) && Rails.application.config.cache_classes == false
-    end
-
     def self.delay_job?(job)
       if delay_jobs.is_a?(Proc)
         delay_jobs.arity == 1 ? delay_jobs.call(job) : delay_jobs.call
@@ -228,14 +224,7 @@ module Delayed
     end
 
     def reload!
-      return unless self.class.reload_app?
-
-      if defined?(ActiveSupport::Reloader)
-        Rails.application.reloader.reload!
-      else
-        ActionDispatch::Reloader.cleanup!
-        ActionDispatch::Reloader.prepare!
-      end
+      Rails.application.reloader.reload! if defined?(Rails.application.reloader) && Rails.application.reloader.check!
     end
   end
 end
