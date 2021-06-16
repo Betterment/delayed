@@ -150,13 +150,14 @@ RSpec::Matchers.define :emit_notification do |expected_event_name|
   end
 
   chain :with_payload, :expected_payload
+  chain :with_value, :expected_value
   diffable
 
   match do |block|
-    @expected = { event_name: expected_event_name, payload: expected_payload }
+    @expected = { event_name: expected_event_name, payload: expected_payload, value: expected_value }
     @actuals = []
     callback = ->(name, _started, _finished, _unique_id, payload) do
-      @actuals << { event_name: name, payload: payload }
+      @actuals << { event_name: name, payload: payload.except(:value), value: payload[:value] }
     end
 
     ActiveSupport::Notifications.subscribed(callback, expected_event_name, &block)
@@ -166,16 +167,18 @@ RSpec::Matchers.define :emit_notification do |expected_event_name|
       @expected.delete(:payload)
     end
 
-    @actual = @actuals.find { |a| values_match?(@expected, a) } || @actuals.last
+    @actual = @actuals.select { |a| values_match?(@expected.except(:value), a.except(:value)) }
+    @expected = [@expected]
     values_match?(@expected, @actual)
   end
 
   failure_message do
     <<~MSG
       Expected the code block to emit:
-        #{@expected.inspect}
+        #{@expected.first.inspect}
+
       But instead, the following were emitted:
-        #{@actuals.map(&:inspect).join("\n  ")}
+        #{(@actual.presence || @actuals).map(&:inspect).join("\n  ")}
     MSG
   end
 end

@@ -46,7 +46,7 @@ module Delayed
     def default_results
       @default_results ||= Priority.names.values.flat_map { |priority|
         (Worker.queues.presence || [Worker.default_queue_name]).map do |queue|
-          [[priority, queue], 0]
+          [[priority.to_i, queue], 0]
         end
       }.to_h
     end
@@ -85,20 +85,20 @@ module Delayed
 
     def max_lock_age_grouped
       oldest_locked_job_grouped.each_with_object({}) do |job, metrics|
-        metrics[[job.priority, job.queue]] = as_of - job.locked_at
+        metrics[[job.priority.to_i, job.queue]] = as_of - job.locked_at
       end
     end
 
     def max_age_grouped
       oldest_workable_job_grouped.each_with_object({}) do |job, metrics|
-        metrics[[job.priority, job.queue]] = as_of - job.run_at
+        metrics[[job.priority.to_i, job.queue]] = as_of - job.run_at
       end
     end
 
     def alert_age_percent_grouped
       oldest_workable_job_grouped.each_with_object({}) do |job, metrics|
         max_age = as_of - job.run_at
-        metrics[[job.priority, job.queue]] = max_age / job.priority.alert_age * 100 if job.priority.alert_age
+        metrics[[job.priority.to_i, job.queue]] = max_age / job.priority.alert_age * 100 if job.priority.alert_age
       end
     end
 
