@@ -16,7 +16,10 @@ namespace :delayed do
     # We will use the cache_classes config as a proxy for determining if we should eager load before booting workers.
     if !Rails.application.config.respond_to?(:rake_eager_load) && Rails.application.config.cache_classes
       Rails.application.config.eager_load = true
-      Rails.application.eager_load!
+      Rails::Application::Finisher.initializers
+        .find { |i| i.name == :eager_load! }
+        .bind(Rails.application)
+        .run
     end
   end
 
