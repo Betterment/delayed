@@ -20,7 +20,6 @@ module Delayed
     def initialize
       @jobs = Job.group(priority_case_statement).group(:queue)
       @jobs = @jobs.where(queue: Worker.queues) if Worker.queues.any?
-      @as_of = Job.db_time_now
     end
 
     def run!
@@ -32,7 +31,7 @@ module Delayed
 
     private
 
-    attr_reader :jobs, :as_of
+    attr_reader :jobs
 
     def emit_metric!(metric)
       send("#{metric}_grouped").reverse_merge(default_results).each do |(priority, queue), value|
@@ -68,11 +67,11 @@ module Delayed
     end
 
     def future_count_grouped
-      jobs.where("run_at > ?", as_of).count
+      jobs.where("run_at > ?", Job.db_time_now).count
     end
 
     def locked_count_grouped
-      jobs.claimed.count
+      jobs.locked.count
     end
 
     def erroring_count_grouped
@@ -85,25 +84,25 @@ module Delayed
 
     def max_lock_age_grouped
       oldest_locked_job_grouped.each_with_object({}) do |job, metrics|
-        metrics[[job.priority.to_i, job.queue]] = as_of - job.locked_at
+        metrics[[job.priority.to_i, job.queue]] = Job.db_time_now - job.locked_at
       end
     end
 
     def max_age_grouped
       oldest_workable_job_grouped.each_with_object({}) do |job, metrics|
-        metrics[[job.priority.to_i, job.queue]] = as_of - job.run_at
+        metrics[[job.priority.to_i, job.queue]] = Job.db_time_now - job.run_at
       end
     end
 
     def alert_age_percent_grouped
       oldest_workable_job_grouped.each_with_object({}) do |job, metrics|
-        max_age = as_of - job.run_at
+        max_age = Job.db_time_now - job.run_at
         metrics[[job.priority.to_i, job.queue]] = max_age / job.priority.alert_age * 100 if job.priority.alert_age
       end
     end
 
     def workable_count_grouped
-      jobs.workable(as_of).count
+      jobs.workable(Job.db_time_now).count
     end
 
     def working_count_grouped
@@ -115,8 +114,7 @@ module Delayed
     end
 
     def oldest_workable_job_grouped
-      @oldest_workable_job_grouped ||= jobs.workable(as_of)
-        .select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
+      jobs.workable(Job.db_time_now).select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
     end
 
     def priority_case_statement

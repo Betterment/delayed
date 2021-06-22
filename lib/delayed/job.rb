@@ -7,13 +7,13 @@ module Delayed
     scope :max_priority, lambda { |priority| where("priority <= ?", priority) if priority }
     scope :for_queues, lambda { |queues| where(queue: queues) if queues.any? }
 
-    scope :claimed, -> { where.not(locked_at: nil) }
+    scope :locked, -> { where.not(locked_at: nil) }
     scope :erroring, -> { where.not(last_error: nil) }
     scope :failed, -> { where.not(failed_at: nil) }
-    scope :not_claimed, -> { where(locked_at: nil) }
+    scope :not_locked, -> { where(locked_at: nil) }
     scope :not_failed, -> { where(failed_at: nil) }
-    scope :workable, ->(timestamp) { not_claimed.not_failed.where("run_at <= ?", timestamp) }
-    scope :working, -> { claimed.not_failed }
+    scope :workable, ->(timestamp) { not_locked.not_failed.where("run_at <= ?", timestamp) }
+    scope :working, -> { locked.not_failed }
 
     before_save :set_default_run_at
 
