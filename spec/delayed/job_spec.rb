@@ -863,6 +863,16 @@ describe Delayed::Job do
       expect(subject.run_time_alert?).to eq(false)
     end
 
+    context 'when the job is not locked (e.g. delay_jobs is false)' do
+      let(:locked_at) { nil }
+
+      it 'returns nil' do
+        expect(subject.alert_run_time).to eq(5.minutes)
+        expect(subject.run_time).to be_nil
+        expect(subject.run_time_alert?).to be_nil
+      end
+    end
+
     context 'when the job has been running longer than specified alert run_time' do
       let(:locked_at) { now - 6.minutes }
 
