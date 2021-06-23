@@ -207,6 +207,22 @@ RSpec.describe Delayed::ActiveJobAdapter do
       end
     end
 
+    context 'when ActiveJob uses queue_with_priority' do
+      let(:job_class) do
+        Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
+          queue_with_priority Delayed::Priority.reporting
+
+          def perform; end
+        end
+      end
+
+      it 'applies the specified priority' do
+        JobClass.perform_later
+
+        expect(Delayed::Job.last.priority).to eq(30)
+      end
+    end
+
     context 'when using the ActiveJob test adapter' do
       let(:queue_adapter) { :test }
 
