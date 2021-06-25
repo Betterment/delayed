@@ -1,11 +1,11 @@
-require "generators/delayed_job/delayed_job_generator"
-require "generators/delayed_job/next_migration_version"
+require "generators/delayed/generator"
+require "generators/delayed/next_migration_version"
 require "rails/generators/migration"
 require "rails/generators/active_record"
 
 # Extend the DelayedJobGenerator so that it creates an AR migration
-module DelayedJob
-  class ActiveRecordGenerator < ::DelayedJobGenerator
+module Delayed
+  class MigrationGenerator < Generator
     include Rails::Generators::Migration
     extend NextMigrationVersion
 

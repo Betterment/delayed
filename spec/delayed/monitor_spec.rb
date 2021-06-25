@@ -10,7 +10,7 @@ RSpec.describe Delayed::Monitor do
       table: 'delayed_jobs',
       database: current_database,
       database_adapter: current_adapter,
-      queue: nil,
+      queue: 'default',
     }
   end
 
@@ -98,7 +98,7 @@ RSpec.describe Delayed::Monitor do
     let(:job_attributes) do
       {
         run_at: now,
-        queue: nil,
+        queue: 'default',
         handler: "--- !ruby/object:SimpleJob\n",
         attempts: 0,
       }

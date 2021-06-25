@@ -45,7 +45,7 @@ if db_adapter == "mysql2"
   types[:primary_key] = types[:primary_key].sub(" DEFAULT NULL", "")
 end
 
-migration_template = File.open("lib/generators/delayed_job/templates/migration.rb")
+migration_template = File.open("lib/generators/delayed/templates/migration.rb")
 
 # need to eval the template with the migration_version intact
 migration_context =

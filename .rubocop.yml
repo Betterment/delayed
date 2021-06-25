@@ -10,7 +10,7 @@ inherit_mode:
 
 AllCops:
   Exclude:
-    - 'lib/generators/delayed_job/templates/*.rb'
+    - 'lib/generators/delayed/templates/*.rb'
   NewCops: enable
 
 Rails/EnvironmentVariableAccess:

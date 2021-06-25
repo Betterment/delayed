@@ -1,4 +1,4 @@
-module DelayedJob
+module Delayed
   module NextMigrationVersion
     # while methods have moved around this has been the implementation
     # since ActiveRecord 3.0
