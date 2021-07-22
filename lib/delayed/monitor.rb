@@ -97,7 +97,7 @@ module Delayed
     def alert_age_percent_grouped
       oldest_workable_job_grouped.each_with_object({}) do |job, metrics|
         max_age = Job.db_time_now - job.run_at
-        metrics[[job.priority.to_i, job.queue]] = max_age / job.priority.alert_age * 100 if job.priority.alert_age
+        metrics[[job.priority.to_i, job.queue]] = [max_age / job.priority.alert_age * 100, 100].min if job.priority.alert_age
       end
     end
 
