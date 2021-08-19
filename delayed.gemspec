@@ -2,18 +2,12 @@ Gem::Specification.new do |spec|
   spec.authors        = ['Nathan Griffith', 'Rowan McDonald', 'Cyrus Eslami', 'John Mileham', 'Brandon Keepers', 'Brian Ryckbost',
                          'Chris Gaffney', 'David Genord II', 'Erik Michaels-Ober', 'Matt Griffin', 'Steve Richert', 'Tobias Lütke']
   spec.description    = <<~MSG
-    ===== +Delayed+ is a multi-threaded, SQL-driven ActiveJob backend used at {Betterment}[https://betterment.com] to process millions of background jobs per day.
-
-    It supports *postgres*, *mysql*, and *sqlite*, and is designed to be:
-
-    - *Reliable*, with co-transactional job enqueues and guaranteed, at-least-once execution
-    - *Scalable*, with an optimized pickup query and concurrent job execution
-    - *Resilient*, with built-in retry mechanisms, exponential backoff, and failed job preservation
-    - *Maintainable*, with robust instrumentation, continuous monitoring, and priority-based alerting
-
-    For an overview of how Betterment uses +delayed+ to build resilience into distributed systems, check
-    out the talk ✨{Can I break this?}[https://www.youtube.com/watch?v=TuhS13rBoVY]✨ given at RailsConf
-    2021!
+    Delayed is a multi-threaded, SQL-driven ActiveJob backend used at Betterment to process millions
+    of background jobs per day. It supports postgres, mysql, and sqlite, and is designed to be
+    Reliable (with co-transactional job enqueues and guaranteed, at-least-once execution), Scalable
+    (with an optimized pickup query and concurrent job execution), Resilient (with built-in retry
+    mechanisms, exponential backoff, and failed job preservation), and Maintainable (with robust
+    instrumentation, continuous monitoring, and priority-based alerting).
   MSG
   spec.email          = ['nathan@betterment.com']
   spec.files          = Dir['{app,config,db,lib}/**/*', 'LICENSE', 'Rakefile', 'README.md']
@@ -24,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.require_paths  = ['lib']
   spec.summary        = 'a multi-threaded, SQL-driven ActiveJob backend used at Betterment to process millions of background jobs per day'
 
-  spec.version        = '0.1.0'
+  spec.version        = '0.1.1'
   spec.metadata       = {
     'changelog_uri' => 'https://github.com/betterment/delayed/blob/main/CHANGELOG.md',
     'bug_tracker_uri' => 'https://github.com/betterment/delayed/issues',
