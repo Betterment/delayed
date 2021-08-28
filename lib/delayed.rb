@@ -14,11 +14,10 @@ require 'delayed/plugins/instrumentation'
 require 'delayed/backend/base'
 require 'delayed/backend/job_preparer'
 require 'delayed/worker'
-require 'delayed/railtie' if defined?(Rails::Railtie)
+require 'delayed/engine' if defined?(Rails::Engine)
 
 ActiveSupport.on_load(:active_record) do
-  require 'delayed/serialization/active_record'
-  require 'delayed/job'
+  require_relative '../app/delayed/job' unless defined?(Rails::Engine)
 end
 
 ActiveSupport.on_load(:active_job) do

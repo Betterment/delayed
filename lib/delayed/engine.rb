@@ -1,5 +1,5 @@
 module Delayed
-  class Railtie < Rails::Railtie
+  class Engine < Rails::Engine
     rake_tasks do
       load 'delayed/tasks.rb'
     end
