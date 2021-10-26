@@ -13,9 +13,11 @@ It supports **postgres**, **mysql**, and **sqlite**, and is designed to be:
 - **Resilient**, with built-in retry mechanisms, exponential back-off, and failed job preservation
 - **Maintainable**, with robust instrumentation, continuous monitoring, and priority-based alerting
 
-For an overview of how Betterment uses `delayed` to build resilience into distributed systems, check
-out the talk ✨[Can I break this?](https://www.youtube.com/watch?v=TuhS13rBoVY)✨ given at RailsConf
-2021!
+For an overview of how Betterment uses `delayed` to build resilience into distributed systems, read
+the
+[announcement blog post](https://www.betterment.com/resources/delayed-resilient-background-jobs-on-rails/),
+and/or check out the talk ✨[Can I break this?](https://www.youtube.com/watch?v=TuhS13rBoVY)✨
+given at RailsConf 2021!
 
 
 ### Why `Delayed`?
