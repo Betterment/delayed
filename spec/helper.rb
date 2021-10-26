@@ -139,8 +139,15 @@ RSpec.configure do |config|
   end
 end
 
-# Add this directory so the ActiveSupport autoloading works
-ActiveSupport::Dependencies.autoload_paths << File.dirname(__FILE__)
+if ActiveRecord::VERSION::MAJOR >= 7
+  require "zeitwerk"
+  loader = Zeitwerk::Loader.new
+  loader.push_dir File.dirname(__FILE__)
+  loader.setup
+else
+  # Add this directory so the ActiveSupport autoloading works
+  ActiveSupport::Dependencies.autoload_paths << File.dirname(__FILE__)
+end
 
 RSpec::Matchers.define :emit_notification do |expected_event_name|
   attr_reader :actual, :expected
