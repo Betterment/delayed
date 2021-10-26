@@ -739,10 +739,16 @@ describe Delayed::Job do
     end
   end
 
+  if ActiveRecord::VERSION::MAJOR >= 7
+    delegate :default_timezone=, to: ActiveRecord
+  else
+    delegate :default_timezone=, to: ActiveRecord::Base
+  end
+
   context "db_time_now" do
     after do
       Time.zone = nil
-      ActiveRecord::Base.default_timezone = :local
+      self.default_timezone = :local
     end
 
     it "returns time in current time zone if set" do
@@ -752,13 +758,13 @@ describe Delayed::Job do
 
     it "returns UTC time if that is the AR default" do
       Time.zone = nil
-      ActiveRecord::Base.default_timezone = :utc
+      self.default_timezone = :utc
       expect(described_class.db_time_now.zone).to eq "UTC"
     end
 
     it "returns local time if that is the AR default" do
       Time.zone = "Arizona"
-      ActiveRecord::Base.default_timezone = :local
+      self.default_timezone = :local
       expect(described_class.db_time_now.zone).to eq("MST")
     end
   end

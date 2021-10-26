@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.require_paths  = ['lib']
   spec.summary        = 'a multi-threaded, SQL-driven ActiveJob backend used at Betterment to process millions of background jobs per day'
 
-  spec.version        = '0.2.0'
+  spec.version        = '0.3.0'
   spec.metadata       = {
     'changelog_uri' => 'https://github.com/betterment/delayed/blob/main/CHANGELOG.md',
     'bug_tracker_uri' => 'https://github.com/betterment/delayed/issues',
@@ -40,4 +40,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rspec'
   spec.add_development_dependency 'sqlite3'
   spec.add_development_dependency 'timecop'
+  spec.add_development_dependency 'zeitwerk'
 end

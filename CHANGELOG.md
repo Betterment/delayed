@@ -11,6 +11,16 @@ and this project aims to adhere to [Semantic Versioning](http://semver.org/spec/
 ### Removed <!-- for now removed features. -->
 ### Fixed <!-- for any bug fixes. -->
 
+## [0.3.0] - 2021-10-26
+### Added
+- Add more official support for Rails 7.0 (currently alpha2). There were no gem conflicts, but this
+  adds an entry to our `Appraisals` file so that we run CI tests against ActiveRecord 7.
+### Fixed
+- Fix Rails 7.0 deprecation warnings caused by usages of `ActiveRecord::Base.default_timestamp`
+- Fix tests that relied on classic autoloader behavior. Now we pull in Zeitwerk where necessary.
+- Fix a couple issues caught by the linter, most notably resulting in a switch from `IO.select(...)`
+  to `IO#wait_readable(...)`, improving support for Ruby 3 scheduler hooks.
+
 ## [0.2.0] - 2021-08-30
 ### Fixed
 - Fix the loading of `Delayed::Job` constant on newly-generated Rails 6.1 apps. (previously, the
@@ -33,6 +43,7 @@ and this project aims to adhere to [Semantic Versioning](http://semver.org/spec/
   ancestor repos (`delayed_job` and `delayed_job_active_record`), plus the changes from Betterment's
   internal forks.
 
+[0.3.0]: https://github.com/betterment/delayed/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/betterment/delayed/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/betterment/delayed/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/betterment/delayed/releases/tag/v0.1.0

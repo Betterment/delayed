@@ -150,7 +150,7 @@ module Delayed
     private
 
     def respond_to_missing?(method_name, include_private = false)
-      method_name.to_s.end_with?('?') && self.class.names.key?(method_name.to_s[0..-2].to_sym) || super
+      (method_name.to_s.end_with?('?') && self.class.names.key?(method_name.to_s[0..-2].to_sym)) || super
     end
 
     def method_missing(method_name, *args)
