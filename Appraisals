@@ -9,3 +9,9 @@ end
 appraise 'rails-6-1' do
   gem 'activerecord', '~> 6.1.0'
 end
+
+appraise 'rails-7-0' do
+  gem 'actionmailer', '~> 7.0.0.alpha2'
+  gem 'activejob', '~> 7.0.0.alpha2'
+  gem 'activerecord', '~> 7.0.0.alpha2'
+end
