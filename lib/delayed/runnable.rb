@@ -21,7 +21,7 @@ module Delayed
     def on_exit!; end
 
     def interruptable_sleep(seconds)
-      IO.select([pipe[0]], nil, nil, seconds)
+      pipe[0].wait_readable(seconds)
     end
 
     def stop
