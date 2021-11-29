@@ -23,6 +23,7 @@ Gem::Specification.new do |spec|
     'changelog_uri' => 'https://github.com/betterment/delayed/blob/main/CHANGELOG.md',
     'bug_tracker_uri' => 'https://github.com/betterment/delayed/issues',
     'source_code_uri' => 'https://github.com/betterment/delayed',
+    'rubygems_mfa_required' => 'true',
   }
   spec.required_ruby_version = '>= 2.6'
 
