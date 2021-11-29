@@ -31,6 +31,20 @@ describe Delayed::PerformableMethod do
         .to change { test_class.result }
         .from(nil).to %w(a b)
     end
+
+    if RUBY_VERSION < '3.0'
+      context 'when kwargs are nil (job was delayed via prior gem version)' do
+        before do
+          @method = described_class.new(test_class.new, :foo, ['a', { kwarg: 'b' }], nil)
+        end
+
+        it 'calls the method on the object' do
+          expect { @method.perform }
+            .to change { test_class.result }
+            .from(nil).to %w(a b)
+        end
+      end
+    end
   end
 
   it "raises a NoMethodError if target method doesn't exist" do

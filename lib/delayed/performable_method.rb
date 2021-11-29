@@ -26,7 +26,7 @@ module Delayed
     def perform
       return unless object
 
-      if kwargs.nil? # TODO: Remove this branch in the next major release. (It will be 'nil' for jobs enqueued before we split out kwargs.)
+      if kwargs.nil? || (RUBY_VERSION < '2.7' && kwargs.empty?)
         object.send(method_name, *args)
       else
         object.send(method_name, *args, **kwargs)
