@@ -2,8 +2,18 @@ require 'helper'
 
 describe Delayed::PerformableMethod do
   describe 'perform' do
+    let(:test_class) do
+      Class.new do
+        cattr_accessor :result
+
+        def foo(arg, kwarg:)
+          self.class.result = [arg, kwarg]
+        end
+      end
+    end
+
     before do
-      @method = described_class.new('foo', :count, ['o'])
+      @method = described_class.new(test_class.new, :foo, ['a', { kwarg: 'b' }])
     end
 
     context 'with the persisted record cannot be found' do
@@ -17,8 +27,9 @@ describe Delayed::PerformableMethod do
     end
 
     it 'calls the method on the object' do
-      expect(@method.object).to receive(:count).with('o')
-      @method.perform
+      expect { @method.perform }
+        .to change { test_class.result }
+        .from(nil).to %w(a b)
     end
   end
 
