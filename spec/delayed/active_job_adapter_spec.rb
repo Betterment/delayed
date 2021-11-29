@@ -223,6 +223,25 @@ RSpec.describe Delayed::ActiveJobAdapter do
       end
     end
 
+    context 'when ActiveJob has both positional and keyword arguments' do
+      let(:job_class) do
+        Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
+          cattr_accessor(:result)
+
+          def perform(arg, kwarg:)
+            self.class.result = [arg, kwarg]
+          end
+        end
+      end
+
+      it 'passes arguments through to the perform method' do
+        JobClass.perform_later('foo', kwarg: 'bar')
+
+        Delayed::Worker.new.work_off
+        expect(JobClass.result).to eq %w(foo bar)
+      end
+    end
+
     context 'when using the ActiveJob test adapter' do
       let(:queue_adapter) { :test }
 
