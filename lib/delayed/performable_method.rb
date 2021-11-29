@@ -1,8 +1,8 @@
 module Delayed
   class PerformableMethod
-    attr_accessor :object, :method_name, :args
+    attr_accessor :object, :method_name, :args, :kwargs
 
-    def initialize(object, method_name, args)
+    def initialize(object, method_name, args, kwargs)
       raise NoMethodError, "undefined method `#{method_name}' for #{object.inspect}" unless object.respond_to?(method_name, true)
 
       if !her_model?(object) && object.respond_to?(:persisted?) && !object.persisted?
@@ -11,6 +11,7 @@ module Delayed
 
       self.object       = object
       self.args         = args
+      self.kwargs       = kwargs
       self.method_name  = method_name.to_sym
     end
 
@@ -23,7 +24,13 @@ module Delayed
     end
 
     def perform
-      object.send(method_name, *args) if object
+      return unless object
+
+      if kwargs.nil? # TODO: Remove this branch in the next major release. (It will be 'nil' for jobs enqueued before we split out kwargs.)
+        object.send(method_name, *args)
+      else
+        object.send(method_name, *args, **kwargs)
+      end
     end
 
     def method(sym)

@@ -25,7 +25,8 @@ describe Delayed::MessageSending do
         job = obj.tell!('a', kwarg: 'b')
         expect(job.payload_object.class).to eq(Delayed::PerformableMethod)
         expect(job.payload_object.method_name).to eq(:tell_without_delay!)
-        expect(job.payload_object.args).to eq(['a', { kwarg: 'b' }])
+        expect(job.payload_object.args).to eq(['a'])
+        expect(job.payload_object.kwargs).to eq(kwarg: 'b')
       }.to change { Delayed::Job.count }.by(1)
     end
 
@@ -91,7 +92,8 @@ describe Delayed::MessageSending do
         job = FairyTail.new.delay.tell('arg', kwarg: 'kwarg')
         expect(job.payload_object.class).to eq(Delayed::PerformableMethod)
         expect(job.payload_object.method_name).to eq(:tell)
-        expect(job.payload_object.args).to eq(['arg', { kwarg: 'kwarg' }])
+        expect(job.payload_object.args).to eq(['arg'])
+        expect(job.payload_object.kwargs).to eq(kwarg: 'kwarg')
       }.to change { Delayed::Job.count }.by(1)
     end
 

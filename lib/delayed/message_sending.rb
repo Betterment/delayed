@@ -8,8 +8,8 @@ module Delayed
       @options = options
     end
 
-    def method_missing(method, *args)
-      Job.enqueue({ payload_object: @payload_class.new(@target, method.to_sym, args) }.merge(@options))
+    def method_missing(method, *args, **kwargs)
+      Job.enqueue({ payload_object: @payload_class.new(@target, method.to_sym, args, kwargs) }.merge(@options))
     end
   end
 
@@ -36,7 +36,7 @@ module Delayed
       punctuation = $1 # rubocop:disable Style/PerlBackrefs
       with_method = "#{aliased_method}_with_delay#{punctuation}"
       without_method = "#{aliased_method}_without_delay#{punctuation}"
-      define_method(with_method) do |*args|
+      define_method(with_method) do |*args, **kwargs|
         curr_opts = opts.clone
         curr_opts.each_key do |key|
           next unless (val = curr_opts[key]).is_a?(Proc)
@@ -47,7 +47,7 @@ module Delayed
                              val.call
                            end
         end
-        delay(curr_opts).__send__(without_method, *args)
+        delay(curr_opts).__send__(without_method, *args, **kwargs)
       end
 
       alias_method without_method, method

@@ -13,7 +13,7 @@ describe Delayed::PerformableMethod do
     end
 
     before do
-      @method = described_class.new(test_class.new, :foo, ['a', { kwarg: 'b' }])
+      @method = described_class.new(test_class.new, :foo, ['a'], { kwarg: 'b' })
     end
 
     context 'with the persisted record cannot be found' do
@@ -35,7 +35,7 @@ describe Delayed::PerformableMethod do
 
   it "raises a NoMethodError if target method doesn't exist" do
     expect {
-      described_class.new(Object, :method_that_does_not_exist, [])
+      described_class.new(Object, :method_that_does_not_exist, [], {})
     }.to raise_error(NoMethodError)
   end
 
@@ -44,29 +44,29 @@ describe Delayed::PerformableMethod do
       def private_method; end
       private :private_method
     end
-    expect { described_class.new(clazz.new, :private_method, []) }.not_to raise_error
+    expect { described_class.new(clazz.new, :private_method, [], {}) }.not_to raise_error
   end
 
   context 'when it receives an object that is not persisted' do
     let(:object) { double(persisted?: false, expensive_operation: true) }
 
     it 'raises an ArgumentError' do
-      expect { described_class.new(object, :expensive_operation, []) }.to raise_error ArgumentError
+      expect { described_class.new(object, :expensive_operation, [], {}) }.to raise_error ArgumentError
     end
 
     it 'does not raise ArgumentError if the object acts like a Her model' do
       allow(object.class).to receive(:save_existing).and_return(true)
-      expect { described_class.new(object, :expensive_operation, []) }.not_to raise_error
+      expect { described_class.new(object, :expensive_operation, [], {}) }.not_to raise_error
     end
   end
 
   describe 'display_name' do
     it 'returns class_name#method_name for instance methods' do
-      expect(described_class.new('foo', :count, ['o']).display_name).to eq('String#count')
+      expect(described_class.new('foo', :count, ['o'], {}).display_name).to eq('String#count')
     end
 
     it 'returns class_name.method_name for class methods' do
-      expect(described_class.new(Class, :inspect, []).display_name).to eq('Class.inspect')
+      expect(described_class.new(Class, :inspect, [], {}).display_name).to eq('Class.inspect')
     end
   end
 
@@ -95,7 +95,7 @@ describe Delayed::PerformableMethod do
     end
 
     it 'delegates failure hook to object' do
-      method = described_class.new('object', :size, [])
+      method = described_class.new('object', :size, [], {})
       expect(method.object).to receive(:failure)
       method.failure
     end
@@ -125,7 +125,7 @@ describe Delayed::PerformableMethod do
       end
 
       it 'delegates failure hook to object' do
-        method = described_class.new('object', :size, [])
+        method = described_class.new('object', :size, [], {})
         expect(method.object).to receive(:failure)
         method.failure
       end

@@ -20,7 +20,7 @@ describe Delayed::PerformableMailer do
       mailer = MyMailer.new
       email = double('email', deliver: true)
       allow(mailer).to receive(:mail).and_return(email)
-      mailer_job = described_class.new(mailer, :signup, ['john@example.com'])
+      mailer_job = described_class.new(mailer, :signup, ['john@example.com'], {})
 
       expect(email).to receive(:deliver)
       mailer_job.perform
@@ -34,7 +34,8 @@ describe Delayed::PerformableMailer do
           job = MyMailer.delay.signup('john@example.com', beta_tester: true)
           expect(job.payload_object.class).to eq(Delayed::PerformableMailer)
           expect(job.payload_object.method_name).to eq(:signup)
-          expect(job.payload_object.args).to eq(['john@example.com', { beta_tester: true }])
+          expect(job.payload_object.args).to eq(['john@example.com'])
+          expect(job.payload_object.kwargs).to eq(beta_tester: true)
         }.to change { Delayed::Job.count }.by(1)
       end
     end
@@ -53,13 +54,14 @@ describe Delayed::PerformableMailer do
       describe 'delay' do
         it 'enqueues a PerformableEmail job' do
           expect {
-            job = MyMailer.with(foo: 1, bar: 2).delay.signup('john@example.com')
+            job = MyMailer.with(foo: 1, bar: 2).delay.signup('john@example.com', beta_tester: false)
             expect(job.payload_object.class).to eq(Delayed::PerformableMailer)
             expect(job.payload_object.object.class).to eq(described_class)
             expect(job.payload_object.object.instance_variable_get('@mailer')).to eq(MyMailer)
             expect(job.payload_object.object.instance_variable_get('@params')).to eq(foo: 1, bar: 2)
             expect(job.payload_object.method_name).to eq(:signup)
             expect(job.payload_object.args).to eq(['john@example.com'])
+            expect(job.payload_object.kwargs).to eq(beta_tester: false)
           }.to change { Delayed::Job.count }.by(1)
         end
       end
