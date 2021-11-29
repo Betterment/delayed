@@ -6,6 +6,7 @@ module Delayed
         'object' => object,
         'method_name' => method_name,
         'args' => args,
+        'kwargs' => kwargs,
       }
     end
   end
