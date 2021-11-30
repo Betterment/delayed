@@ -11,6 +11,30 @@ describe 'Psych::Visitors::ToRuby', if: defined?(Psych::Visitors::ToRuby) do
     end
   end
 
+  context Delayed::PerformableMethod do
+    it 'serializes with object, method_name, args, and kwargs' do
+      Delayed::PerformableMethod.new(String, :new, ['hello'], capacity: 20).tap do |pm|
+        serialized = YAML.dump_dj(pm)
+        expect(serialized).to eq <<~YAML
+          --- !ruby/object:Delayed::PerformableMethod
+          object: !ruby/class 'String'
+          method_name: :new
+          args:
+          - hello
+          kwargs:
+            :capacity: 20
+        YAML
+
+        deserialized = YAML.load_dj(serialized)
+        expect(deserialized).to be_an_instance_of(Delayed::PerformableMethod)
+        expect(deserialized.object).to eq String
+        expect(deserialized.method_name).to eq :new
+        expect(deserialized.args).to eq ['hello']
+        expect(deserialized.kwargs).to eq(capacity: 20)
+      end
+    end
+  end
+
   context ActiveRecord::Base do
     it 'serializes and deserializes in a version-independent way' do
       Story.create.tap do |story|

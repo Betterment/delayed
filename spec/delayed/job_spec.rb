@@ -352,7 +352,7 @@ describe Delayed::Job do
   context 'large handler' do
     before do
       text = 'Lorem ipsum dolor sit amet. ' * 1000
-      @job = described_class.enqueue Delayed::PerformableMethod.new(text, :length, {})
+      @job = described_class.enqueue Delayed::PerformableMethod.new(text, :length, [], {})
     end
 
     it 'has an id' do

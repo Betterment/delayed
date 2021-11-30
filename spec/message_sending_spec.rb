@@ -7,24 +7,27 @@ describe Delayed::MessageSending do
   end
 
   describe 'handle_asynchronously' do
-    class Story
-      def tell!(_arg); end
-      handle_asynchronously :tell!
+    let(:test_class) do
+      Class.new do
+        def tell!(_arg, _kwarg:); end
+        handle_asynchronously :tell!
+      end
     end
 
     it 'aliases original method' do
-      expect(Story.new).to respond_to(:tell_without_delay!)
-      expect(Story.new).to respond_to(:tell_with_delay!)
+      expect(test_class.new).to respond_to(:tell_without_delay!)
+      expect(test_class.new).to respond_to(:tell_with_delay!)
     end
 
     it 'creates a PerformableMethod' do
-      story = Story.create
+      obj = test_class.new
       expect {
-        job = story.tell!(1)
+        job = obj.tell!('a', kwarg: 'b')
         expect(job.payload_object.class).to eq(Delayed::PerformableMethod)
         expect(job.payload_object.method_name).to eq(:tell_without_delay!)
-        expect(job.payload_object.args).to eq([1])
-      }.to(change { Delayed::Job.count })
+        expect(job.payload_object.args).to eq(['a'])
+        expect(job.payload_object.kwargs).to eq(kwarg: 'b')
+      }.to change { Delayed::Job.count }.by(1)
     end
 
     describe 'with options' do
@@ -64,14 +67,20 @@ describe Delayed::MessageSending do
   end
 
   context 'delay' do
-    class FairyTail
-      attr_accessor :happy_ending
+    let(:fairy_tail_class) do
+      Class.new do
+        attr_accessor :happy_ending
 
-      def self.princesses; end
+        def self.princesses; end
 
-      def tell
-        @happy_ending = true
+        def tell(arg, kwarg:)
+          @happy_ending = [arg, kwarg]
+        end
       end
+    end
+
+    before do
+      stub_const('FairyTail', fairy_tail_class)
     end
 
     after do
@@ -80,10 +89,11 @@ describe Delayed::MessageSending do
 
     it 'creates a new PerformableMethod job' do
       expect {
-        job = 'hello'.delay.count('l')
+        job = FairyTail.new.delay.tell('arg', kwarg: 'kwarg')
         expect(job.payload_object.class).to eq(Delayed::PerformableMethod)
-        expect(job.payload_object.method_name).to eq(:count)
-        expect(job.payload_object.args).to eq(['l'])
+        expect(job.payload_object.method_name).to eq(:tell)
+        expect(job.payload_object.args).to eq(['arg'])
+        expect(job.payload_object.kwargs).to eq(kwarg: 'kwarg')
       }.to change { Delayed::Job.count }.by(1)
     end
 
@@ -111,8 +121,8 @@ describe Delayed::MessageSending do
       fairy_tail = FairyTail.new
       expect {
         expect {
-          fairy_tail.delay.tell
-        }.to change { fairy_tail.happy_ending }.from(nil).to(true)
+          fairy_tail.delay.tell('a', kwarg: 'b')
+        }.to change { fairy_tail.happy_ending }.from(nil).to %w(a b)
       }.not_to(change { Delayed::Job.count })
     end
 
@@ -121,7 +131,7 @@ describe Delayed::MessageSending do
       fairy_tail = FairyTail.new
       expect {
         expect {
-          fairy_tail.delay.tell
+          fairy_tail.delay.tell('a', kwarg: 'b')
         }.not_to change { fairy_tail.happy_ending }
       }.to change { Delayed::Job.count }.by(1)
     end
@@ -131,7 +141,7 @@ describe Delayed::MessageSending do
       fairy_tail = FairyTail.new
       expect {
         expect {
-          fairy_tail.delay.tell
+          fairy_tail.delay.tell('a', kwarg: 'b')
         }.not_to change { fairy_tail.happy_ending }
       }.to change { Delayed::Job.count }.by(1)
     end
@@ -141,8 +151,8 @@ describe Delayed::MessageSending do
       fairy_tail = FairyTail.new
       expect {
         expect {
-          fairy_tail.delay.tell
-        }.to change { fairy_tail.happy_ending }.from(nil).to(true)
+          fairy_tail.delay.tell('a', kwarg: 'b')
+        }.to change { fairy_tail.happy_ending }.from(nil).to %w(a b)
       }.not_to(change { Delayed::Job.count })
     end
   end
