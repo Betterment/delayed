@@ -1,5 +1,5 @@
 module Delayed
-  class Job < ::ActiveRecord::Base
+  class Job < JobRecord
     include Delayed::Backend::Base
 
     scope :by_priority, lambda { order("priority ASC, run_at ASC") }
@@ -20,7 +20,7 @@ module Delayed
     REENQUEUE_BUFFER = 30.seconds
 
     def self.set_delayed_job_table_name
-      delayed_job_table_name = "#{::ActiveRecord::Base.table_name_prefix}delayed_jobs"
+      delayed_job_table_name = "#{JobRecord.table_name_prefix}delayed_jobs"
       self.table_name = delayed_job_table_name
     end
 
