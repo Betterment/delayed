@@ -28,11 +28,11 @@ RSpec.describe Delayed::ActiveJobAdapter do
       JobClass.perform_later
     end
 
-    expect(Delayed::Job.last.handler).to eq [
+    expect(Delayed::Job.last.handler.lines).to match [
       "--- !ruby/object:Delayed::JobWrapper\n",
       "job_data:\n",
       "  job_class: JobClass\n",
-      "  job_id: #{Delayed::Job.last.payload_object.job_id}\n",
+      /  job_id: '?#{Delayed::Job.last.payload_object.job_id}'?\n/,
       "  provider_job_id: \n",
       "  queue_name: default\n",
       "  priority: \n",
@@ -42,7 +42,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
       "  locale: en\n",
       ("  timezone: \n" if ActiveJob::VERSION::MAJOR >= 6),
       ("  enqueued_at: '2023-01-20T18:52:29Z'\n" if ActiveJob::VERSION::MAJOR >= 6),
-    ].compact.join
+    ].compact
   end
 
   describe '.set' do
