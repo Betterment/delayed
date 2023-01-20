@@ -28,21 +28,33 @@ RSpec.describe Delayed::ActiveJobAdapter do
       JobClass.perform_later
     end
 
-    expect(Delayed::Job.last.handler.lines).to match [
-      "--- !ruby/object:Delayed::JobWrapper\n",
-      "job_data:\n",
-      "  job_class: JobClass\n",
-      /  job_id: '?#{Delayed::Job.last.payload_object.job_id}'?\n/,
-      "  provider_job_id: \n",
-      "  queue_name: default\n",
-      "  priority: \n",
-      "  arguments: []\n",
-      "  executions: 0\n",
-      ("  exception_executions: {}\n" if ActiveJob::VERSION::MAJOR >= 6),
-      "  locale: en\n",
-      ("  timezone: \n" if ActiveJob::VERSION::MAJOR >= 6),
-      ("  enqueued_at: '2023-01-20T18:52:29Z'\n" if ActiveJob::VERSION::MAJOR >= 6),
-    ].compact
+    Delayed::Job.last.tap do |dj|
+      expect(dj.handler.lines).to match [
+        "--- !ruby/object:Delayed::JobWrapper\n",
+        "job_data:\n",
+        "  job_class: JobClass\n",
+        /  job_id: '?#{dj.payload_object.job_id}'?\n/,
+        "  provider_job_id: \n",
+        "  queue_name: default\n",
+        "  priority: \n",
+        "  arguments: []\n",
+        "  executions: 0\n",
+        ("  exception_executions: {}\n" if ActiveJob::VERSION::MAJOR >= 6),
+        "  locale: en\n",
+        ("  timezone: \n" if ActiveJob::VERSION::MAJOR >= 6),
+        ("  enqueued_at: '2023-01-20T18:52:29Z'\n" if ActiveJob::VERSION::MAJOR >= 6),
+      ].compact
+    end
+  end
+
+  it 'deserializes even if the underlying job class is not defined' do
+    JobClass.perform_later
+
+    Delayed::Job.last.tap do |dj|
+      dj.handler = dj.handler.gsub('JobClass', 'MissingJobClass')
+      expect { dj.payload_object }.not_to raise_error
+      expect { dj.payload_object.job_id }.to raise_error(NameError, 'uninitialized constant MissingJobClass')
+    end
   end
 
   describe '.set' do
