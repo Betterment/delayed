@@ -56,10 +56,14 @@ module Delayed
       end
     end
 
+    def encode_with(coder)
+      coder['job_data'] = @job_data
+    end
+
     private
 
     def job
-      ActiveJob::Base.deserialize(job_data) if job_data
+      @job ||= ActiveJob::Base.deserialize(job_data) if job_data
     end
   end
 end
