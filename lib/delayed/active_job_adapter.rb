@@ -56,6 +56,10 @@ module Delayed
       end
     end
 
+    def encode_with(coder)
+      coder['job_data'] = @job_data
+    end
+
     private
 
     def job

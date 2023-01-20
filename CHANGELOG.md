@@ -11,6 +11,13 @@ and this project aims to adhere to [Semantic Versioning](http://semver.org/spec/
 ### Removed <!-- for now removed features. -->
 ### Fixed <!-- for any bug fixes. -->
 
+## [0.5.0] - 2023-01-20
+### Changed
+- Reduced handler size by excluding redundant 'job:' key (only 'job_data:' is
+  necessary). This ensures that a job can be deserialized even if the underlying
+  ActiveJob class is unknown to the worker, and will result in a retryable
+  `NameError` instead of a permanently-failed `DeserializationError`.
+
 ## [0.4.0] - 2021-11-30
 ### Fixed
 - Fix Ruby 3.0 kwarg compatibility issue when executing jobs enqueued via the
@@ -53,6 +60,7 @@ and this project aims to adhere to [Semantic Versioning](http://semver.org/spec/
   ancestor repos (`delayed_job` and `delayed_job_active_record`), plus the changes from Betterment's
   internal forks.
 
+[0.5.0]: https://github.com/betterment/delayed/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/betterment/delayed/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/betterment/delayed/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/betterment/delayed/compare/v0.1.1...v0.2.0
