@@ -23,6 +23,28 @@ RSpec.describe Delayed::ActiveJobAdapter do
     ActiveJob::Base.queue_adapter = adapter_was
   end
 
+  it 'serializes a JobWrapper in the handler with expected fields' do
+    Timecop.freeze('2023-01-20T18:52:29Z') do
+      JobClass.perform_later
+    end
+
+    expect(Delayed::Job.last.handler).to eq [
+      "--- !ruby/object:Delayed::JobWrapper\n",
+      "job_data:\n",
+      "  job_class: JobClass\n",
+      "  job_id: #{Delayed::Job.last.payload_object.job_id}\n",
+      "  provider_job_id: \n",
+      "  queue_name: default\n",
+      "  priority: \n",
+      "  arguments: []\n",
+      "  executions: 0\n",
+      ("  exception_executions: {}\n" if ActiveJob::VERSION::MAJOR >= 6),
+      "  locale: en\n",
+      ("  timezone: \n" if ActiveJob::VERSION::MAJOR >= 6),
+      ("  enqueued_at: '2023-01-20T18:52:29Z'\n" if ActiveJob::VERSION::MAJOR >= 6),
+    ].compact.join
+  end
+
   describe '.set' do
     it 'supports priority as an integer' do
       JobClass.set(priority: 43).perform_later

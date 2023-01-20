@@ -59,7 +59,7 @@ module Delayed
     private
 
     def job
-      @job ||= ActiveJob::Base.deserialize(job_data) if job_data
+      ActiveJob::Base.deserialize(job_data) if job_data
     end
   end
 end
