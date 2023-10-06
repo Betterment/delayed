@@ -34,16 +34,16 @@ RSpec.describe Delayed::ActiveJobAdapter do
         "job_data:\n",
         "  job_class: JobClass\n",
         /  job_id: '?#{dj.payload_object.job_id}'?\n/,
-        "  provider_job_id: \n",
+        /  provider_job_id: ?\n/,
         "  queue_name: default\n",
-        "  priority: \n",
+        /  priority: ?\n/,
         "  arguments: []\n",
         "  executions: 0\n",
         ("  exception_executions: {}\n" if ActiveJob::VERSION::MAJOR >= 6),
         "  locale: en\n",
-        ("  timezone: \n" if ActiveJob::VERSION::MAJOR >= 6),
+        (/  timezone: ?\n/ if ActiveJob::VERSION::MAJOR >= 6),
         (/  enqueued_at: '2023-01-20T18:52:29(\.\d+)?Z'\n/ if ActiveJob::VERSION::MAJOR >= 6),
-        ("  scheduled_at: \n" if ActiveJob::VERSION::MAJOR >= 7 && ActiveJob::VERSION::MINOR >= 1),
+        (/  scheduled_at: ?\n/ if ActiveJob::VERSION::MAJOR >= 7 && ActiveJob::VERSION::MINOR >= 1),
       ].compact
     end
   end
