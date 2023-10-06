@@ -29,17 +29,4 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'activerecord', '>= 5.2'
   spec.add_dependency 'concurrent-ruby'
-
-  spec.add_development_dependency 'actionmailer'
-  spec.add_development_dependency 'activejob'
-  spec.add_development_dependency 'activerecord'
-  spec.add_development_dependency 'appraisal'
-  spec.add_development_dependency 'betterlint'
-  spec.add_development_dependency 'mysql2'
-  spec.add_development_dependency 'pg'
-  spec.add_development_dependency 'rake'
-  spec.add_development_dependency 'rspec'
-  spec.add_development_dependency 'sqlite3'
-  spec.add_development_dependency 'timecop'
-  spec.add_development_dependency 'zeitwerk'
 end
