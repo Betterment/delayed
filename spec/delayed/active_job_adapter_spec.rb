@@ -42,7 +42,8 @@ RSpec.describe Delayed::ActiveJobAdapter do
         ("  exception_executions: {}\n" if ActiveJob::VERSION::MAJOR >= 6),
         "  locale: en\n",
         ("  timezone: \n" if ActiveJob::VERSION::MAJOR >= 6),
-        ("  enqueued_at: '2023-01-20T18:52:29Z'\n" if ActiveJob::VERSION::MAJOR >= 6),
+        (/  enqueued_at: '2023-01-20T18:52:29(\.\d+)?Z'\n/ if ActiveJob::VERSION::MAJOR >= 6),
+        ("  scheduled_at: \n" if ActiveJob::VERSION::MAJOR >= 7 && ActiveJob::VERSION::MINOR >= 1),
       ].compact
     end
   end
