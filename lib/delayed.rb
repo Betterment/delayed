@@ -14,6 +14,7 @@ require 'delayed/plugins/instrumentation'
 require 'delayed/backend/base'
 require 'delayed/backend/job_preparer'
 require 'delayed/worker'
+require 'delayed/job_wrapper'
 
 if defined?(Rails::Engine)
   require 'delayed/engine'
