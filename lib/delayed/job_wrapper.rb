@@ -4,8 +4,16 @@ module Delayed
 
     delegate_missing_to :job
 
-    def initialize(job_data)
-      @job_data = job_data
+    def initialize(job_or_data)
+      # During enqueue the job instance is passed in directly, saves us deserializing
+      # it to find out how to queue the job.
+      # During load from the db, we get a data hash passed in so deserialize lazily.
+      if job_or_data.is_a?(ActiveJob::Base)
+        @job = job_or_data
+        @job_data = job.serialize
+      else
+        @job_data = job_or_data
+      end
     end
 
     def display_name
@@ -25,7 +33,9 @@ module Delayed
     private
 
     def job
-      @job ||= ActiveJob::Base.deserialize(job_data) if job_data
+      return @job if defined?(@job)
+
+      @job = ActiveJob::Base.deserialize(job_data) if job_data
     end
   end
 end

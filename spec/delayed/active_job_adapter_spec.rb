@@ -23,6 +23,16 @@ RSpec.describe Delayed::ActiveJobAdapter do
     ActiveJob::Base.queue_adapter = adapter_was
   end
 
+  it "does not invoke #deserialize during enqueue" do # rubocop:disable RSpec/NoExpectationExample
+    JobClass.include(Module.new do
+      def deserialize(*)
+        raise "uh oh, deserialize called during enqueue!"
+      end
+    end)
+
+    JobClass.perform_later
+  end
+
   it 'serializes a JobWrapper in the handler with expected fields' do
     Timecop.freeze('2023-01-20T18:52:29Z') do
       JobClass.perform_later

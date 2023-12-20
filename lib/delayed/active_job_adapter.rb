@@ -14,7 +14,7 @@ module Delayed
       opts.merge!({ queue: job.queue_name, priority: job.priority }.compact)
         .merge!(job.provider_attributes || {})
 
-      Delayed::Job.enqueue(JobWrapper.new(job.serialize), opts).tap do |dj|
+      Delayed::Job.enqueue(JobWrapper.new(job), opts).tap do |dj|
         job.provider_job_id = dj.id
       end
     end
