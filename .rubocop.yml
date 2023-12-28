@@ -16,3 +16,6 @@ AllCops:
 
 Rails/EnvironmentVariableAccess:
   Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
