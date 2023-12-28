@@ -18,15 +18,15 @@ Gem::Specification.new do |spec|
   spec.require_paths  = ['lib']
   spec.summary        = 'a multi-threaded, SQL-driven ActiveJob backend used at Betterment to process millions of background jobs per day'
 
-  spec.version        = '0.5.2'
+  spec.version        = '0.6.0'
   spec.metadata       = {
     'changelog_uri' => 'https://github.com/betterment/delayed/blob/main/CHANGELOG.md',
     'bug_tracker_uri' => 'https://github.com/betterment/delayed/issues',
     'source_code_uri' => 'https://github.com/betterment/delayed',
     'rubygems_mfa_required' => 'true',
   }
-  spec.required_ruby_version = '>= 2.6'
+  spec.required_ruby_version = '>= 3.0'
 
-  spec.add_dependency 'activerecord', '>= 5.2'
+  spec.add_dependency 'activerecord', '>= 6.1'
   spec.add_dependency 'concurrent-ruby'
 end
