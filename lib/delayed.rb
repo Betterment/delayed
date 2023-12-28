@@ -39,7 +39,7 @@ end
 module Delayed
   autoload :PerformableMailer, 'delayed/performable_mailer'
 
-  mattr_accessor(:default_log_level) { 'info'.freeze }
+  mattr_accessor(:default_log_level) { 'info' }
   mattr_accessor(:plugins) do
     [
       Delayed::Plugins::Instrumentation,
