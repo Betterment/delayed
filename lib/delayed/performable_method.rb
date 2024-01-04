@@ -24,7 +24,13 @@ module Delayed
     end
 
     def perform
-      object.send(method_name, *args, **kwargs) if object
+      return unless object
+
+      if kwargs.nil?
+        object.send(method_name, *args)
+      else
+        object.send(method_name, *args, **kwargs)
+      end
     end
 
     def method(sym)
