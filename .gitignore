@@ -4,5 +4,6 @@
 .DS_Store
 .rvmrc
 /coverage
+gemfiles/*.lock
 pkg/*
 *.sqlite
