@@ -16,3 +16,6 @@ AllCops:
 
 Rails/EnvironmentVariableAccess:
   Enabled: false
+
+RSpec/IndexedLet:
+  Enabled: false

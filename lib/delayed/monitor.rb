@@ -34,7 +34,7 @@ module Delayed
     attr_reader :jobs
 
     def emit_metric!(metric)
-      send("#{metric}_grouped").reverse_merge(default_results).each do |(priority, queue), value|
+      send(:"#{metric}_grouped").reverse_merge(default_results).each do |(priority, queue), value|
         ActiveSupport::Notifications.instrument(
           "delayed.job.#{metric}",
           default_tags.merge(priority: Priority.new(priority).to_s, queue: queue, value: value),
