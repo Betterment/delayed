@@ -11,9 +11,11 @@ and this project aims to adhere to [Semantic Versioning](http://semver.org/spec/
 ### Removed <!-- for now removed features. -->
 ### Fixed <!-- for any bug fixes. -->
 
-- Bring ActiveJob queue adapter's enqueuing behaviour inline with delayed_job &
-  upstream adapters, by stopping it serializing & deserializing the job instance
-  during the enqueue process.
+## [0.5.1] - 2023-10-11
+### Changed
+
+- Explicitly test Rails 7.1 and Ruby 3.1, Ruby 3.2 to verify compatability. Previous
+  gems were compatible, but this release is now verified to be compatible.
 
 ## [0.5.0] - 2023-01-20
 ### Changed
