@@ -11,6 +11,13 @@ and this project aims to adhere to [Semantic Versioning](http://semver.org/spec/
 ### Removed <!-- for now removed features. -->
 ### Fixed <!-- for any bug fixes. -->
 
+## [0.5.3] - 2024-01-12
+### Changed
+
+- Bring ActiveJob queue adapter's enqueuing behaviour inline with delayed_job &
+  upstream adapters, by stopping it serializing & deserializing the job instance
+  during the enqueue process. Optimises the enqueueing of jobs slightly too.
+
 ## [0.5.2] - 2023-10-19
 ### Fixed
 
