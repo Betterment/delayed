@@ -10,7 +10,7 @@ module Delayed
       # During load from the db, we get a data hash passed in so deserialize lazily.
       if job_or_data.is_a?(ActiveJob::Base)
         @job = job_or_data
-        @job_data = job.serialize
+        @job_data = job_or_data.serialize
       else
         @job_data = job_or_data
       end
@@ -33,9 +33,7 @@ module Delayed
     private
 
     def job
-      return @job if defined?(@job)
-
-      @job = ActiveJob::Base.deserialize(job_data) if job_data
+      @job ||= ActiveJob::Base.deserialize(job_data) if job_data
     end
   end
 end
