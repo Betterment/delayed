@@ -11,6 +11,14 @@ and this project aims to adhere to [Semantic Versioning](http://semver.org/spec/
 ### Removed <!-- for now removed features. -->
 ### Fixed <!-- for any bug fixes. -->
 
+## [0.5.2] - 2023-10-19
+### Fixed
+
+- Fixed regression for Rails 7.1.1 not executing jobs, due to lazy loading change in Rails.
+  The `JobWrapper` needs to be loaded before `ActiveJob::Base` is loaded, but this wasn't
+  happening in the worker processes. Fix by extracting `JobWrapper` into it's own file and
+  loading when `Delayed` is loaded earlier in the process.
+
 ## [0.5.1] - 2023-10-11
 ### Changed
 
