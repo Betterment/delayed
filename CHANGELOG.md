@@ -11,6 +11,27 @@ and this project aims to adhere to [Semantic Versioning](http://semver.org/spec/
 ### Removed <!-- for now removed features. -->
 ### Fixed <!-- for any bug fixes. -->
 
+## [0.5.3] - 2024-01-12
+### Changed
+
+- Bring ActiveJob queue adapter's enqueuing behaviour inline with delayed_job &
+  upstream adapters, by stopping it serializing & deserializing the job instance
+  during the enqueue process. Optimises the enqueueing of jobs slightly too.
+
+## [0.5.2] - 2023-10-19
+### Fixed
+
+- Fixed regression for Rails 7.1.1 not executing jobs, due to lazy loading change in Rails.
+  The `JobWrapper` needs to be loaded before `ActiveJob::Base` is loaded, but this wasn't
+  happening in the worker processes. Fix by extracting `JobWrapper` into it's own file and
+  loading when `Delayed` is loaded earlier in the process.
+
+## [0.5.1] - 2023-10-11
+### Changed
+
+- Explicitly test Rails 7.1 and Ruby 3.1, Ruby 3.2 to verify compatability. Previous
+  gems were compatible, but this release is now verified to be compatible.
+
 ## [0.5.0] - 2023-01-20
 ### Changed
 - Reduced handler size by excluding redundant 'job:' key (only 'job_data:' is
