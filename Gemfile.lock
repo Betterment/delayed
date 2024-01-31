@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    delayed (0.5.2)
+    delayed (0.5.3)
       activerecord (>= 5.2)
       concurrent-ruby
 
@@ -104,6 +104,10 @@ GEM
     net-smtp (0.4.0.1)
       net-protocol
     nokogiri (1.15.5-arm64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.15.5-x86_64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.15.5-x86_64-linux)
       racc (~> 1.4)
     parallel (1.24.0)
     parser (3.3.0.2)
