@@ -116,11 +116,35 @@ RSpec.describe Delayed::Priority do
     expect(described_class.new(-123).name).to eq nil
   end
 
+  context 'when assign_at_midpoint is set to true' do
+    let(:assign_at_midpoint) { true }
+
+    it 'provides the name of the priority range' do
+      expect(described_class.new(0).name).to eq :interactive
+      expect(described_class.new(3).name).to eq :interactive
+      expect(described_class.new(10).name).to eq :user_visible
+      expect(described_class.new(29).name).to eq :eventual
+      expect(described_class.new(999).name).to eq :reporting
+      expect(described_class.new(-123).name).to eq nil
+    end
+  end
+
   it 'supports initialization by symbol value' do
     expect(described_class.new(:interactive)).to eq(0)
     expect(described_class.new(:user_visible)).to eq(10)
     expect(described_class.new(:eventual)).to eq(20)
     expect(described_class.new(:reporting)).to eq(30)
+  end
+
+  context 'when assign_at_midpoint is set to true' do
+    let(:assign_at_midpoint) { true }
+
+    it 'supports initialization by symbol value' do
+      expect(described_class.new(:interactive)).to eq(5)
+      expect(described_class.new(:user_visible)).to eq(15)
+      expect(described_class.new(:eventual)).to eq(25)
+      expect(described_class.new(:reporting)).to eq(35)
+    end
   end
 
   it "supports predicate ('?') methods" do
@@ -131,6 +155,20 @@ RSpec.describe Delayed::Priority do
     expect(described_class.new(29)).to be_eventual
     expect(described_class.new(999)).to be_reporting
     expect(described_class.new(-123).interactive?).to eq false
+  end
+
+  context 'when assign_at_midpoint is set to true' do
+    let(:assign_at_midpoint) { true }
+
+    it "supports predicate ('?') methods" do
+      expect(described_class.new(0).interactive?).to eq true
+      expect(described_class.new(3)).to be_interactive
+      expect(described_class.new(3).user_visible?).to eq false
+      expect(described_class.new(10)).to be_user_visible
+      expect(described_class.new(29)).to be_eventual
+      expect(described_class.new(999)).to be_reporting
+      expect(described_class.new(-123).interactive?).to eq false
+    end
   end
 
   it 'supports alert threshold methods' do

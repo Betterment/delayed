@@ -70,7 +70,7 @@ module Delayed
 
         @ranges = nil
         @alerts = nil
-        @names = names_to_default_priority(names)
+        @names = names&.sort_by(&:last)&.to_h&.transform_values { |v| new(v) }
       end
 
       def alerts=(alerts)
@@ -96,10 +96,29 @@ module Delayed
         end
       end
 
+      def names_to_priority
+        return names unless assign_at_midpoint?
+
+        new_names_to_priority = {}
+
+        sorted_priorities_by_name = names&.sort_by(&:last)
+        sorted_priorities_by_name.each.with_index do |(name, priority_value), index|
+          if assign_at_midpoint?
+            (_, next_priority_value) = sorted_priorities_by_name[index+1] || [nil, priority_value.to_i + 10]
+            midpoint = priority_value.to_i + ((next_priority_value.to_i - priority_value.to_i).to_f/2.0).ceil
+            new_names_to_priority[name] = new(midpoint)
+          else
+            new_names_to_priority[name] = new(priority_value)
+          end
+        end
+
+        new_names_to_priority.sort_by(&:last).to_h
+      end
+
       private
 
       def default_names
-        @default_names ||= names_to_default_priority(DEFAULT_NAMES)
+        @default_names ||= DEFAULT_NAMES.transform_values { |v| new(v) }
       end
 
       def default_alerts
@@ -107,38 +126,15 @@ module Delayed
       end
 
       def respond_to_missing?(method_name, include_private = false)
-        names.key?(method_name) || super
+        names_to_priority.key?(method_name) || super
       end
 
       def method_missing(method_name, *args)
-        if names.key?(method_name) && args.none?
-          names[method_name]
+        if names_to_priority.key?(method_name) && args.none?
+          names_to_priority[method_name]
         else
           super
         end
-      end
-
-      def names_to_default_priority(names)
-        return unless names
-
-        names_to_priority = {}
-
-        if assign_at_midpoint?
-          sorted_priorities_by_name = names&.sort_by(&:last)
-          sorted_priorities_by_name.each.with_index do |(name, priority_value), index|
-            if assign_at_midpoint?
-              (_, next_priority_value) = sorted_priorities_by_name[index+1] || [nil, priority_value + 10]
-              midpoint = priority_value + ((next_priority_value - priority_value).to_f/2.0).ceil
-              names_to_priority[name] = new(midpoint)
-            else
-              names_to_priority[name] = new(priority_value)
-            end
-          end
-        else
-          names_to_priority = names.transform_values { |v| new(v) }
-        end
-
-        names_to_priority.sort_by(&:last).to_h
       end
     end
 
@@ -149,7 +145,7 @@ module Delayed
 
     def initialize(value)
       super()
-      value = self.class.names[value] if value.is_a?(Symbol)
+      value = self.class.names_to_priority[value] if value.is_a?(Symbol)
       @value = value.to_i
     end
 
