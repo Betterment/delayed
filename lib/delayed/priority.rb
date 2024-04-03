@@ -86,9 +86,8 @@ module Delayed
         @assign_at_midpoint || false
       end
 
-      def assign_at_midpoint=(assign_at_midpoint=false)
+      def assign_at_midpoint=(assign_at_midpoint)
         @assign_at_midpoint = assign_at_midpoint
-        @assign_at_midpoint
       end
 
       def ranges
