@@ -3,8 +3,10 @@ require 'helper'
 RSpec.describe Delayed::Priority do
   let(:custom_names) { nil }
   let(:custom_alerts) { nil }
+  let(:assign_at_midpoint) { nil }
 
   around do |example|
+    described_class.assign_at_midpoint = assign_at_midpoint
     described_class.names = custom_names
     described_class.alerts = custom_alerts
     example.run
@@ -43,6 +45,17 @@ RSpec.describe Delayed::Priority do
       expect(described_class.reporting).to eq 30
     end
 
+    context 'when assign_at_midpoint is set to true' do
+      let(:assign_at_midpoint) { true }
+
+      it 'returns the midpoint value' do
+        expect(described_class.interactive).to eq 5
+        expect(described_class.user_visible).to eq 15
+        expect(described_class.eventual).to eq 25
+        expect(described_class.reporting).to eq 35
+      end
+    end
+
     context 'when customized to high, medium, low' do
       let(:custom_names) { { high: 0, medium: 100, low: 500 } }
 
@@ -79,6 +92,16 @@ RSpec.describe Delayed::Priority do
             medium: { run_time: 1.minute },
             low: { attempts: 10 },
           )
+        end
+      end
+
+      context 'when assign_at_midpoint is set to true' do
+        let(:assign_at_midpoint) { true }
+
+        it 'returns the midpoint value' do
+          expect(described_class.high).to eq 50
+          expect(described_class.medium).to eq 300
+          expect(described_class.low).to eq 505
         end
       end
     end

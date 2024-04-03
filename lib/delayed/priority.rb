@@ -70,7 +70,7 @@ module Delayed
 
         @ranges = nil
         @alerts = nil
-        @names = names&.sort_by(&:last)&.to_h&.transform_values { |v| new(v) }
+        @names = names_to_default_priority(names)
       end
 
       def alerts=(alerts)
@@ -82,6 +82,15 @@ module Delayed
         @alerts = alerts&.sort_by { |k, _| names.keys.index(k) }&.to_h
       end
 
+      def assign_at_midpoint?
+        @assign_at_midpoint || false
+      end
+
+      def assign_at_midpoint=(assign_at_midpoint=false)
+        @assign_at_midpoint = assign_at_midpoint
+        @assign_at_midpoint
+      end
+
       def ranges
         @ranges ||= names.zip(names.except(names.keys.first)).each_with_object({}) do |((name, lower), (_, upper)), obj|
           obj[name] = (lower...(upper || Float::INFINITY))
@@ -91,7 +100,7 @@ module Delayed
       private
 
       def default_names
-        @default_names ||= DEFAULT_NAMES.transform_values { |v| new(v) }
+        @default_names ||= names_to_default_priority(DEFAULT_NAMES)
       end
 
       def default_alerts
@@ -108,6 +117,29 @@ module Delayed
         else
           super
         end
+      end
+
+      def names_to_default_priority(names)
+        return unless names
+
+        names_to_priority = {}
+
+        if assign_at_midpoint?
+          sorted_priorities_by_name = names&.sort_by(&:last)
+          sorted_priorities_by_name.each.with_index do |(name, priority_value), index|
+            if assign_at_midpoint?
+              (_, next_priority_value) = sorted_priorities_by_name[index+1] || [nil, priority_value + 10]
+              midpoint = priority_value + ((next_priority_value - priority_value).to_f/2.0).ceil
+              names_to_priority[name] = new(midpoint)
+            else
+              names_to_priority[name] = new(priority_value)
+            end
+          end
+        else
+          names_to_priority = names.transform_values { |v| new(v) }
+        end
+
+        names_to_priority.sort_by(&:last).to_h
       end
     end
 
