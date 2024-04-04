@@ -116,9 +116,12 @@ module Delayed
 
       def names_to_midpoint_priority
         names.each_cons(2).to_h { |(name, priority_value), (_, next_priority_value)|
-          midpoint = priority_value.to_i + ((next_priority_value.to_i - priority_value.to_i).to_d / 2).ceil
-          [name, new(midpoint)]
+          [name, new(midpoint(priority_value, next_priority_value))]
         }.merge(names.keys.last => new(names.values.last.to_i + 5))
+      end
+
+      def midpoint(low, high)
+        low.to_i + ((high.to_i - low.to_i).to_d / 2).ceil
       end
 
       def respond_to_missing?(method_name, include_private = false)
