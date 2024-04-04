@@ -15,7 +15,7 @@ RSpec.describe Delayed::Priority do
     described_class.names = nil
   end
 
-  describe '.names, .ranges, .alerts, method_missing' do
+  describe '.names, .ranges, .alerts, .names_to_priority, method_missing' do
     it 'defaults to interactive, user_visible, eventual, reporting' do
       expect(described_class.names).to eq(
         interactive: 0,
