@@ -35,6 +35,12 @@ RSpec.describe Delayed::Priority do
         eventual: { age: 1.5.hours, run_time: 5.minutes, attempts: 8 },
         reporting: { age: 4.hours, run_time: 10.minutes, attempts: 8 },
       )
+      expect(described_class.names_to_priority).to eq(
+        interactive: 0,
+        user_visible: 10,
+        eventual: 20,
+        reporting: 30,
+      )
       expect(described_class).to respond_to(:interactive)
       expect(described_class).to respond_to(:user_visible)
       expect(described_class).to respond_to(:eventual)
@@ -49,6 +55,12 @@ RSpec.describe Delayed::Priority do
       let(:assign_at_midpoint) { true }
 
       it 'returns the midpoint value' do
+        expect(described_class.names_to_priority).to eq(
+          interactive: 5,
+          user_visible: 15,
+          eventual: 25,
+          reporting: 35,
+        )
         expect(described_class.interactive).to eq 5
         expect(described_class.user_visible).to eq 15
         expect(described_class.eventual).to eq 25
@@ -69,6 +81,11 @@ RSpec.describe Delayed::Priority do
           high: (0...100),
           medium: (100...500),
           low: (500...Float::INFINITY),
+        )
+        expect(described_class.names_to_priority).to eq(
+          high: 0,
+          medium: 100,
+          low: 500,
         )
         expect(described_class.alerts).to eq({})
         expect(described_class).not_to respond_to(:interactive)
@@ -99,6 +116,11 @@ RSpec.describe Delayed::Priority do
         let(:assign_at_midpoint) { true }
 
         it 'returns the midpoint value' do
+          expect(described_class.names_to_priority).to eq(
+            high: 50,
+            medium: 300,
+            low: 505,
+          )
           expect(described_class.high).to eq 50
           expect(described_class.medium).to eq 300
           expect(described_class.low).to eq 505
@@ -116,35 +138,11 @@ RSpec.describe Delayed::Priority do
     expect(described_class.new(-123).name).to eq nil
   end
 
-  context 'when assign_at_midpoint is set to true' do
-    let(:assign_at_midpoint) { true }
-
-    it 'provides the name of the priority range' do
-      expect(described_class.new(0).name).to eq :interactive
-      expect(described_class.new(3).name).to eq :interactive
-      expect(described_class.new(10).name).to eq :user_visible
-      expect(described_class.new(29).name).to eq :eventual
-      expect(described_class.new(999).name).to eq :reporting
-      expect(described_class.new(-123).name).to eq nil
-    end
-  end
-
   it 'supports initialization by symbol value' do
     expect(described_class.new(:interactive)).to eq(0)
     expect(described_class.new(:user_visible)).to eq(10)
     expect(described_class.new(:eventual)).to eq(20)
     expect(described_class.new(:reporting)).to eq(30)
-  end
-
-  context 'when assign_at_midpoint is set to true' do
-    let(:assign_at_midpoint) { true }
-
-    it 'supports initialization by symbol value' do
-      expect(described_class.new(:interactive)).to eq(5)
-      expect(described_class.new(:user_visible)).to eq(15)
-      expect(described_class.new(:eventual)).to eq(25)
-      expect(described_class.new(:reporting)).to eq(35)
-    end
   end
 
   it "supports predicate ('?') methods" do
@@ -159,6 +157,22 @@ RSpec.describe Delayed::Priority do
 
   context 'when assign_at_midpoint is set to true' do
     let(:assign_at_midpoint) { true }
+
+    it 'provides the name of the priority range' do
+      expect(described_class.new(0).name).to eq :interactive
+      expect(described_class.new(3).name).to eq :interactive
+      expect(described_class.new(10).name).to eq :user_visible
+      expect(described_class.new(29).name).to eq :eventual
+      expect(described_class.new(999).name).to eq :reporting
+      expect(described_class.new(-123).name).to eq nil
+    end
+
+    it 'supports initialization by symbol value' do
+      expect(described_class.new(:interactive)).to eq(5)
+      expect(described_class.new(:user_visible)).to eq(15)
+      expect(described_class.new(:eventual)).to eq(25)
+      expect(described_class.new(:reporting)).to eq(35)
+    end
 
     it "supports predicate ('?') methods" do
       expect(described_class.new(0).interactive?).to eq true

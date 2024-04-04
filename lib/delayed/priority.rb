@@ -57,6 +57,8 @@ module Delayed
     }.freeze
 
     class << self
+      attr_writer :assign_at_midpoint
+
       def names
         @names || default_names
       end
@@ -70,6 +72,7 @@ module Delayed
 
         @ranges = nil
         @alerts = nil
+        @names_to_priority = nil
         @names = names&.sort_by(&:last)&.to_h&.transform_values { |v| new(v) }
       end
 
@@ -86,10 +89,6 @@ module Delayed
         @assign_at_midpoint || false
       end
 
-      def assign_at_midpoint=(assign_at_midpoint)
-        @assign_at_midpoint = assign_at_midpoint
-      end
-
       def ranges
         @ranges ||= names.zip(names.except(names.keys.first)).each_with_object({}) do |((name, lower), (_, upper)), obj|
           obj[name] = (lower...(upper || Float::INFINITY))
@@ -97,22 +96,12 @@ module Delayed
       end
 
       def names_to_priority
-        return names unless assign_at_midpoint?
-
-        new_names_to_priority = {}
-
-        sorted_priorities_by_name = names&.sort_by(&:last)
-        sorted_priorities_by_name.each.with_index do |(name, priority_value), index|
+        @names_to_priority ||=
           if assign_at_midpoint?
-            (_, next_priority_value) = sorted_priorities_by_name[index+1] || [nil, priority_value.to_i + 10]
-            midpoint = priority_value.to_i + ((next_priority_value.to_i - priority_value.to_i).to_f/2.0).ceil
-            new_names_to_priority[name] = new(midpoint)
+            names_to_midpoint_priority
           else
-            new_names_to_priority[name] = new(priority_value)
+            names
           end
-        end
-
-        new_names_to_priority.sort_by(&:last).to_h
       end
 
       private
@@ -123,6 +112,13 @@ module Delayed
 
       def default_alerts
         @names ? {} : DEFAULT_ALERTS
+      end
+
+      def names_to_midpoint_priority
+        names.each_cons(2).to_h { |(name, priority_value), (_, next_priority_value)|
+          midpoint = priority_value.to_i + ((next_priority_value.to_i - priority_value.to_i).to_d / 2).ceil
+          [name, new(midpoint)]
+        }.merge(names.keys.last => new(names.values.last.to_i + 5))
       end
 
       def respond_to_missing?(method_name, include_private = false)
