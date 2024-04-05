@@ -287,7 +287,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
       end
     end
 
-    if ActiveJob.gem_version > Gem::Version.new('7.1')
+    if ActiveJob.gem_version.release >= Gem::Version.new('7.2')
       context 'when the given job sets enqueue_after_transaction_commit to true' do
         before do
           JobClass.include ActiveJob::EnqueueAfterTransactionCommit # normally run in an ActiveJob railtie
