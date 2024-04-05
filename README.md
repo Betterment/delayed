@@ -44,19 +44,28 @@ migration paths where possible.
 
 ## Table of Contents
 
-* [Getting Started](#getting-started)
-* [Basic Usage](#basic-usage)
-  * [Running a worker process](#running-a-worker-process)
-  * [Enqueuing Jobs](#enqueuing-jobs)
-* [Operational Considerations](#operational-considerations)
-* [Monitoring Jobs & Workers](#monitoring-jobs--workers)
-  * [Lifecycle Hooks](#lifecycle-hooks)
-  * [Priority-based Alerting Threshholds](#priority-based-alerting-threshholds)
-  * [Continuous Monitoring](#continuous-monitoring)
-* [Configuration](#configuration)
-* [Migrating from other ActiveJob backends](#migrating-from-other-activejob-backends)
-  * [Migrating from DelayedJob](#migrating-from-delayedjob)
-* [How to Contribute](#how-to-contribute)
+- [Delayed](#delayed)
+    - [Why `Delayed`?](#why-delayed)
+  - [Table of Contents](#table-of-contents)
+  - [Getting Started](#getting-started)
+    - [Installation](#installation)
+  - [Basic Usage](#basic-usage)
+    - [Running a worker process](#running-a-worker-process)
+    - [Enqueuing Jobs](#enqueuing-jobs)
+      - [Other ActiveJob Features](#other-activejob-features)
+  - [Operational Considerations](#operational-considerations)
+      - [Co-transactionality](#co-transactionality)
+      - [At-Least-Once Delivery](#at-least-once-delivery)
+      - [When Jobs Fail](#when-jobs-fail)
+  - [Monitoring Jobs \& Workers](#monitoring-jobs--workers)
+    - [Lifecycle Hooks](#lifecycle-hooks)
+    - [Priority-based Alerting Threshholds](#priority-based-alerting-threshholds)
+    - [Continuous Monitoring](#continuous-monitoring)
+  - [Configuration](#configuration)
+  - [Migrating from other ActiveJob backends](#migrating-from-other-activejob-backends)
+      - [Migrating from DelayedJob](#migrating-from-delayedjob)
+  - [How to Contribute](#how-to-contribute)
+    - [Suggested Workflow](#suggested-workflow)
 
 ## Getting Started
 
@@ -489,6 +498,14 @@ Delayed::Worker.default_priority = 10
 # if, say, you'd like a dedicated worker for high priority jobs:
 Delayed::Worker.min_priority = nil
 Delayed::Worker.max_priority = nil
+```
+
+Job priorities can specified by using the name of the desired range (i.e. :user_visible).
+By default, the value for a named priority will be the first value in that range.
+To set each priority's default value to the middle of its range (i.e. 15 for :user_visible), Delayed::Priority can be configured with:
+
+```ruby
+Delayed::Priority.assign_at_midpoint = true
 ```
 
 Logging verbosity is also configurable. The gem will attempt to default to `Rails.logger` with an
