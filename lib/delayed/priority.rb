@@ -174,11 +174,17 @@ module Delayed
     end
 
     def -(other)
-      to_i - other.to_i
+      other = other.to_i if other.is_a?(self.class)
+      self.class.new(to_i - other)
     end
 
     def +(other)
-      to_i + other.to_i
+      other = other.to_i if other.is_a?(self.class)
+      self.class.new(to_i + other)
+    end
+
+    def to_d
+      to_i.to_d
     end
 
     private
