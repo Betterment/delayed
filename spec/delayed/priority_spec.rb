@@ -226,4 +226,13 @@ RSpec.describe Delayed::Priority do
       ].sort,
     ).to eq [-13, 3, 5, 40]
   end
+
+  it 'supports addition and subtraction' do
+    expect(described_class.new(0) + 10).to eq(10)
+    expect(10 + described_class.new(5)).to eq(15)
+    expect(described_class.new(0) + described_class.new(33)).to eq(33)
+    expect(described_class.new(10) - 5).to eq(5)
+    expect(15 - described_class.new(10)).to eq(5)
+    expect(described_class.new(5) - described_class.new(15)).to eq(-10)
+  end
 end
