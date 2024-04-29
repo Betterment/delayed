@@ -27,3 +27,13 @@ appraise 'rails-7-1' do
   gem 'activejob', '~> 7.1.0'
   gem 'activerecord', '~> 7.1.0'
 end
+
+appraise 'rails-main' do
+  gem 'actionmailer', github: 'rails/rails', glob: 'actionmailer/*.gemspec'
+  gem 'activejob', github: 'rails/rails', glob: 'activejob/*.gemspec'
+  gem 'activerecord', github: 'rails/rails', glob: 'activerecord/*.gemspec'
+  gem 'actionview', github: 'rails/rails', glob: 'actionview/*.gemspec'
+  gem 'actionpack', github: 'rails/rails', glob: 'actionpack/*.gemspec'
+  gem 'activesupport', github: 'rails/rails', glob: 'activesupport/*.gemspec'
+  gem 'activemodel', github: 'rails/rails', glob: 'activemodel/*.gemspec'
+end
