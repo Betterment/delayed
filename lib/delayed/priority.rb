@@ -57,6 +57,8 @@ module Delayed
     }.freeze
 
     class << self
+      attr_writer :assign_at_midpoint
+
       def names
         @names || default_names
       end
@@ -70,6 +72,7 @@ module Delayed
 
         @ranges = nil
         @alerts = nil
+        @names_to_priority = nil
         @names = names&.sort_by(&:last)&.to_h&.transform_values { |v| new(v) }
       end
 
@@ -82,10 +85,23 @@ module Delayed
         @alerts = alerts&.sort_by { |k, _| names.keys.index(k) }&.to_h
       end
 
+      def assign_at_midpoint?
+        @assign_at_midpoint || false
+      end
+
       def ranges
         @ranges ||= names.zip(names.except(names.keys.first)).each_with_object({}) do |((name, lower), (_, upper)), obj|
           obj[name] = (lower...(upper || Float::INFINITY))
         end
+      end
+
+      def names_to_priority
+        @names_to_priority ||=
+          if assign_at_midpoint?
+            names_to_midpoint_priority
+          else
+            names
+          end
       end
 
       private
@@ -98,13 +114,23 @@ module Delayed
         @names ? {} : DEFAULT_ALERTS
       end
 
+      def names_to_midpoint_priority
+        names.each_cons(2).to_h { |(name, priority_value), (_, next_priority_value)|
+          [name, new(midpoint(priority_value, next_priority_value))]
+        }.merge(names.keys.last => new(names.values.last + 5))
+      end
+
+      def midpoint(low, high)
+        low + ((high - low).to_d / 2).ceil
+      end
+
       def respond_to_missing?(method_name, include_private = false)
-        names.key?(method_name) || super
+        names_to_priority.key?(method_name) || super
       end
 
       def method_missing(method_name, *args)
-        if names.key?(method_name) && args.none?
-          names[method_name]
+        if names_to_priority.key?(method_name) && args.none?
+          names_to_priority[method_name]
         else
           super
         end
@@ -118,7 +144,7 @@ module Delayed
 
     def initialize(value)
       super()
-      value = self.class.names[value] if value.is_a?(Symbol)
+      value = self.class.names_to_priority[value] if value.is_a?(Symbol)
       @value = value.to_i
     end
 
@@ -145,6 +171,20 @@ module Delayed
     def <=>(other)
       other = other.to_i if other.is_a?(self.class)
       to_i <=> other
+    end
+
+    def -(other)
+      other = other.to_i if other.is_a?(self.class)
+      self.class.new(to_i - other)
+    end
+
+    def +(other)
+      other = other.to_i if other.is_a?(self.class)
+      self.class.new(to_i + other)
+    end
+
+    def to_d
+      to_i.to_d
     end
 
     private

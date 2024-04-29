@@ -491,6 +491,14 @@ Delayed::Worker.min_priority = nil
 Delayed::Worker.max_priority = nil
 ```
 
+Job priorities can specified by using the name of the desired range (i.e. :user_visible).
+By default, the value for a named priority will be the first value in that range.
+To set each priority's default value to the middle of its range (i.e. 15 for :user_visible), Delayed::Priority can be configured with:
+
+```ruby
+Delayed::Priority.assign_at_midpoint = true
+```
+
 Logging verbosity is also configurable. The gem will attempt to default to `Rails.logger` with an
 "info" log level.
 
