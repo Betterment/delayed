@@ -89,20 +89,17 @@ module Delayed
     # Exit early if interrupted.
     def work_off(num = 100)
       success = Concurrent::AtomicFixnum.new(0)
-      failure = Concurrent::AtomicFixnum.new(0)
+      total = 0
 
-      num.times do
+      while total < num
         jobs = reserve_jobs
         break if jobs.empty?
 
+        total += jobs.length
         pool = Concurrent::FixedThreadPool.new(jobs.length)
         jobs.each do |job|
           pool.post do
-            if run_job(job)
-              success.increment
-            else
-              failure.increment
-            end
+            success.increment if run_job(job)
           end
         end
 
@@ -112,7 +109,7 @@ module Delayed
         break if stop? # leave if we're exiting
       end
 
-      [success, failure].map(&:value)
+      [success.value, total - success.value]
     end
 
     def run_thread_callbacks(job, &block)
@@ -139,13 +136,14 @@ module Delayed
           job.destroy
         end
         job_say job, format('COMPLETED after %.4f seconds', run_time)
-        true # did work
       end
+      true # did work
     rescue DeserializationError => e
       job_say job, "FAILED permanently with #{e.class.name}: #{e.message}", 'error'
 
       job.error = e
       failed(job)
+      false # work failed
     rescue Exception => e # rubocop:disable Lint/RescueException
       self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, e) }
       false # work failed
