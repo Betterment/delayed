@@ -89,22 +89,17 @@ module Delayed
     # Exit early if interrupted.
     def work_off(num = 100)
       success = Concurrent::AtomicFixnum.new(0)
-      failure = Concurrent::AtomicFixnum.new(0)
+      total = 0
 
-      num.times do
+      while total < num
         jobs = reserve_jobs
         break if jobs.empty?
 
+        total += jobs.length
         pool = Concurrent::FixedThreadPool.new(jobs.length)
         jobs.each do |job|
           pool.post do
-            run_thread_callbacks(job) do
-              if run_job(job)
-                success.increment
-              else
-                failure.increment
-              end
-            end
+            success.increment if run_job(job)
           end
         end
 
@@ -114,7 +109,7 @@ module Delayed
         break if stop? # leave if we're exiting
       end
 
-      [success, failure].map(&:value)
+      [success.value, total - success.value]
     end
 
     def run_thread_callbacks(job, &block)
@@ -122,30 +117,33 @@ module Delayed
     end
 
     def run(job)
-      metadata = {
-        status: 'RUNNING',
-        name: job.name,
-        run_at: job.run_at,
-        created_at: job.created_at,
-        priority: job.priority,
-        queue: job.queue,
-        attempts: job.attempts,
-        enqueued_for: (Time.current - job.created_at).round,
-      }
-      job_say job, metadata.to_json
-      run_time = Benchmark.realtime do
-        Timeout.timeout(max_run_time(job).to_i, WorkerTimeout) do
-          job.invoke_job
+      run_thread_callbacks(job) do
+        metadata = {
+          status: 'RUNNING',
+          name: job.name,
+          run_at: job.run_at,
+          created_at: job.created_at,
+          priority: job.priority,
+          queue: job.queue,
+          attempts: job.attempts,
+          enqueued_for: (Time.current - job.created_at).round,
+        }
+        job_say job, metadata.to_json
+        run_time = Benchmark.realtime do
+          Timeout.timeout(max_run_time(job).to_i, WorkerTimeout) do
+            job.invoke_job
+          end
+          job.destroy
         end
-        job.destroy
+        job_say job, format('COMPLETED after %.4f seconds', run_time)
       end
-      job_say job, format('COMPLETED after %.4f seconds', run_time)
       true # did work
     rescue DeserializationError => e
       job_say job, "FAILED permanently with #{e.class.name}: #{e.message}", 'error'
 
       job.error = e
       failed(job)
+      false # work failed
     rescue Exception => e # rubocop:disable Lint/RescueException
       self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, e) }
       false # work failed
