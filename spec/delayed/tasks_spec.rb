@@ -64,7 +64,7 @@ describe 'rake' do
           .to change { Delayed::Worker.min_priority }.from(nil).to(6)
           .and change { Delayed::Worker.max_priority }.from(nil).to(8)
           .and change { Delayed::Worker.queues }.from([]).to(%w(foo bar))
-          .and change { Delayed::Worker.sleep_delay }.from(5).to(1)
+          .and change { Delayed::Worker.sleep_delay }.from(TEST_SLEEP_DELAY).to(1)
           .and change { Delayed::Worker.read_ahead }.from(5).to(3)
           .and change { Delayed::Worker.max_claims }.from(5).to(3)
       end
@@ -96,7 +96,7 @@ describe 'rake' do
           .to change { Delayed::Worker.min_priority }.from(nil).to(6)
           .and change { Delayed::Worker.max_priority }.from(nil).to(8)
           .and change { Delayed::Worker.queues }.from([]).to(%w(foo))
-          .and change { Delayed::Worker.sleep_delay }.from(5).to(1)
+          .and change { Delayed::Worker.sleep_delay }.from(TEST_SLEEP_DELAY).to(1)
           .and change { Delayed::Worker.read_ahead }.from(5).to(3)
           .and change { Delayed::Worker.max_claims }.from(5).to(3)
       end

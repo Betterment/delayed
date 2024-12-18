@@ -12,6 +12,7 @@ module Delayed
     include Runnable
 
     cattr_accessor :sleep_delay, instance_writer: false, default: 5
+    cattr_accessor :min_reserve_interval, instance_writer: false, default: 1
     cattr_accessor :max_attempts, instance_writer: false, default: 25
     cattr_accessor :max_claims, instance_writer: false, default: 5
     cattr_accessor :max_run_time, instance_writer: false, default: 20.minutes
@@ -92,6 +93,7 @@ module Delayed
       total = 0
 
       while total < num
+        start = clock_time
         jobs = reserve_jobs
         break if jobs.empty?
 
@@ -107,6 +109,9 @@ module Delayed
         pool.wait_for_termination
 
         break if stop? # leave if we're exiting
+
+        elapsed = clock_time - start
+        interruptable_sleep(self.class.min_reserve_interval - elapsed)
       end
 
       [success.value, total - success.value]
@@ -226,6 +231,10 @@ module Delayed
 
     def reload!
       Rails.application.reloader.reload! if defined?(Rails.application.reloader) && Rails.application.reloader.check!
+    end
+
+    def clock_time
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
   end
 end
