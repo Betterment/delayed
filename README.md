@@ -432,6 +432,10 @@ Delayed::Worker.read_ahead = 5
 
 # If a worker finds no jobs, it will sleep this number of seconds in between attempts:
 Delayed::Worker.sleep_delay = 5
+
+# Until version 1.0, the worker will not sleep at all between attemps if it finds jobs.
+# This can be configured by setting the minimum reserve interval:
+Delayed::Worker.min_reserve_interval = 0.5 # seconds
 ```
 
 If a job fails, it will be rerun up to 25 times (with an exponential back-off). Jobs will also

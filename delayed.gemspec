@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.require_paths  = ['lib']
   spec.summary        = 'a multi-threaded, SQL-driven ActiveJob backend used at Betterment to process millions of background jobs per day'
 
-  spec.version        = '0.5.5'
+  spec.version        = '0.6.0'
   spec.metadata       = {
     'changelog_uri' => 'https://github.com/betterment/delayed/blob/main/CHANGELOG.md',
     'bug_tracker_uri' => 'https://github.com/betterment/delayed/issues',

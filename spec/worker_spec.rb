@@ -1,10 +1,6 @@
 require 'helper'
 
 describe Delayed::Worker do
-  before do
-    described_class.sleep_delay = 0
-  end
-
   describe 'start' do
     it 'runs the :execute lifecycle hook' do
       performances = []
@@ -32,62 +28,74 @@ describe Delayed::Worker do
       allow(subject).to receive(:interruptable_sleep).and_call_original
     end
 
-    context 'when there are no jobs' do
-      before do
-        allow(Delayed::Job).to receive(:reserve).and_return([])
-      end
+    around do |example|
+      max_claims_was = described_class.max_claims
+      described_class.max_claims = max_claims
+      example.run
+    ensure
+      described_class.max_claims = max_claims_was
+    end
 
-      it 'does not log and then sleeps' do
+    before do
+      allow(Delayed::Job).to receive(:reserve).and_return((0...jobs_returned).map { job }, [])
+    end
+
+    let(:max_claims) { 1 }
+    let(:jobs_returned) { 1 }
+    let(:job) do
+      instance_double(
+        Delayed::Job,
+        id: 123,
+        max_run_time: 10,
+        name: 'MyJob',
+        run_at: Delayed::Job.db_time_now,
+        created_at: Delayed::Job.db_time_now,
+        priority: Delayed::Priority.interactive,
+        queue: 'testqueue',
+        attempts: 0,
+        invoke_job: true,
+        destroy: true,
+      )
+    end
+
+    it 'logs the count and sleeps only within the loop' do
+      subject.run!
+      expect(Delayed.logger).to have_received(:info).with(/1 jobs processed/)
+      expect(subject).to have_received(:interruptable_sleep).once.with(a_value_within(1).of(TEST_MIN_RESERVE_INTERVAL))
+      expect(subject).not_to have_received(:interruptable_sleep).with(TEST_SLEEP_DELAY)
+    end
+
+    context 'when no jobs are returned' do
+      let(:jobs_returned) { 0 }
+
+      it 'does not log and then sleeps only outside of the loop' do
         subject.run!
         expect(Delayed.logger).not_to have_received(:info)
-        expect(subject).to have_received(:interruptable_sleep)
+        expect(subject).to have_received(:interruptable_sleep).with(TEST_SLEEP_DELAY)
       end
     end
 
-    context 'when there is a job worked off' do
-      around do |example|
-        max_claims_was = described_class.max_claims
-        described_class.max_claims = max_claims
-        example.run
-      ensure
-        described_class.max_claims = max_claims_was
-      end
+    context 'when max_claims is 3 and 3 jobs are returned' do
+      let(:max_claims) { 3 }
+      let(:jobs_returned) { 3 }
 
-      before do
-        allow(Delayed::Job).to receive(:reserve).and_return([job], [])
-      end
-
-      let(:max_claims) { 1 }
-      let(:job) do
-        instance_double(
-          Delayed::Job,
-          id: 123,
-          max_run_time: 10,
-          name: 'MyJob',
-          run_at: Delayed::Job.db_time_now,
-          created_at: Delayed::Job.db_time_now,
-          priority: Delayed::Priority.interactive,
-          queue: 'testqueue',
-          attempts: 0,
-          invoke_job: true,
-          destroy: true,
-        )
-      end
-
-      it 'logs the count and does not sleep' do
+      it 'logs the count and sleeps only in the loop' do
         subject.run!
-        expect(Delayed.logger).to have_received(:info).with(/1 jobs processed/)
-        expect(subject).not_to have_received(:interruptable_sleep)
+        expect(Delayed.logger).to have_received(:info).with(/3 jobs processed/)
+        expect(subject).to have_received(:interruptable_sleep).once.with(a_value_within(1).of(TEST_MIN_RESERVE_INTERVAL))
+        expect(subject).not_to have_received(:interruptable_sleep).with(TEST_SLEEP_DELAY)
       end
+    end
 
-      context 'when max_claims is 2' do
-        let(:max_claims) { 2 }
+    context 'when max_claims is 3 and 2 jobs are returned' do
+      let(:max_claims) { 3 }
+      let(:jobs_returned) { 2 }
 
-        it 'logs the count and sleeps' do
-          subject.run!
-          expect(Delayed.logger).to have_received(:info).with(/1 jobs processed/)
-          expect(subject).to have_received(:interruptable_sleep)
-        end
+      it 'logs the count and sleeps both in the loop and outside of the loop' do
+        subject.run!
+        expect(Delayed.logger).to have_received(:info).with(/2 jobs processed/)
+        expect(subject).to have_received(:interruptable_sleep).once.with(a_value_within(1).of(TEST_MIN_RESERVE_INTERVAL))
+        expect(subject).to have_received(:interruptable_sleep).once.with(TEST_SLEEP_DELAY)
       end
     end
   end

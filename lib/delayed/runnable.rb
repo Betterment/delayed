@@ -21,7 +21,7 @@ module Delayed
     def on_exit!; end
 
     def interruptable_sleep(seconds)
-      pipe[0].wait_readable(seconds)
+      pipe[0].wait_readable(seconds) if seconds.positive?
     end
 
     def stop
