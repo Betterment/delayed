@@ -12,7 +12,7 @@ module Delayed
     include Runnable
 
     cattr_accessor :sleep_delay, instance_writer: false, default: 5
-    cattr_accessor :min_reserve_interval, instance_writer: false, default: 1
+    cattr_accessor :min_reserve_interval, instance_writer: false, default: 0
     cattr_accessor :max_attempts, instance_writer: false, default: 25
     cattr_accessor :max_claims, instance_writer: false, default: 5
     cattr_accessor :max_run_time, instance_writer: false, default: 20.minutes

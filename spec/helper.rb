@@ -120,6 +120,10 @@ RSpec.configure do |config|
     sleep_delay_was = Delayed::Worker.sleep_delay
     min_reserve_interval_was = Delayed::Worker.min_reserve_interval
 
+    if Gem.loaded_specs['delayed'].version >= Gem::Version.new('1.0') && min_reserve_interval_was.zero?
+      raise "Min reserve interval should be nonzero in v1.0 release"
+    end
+
     Delayed::Worker.sleep_delay = TEST_SLEEP_DELAY
     Delayed::Worker.min_reserve_interval = TEST_MIN_RESERVE_INTERVAL
 
