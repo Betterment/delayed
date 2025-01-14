@@ -55,4 +55,5 @@ appraise 'rails-main' do
   gem 'actionpack', github: 'rails/rails', glob: 'actionpack/*.gemspec'
   gem 'activesupport', github: 'rails/rails', glob: 'activesupport/*.gemspec'
   gem 'activemodel', github: 'rails/rails', glob: 'activemodel/*.gemspec'
+  gem 'sqlite3', '>= 2.1'
 end
