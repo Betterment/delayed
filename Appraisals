@@ -34,6 +34,12 @@ appraise 'rails-7-2' do
   gem 'activerecord', '~> 7.2.0'
 end
 
+appraise 'rails-8-0' do
+  gem 'actionmailer', '~> 8.0.0'
+  gem 'activejob', '~> 8.0.0'
+  gem 'activerecord', '~> 8.0.0'
+end
+
 appraise 'rails-main' do
   gem 'actionmailer', github: 'rails/rails', glob: 'actionmailer/*.gemspec'
   gem 'activejob', github: 'rails/rails', glob: 'activejob/*.gemspec'
