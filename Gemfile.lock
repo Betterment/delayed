@@ -218,7 +218,7 @@ DEPENDENCIES
   pg
   rake
   rspec
-  sqlite3 (~> 1.7.3)
+  sqlite3 (~> 1.4)
   timecop
   zeitwerk
 
