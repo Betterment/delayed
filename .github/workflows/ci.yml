@@ -16,23 +16,26 @@ jobs:
           - gemfiles/rails_7_0.gemfile
           - gemfiles/rails_7_1.gemfile
           - gemfiles/rails_7_2.gemfile
+          - gemfiles/rails_8_0.gemfile
         exclude:
           - ruby: '3.2'
             gemfile: gemfiles/rails_5_2.gemfile
+          - ruby: '3.1'
+            gemfile: gemfiles/rails_8_0.gemfile
           - ruby: '3.1'
             gemfile: gemfiles/rails_5_2.gemfile
           - ruby: '3.0'
             gemfile: gemfiles/rails_7_2.gemfile
           - ruby: '3.0'
+            gemfile: gemfiles/rails_8_0.gemfile
+          - ruby: '3.0'
             gemfile: gemfiles/rails_5_2.gemfile
+          - ruby: '2.7'
+            gemfile: gemfiles/rails_8_0.gemfile
           - ruby: '2.7'
             gemfile: gemfiles/rails_7_2.gemfile
           - ruby: '2.7'
             gemfile: gemfiles/rails_7_1.gemfile
-          - ruby: '2.6'
-            gemfile: gemfiles/rails_7_1.gemfile
-          - ruby: '2.6'
-            gemfile: gemfiles/rails_7_0.gemfile
     services:
       postgres:
         image: postgres

@@ -11,6 +11,7 @@ inherit_mode:
 AllCops:
   TargetRubyVersion: 2.6
   Exclude:
+    - 'gemfiles/*.gemfile'
     - 'lib/generators/delayed/templates/*.rb'
   NewCops: enable
 

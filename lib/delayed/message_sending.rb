@@ -1,7 +1,8 @@
-require 'active_support/proxy_object'
-
 module Delayed
-  class DelayProxy < ActiveSupport::ProxyObject
+  class DelayProxy < BasicObject
+    undef_method :==
+    undef_method :equal?
+
     def initialize(payload_class, target, options)
       @payload_class = payload_class
       @target = target
