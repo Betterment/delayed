@@ -18,6 +18,8 @@ jobs:
           - gemfiles/rails_7_2.gemfile
           - gemfiles/rails_8_0.gemfile
         exclude:
+          - ruby: '3.3'
+            gemfile: gemfiles/rails_5_2.gemfile
           - ruby: '3.2'
             gemfile: gemfiles/rails_5_2.gemfile
           - ruby: '3.1'
