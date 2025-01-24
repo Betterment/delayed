@@ -17,7 +17,7 @@ module Delayed
     private
 
     def _enqueue(job, opts = {})
-      if job.class.respond_to?(:enqueue_after_transaction_commit) && job.class.enqueue_after_transaction_commit == :always
+      if enqueue_after_transaction_commit_enabled?(job)
         raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
       end
 
@@ -27,6 +27,11 @@ module Delayed
       Delayed::Job.enqueue(JobWrapper.new(job), opts).tap do |dj|
         job.provider_job_id = dj.id
       end
+    end
+
+    def enqueue_after_transaction_commit_enabled?(job)
+      job.class.respond_to?(:enqueue_after_transaction_commit) &&
+        [true, :always].include?(job.class.enqueue_after_transaction_commit)
     end
 
     module EnqueuingPatch
