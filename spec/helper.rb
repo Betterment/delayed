@@ -10,6 +10,13 @@ require 'sample_jobs'
 
 require 'rake'
 
+if ActiveSupport.gem_version >= Gem::Version.new('7.1')
+  frameworks = [ActiveModel, ActiveRecord, ActionMailer, ActiveJob, ActiveSupport]
+  frameworks.each { |framework| framework.deprecator.behavior = :raise }
+else
+  ActiveSupport::Deprecation.behavior = :raise
+end
+
 if ENV['DEBUG_LOGS']
   Delayed.logger = Logger.new($stdout)
 else
