@@ -315,6 +315,30 @@ RSpec.describe Delayed::ActiveJobAdapter do
       end
     end
 
+    if ActiveJob.gem_version.release >= Gem::Version.new('8.0')
+      context 'when the given job sets enqueue_after_transaction_commit to true' do
+        before do
+          JobClass.include ActiveJob::EnqueueAfterTransactionCommit # normally run in an ActiveJob railtie
+          JobClass.enqueue_after_transaction_commit = true
+        end
+
+        it 'raises an exception on enqueue' do
+          expect { JobClass.perform_later }.to raise_error(Delayed::ActiveJobAdapter::UnsafeEnqueueError)
+        end
+      end
+
+      context 'when the given job sets enqueue_after_transaction_commit to false' do
+        before do
+          JobClass.include ActiveJob::EnqueueAfterTransactionCommit # normally run in an ActiveJob railtie
+          JobClass.enqueue_after_transaction_commit = false
+        end
+
+        it 'does not raises an exception on enqueue' do
+          expect { JobClass.perform_later }.not_to raise_error
+        end
+      end
+    end
+
     context 'when using the ActiveJob test adapter' do
       let(:queue_adapter) { :test }
 
