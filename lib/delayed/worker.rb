@@ -101,7 +101,12 @@ module Delayed
         pool = Concurrent::FixedThreadPool.new(jobs.length)
         jobs.each do |job|
           pool.post do
-            success.increment if run_job(job)
+            self.class.lifecycle.run_callbacks(:thread, self, job) do
+              success.increment if perform(job)
+            end
+          rescue Exception => e # rubocop:disable Lint/RescueException
+            job_say job, "Job thread crashed with #{e.class.name}: #{e.message}", 'error'
+            job.error = e
           end
         end
 
@@ -117,12 +122,8 @@ module Delayed
       [success.value, total - success.value]
     end
 
-    def run_thread_callbacks(job, &block)
-      self.class.lifecycle.run_callbacks(:thread, self, job, &block)
-    end
-
-    def run(job)
-      run_thread_callbacks(job) do
+    def perform(job)
+      self.class.lifecycle.run_callbacks(:perform, self, job) do
         metadata = {
           status: 'RUNNING',
           name: job.name,
@@ -207,10 +208,6 @@ module Delayed
       job.error = error
       job_say job, "FAILED (#{job.attempts} prior attempts) with #{error.class.name}: #{error.message}", 'error'
       reschedule(job)
-    end
-
-    def run_job(job)
-      self.class.lifecycle.run_callbacks(:perform, self, job) { run(job) }
     end
 
     # The backend adapter may return either a list or a single job
