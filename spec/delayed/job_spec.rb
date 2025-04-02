@@ -533,7 +533,7 @@ describe Delayed::Job do
       it 'fails after Worker.max_run_time' do
         Delayed::Worker.max_run_time = 1.second
         job = described_class.create payload_object: LongRunningJob.new
-        worker.run(job)
+        worker.perform(job)
         expect(job.error).not_to be_nil
         expect(job.reload.last_error).to match(/expired/)
         expect(job.reload.last_error).to match(/Delayed::Worker\.max_run_time is only 1 second/)
@@ -558,7 +558,7 @@ describe Delayed::Job do
 
       it 'records last_error when destroy_failed_jobs = false, max_attempts = 1' do
         Delayed::Worker.max_attempts = 1
-        worker.run(@job)
+        worker.perform(@job)
         @job.reload
         expect(@job.error).not_to be_nil
         expect(@job.last_error).to match(/did not work/)
@@ -580,7 +580,7 @@ describe Delayed::Job do
 
       it 're-schedules jobs with handler provided time if present' do
         job = described_class.enqueue(CustomRescheduleJob.new(99.minutes))
-        worker.run(job)
+        worker.perform(job)
         job.reload
 
         expect((described_class.db_time_now + 99.minutes - job.run_at).abs).to be < 1
@@ -590,7 +590,7 @@ describe Delayed::Job do
         error_with_nil_message = StandardError.new
         expect(error_with_nil_message).to receive(:message).twice.and_return(nil)
         expect(@job).to receive(:invoke_job).and_raise error_with_nil_message
-        expect { worker.run(@job) }.not_to raise_error
+        expect { worker.perform(@job) }.not_to raise_error
       end
     end
 

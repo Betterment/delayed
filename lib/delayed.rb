@@ -42,8 +42,8 @@ module Delayed
   mattr_accessor(:default_log_level) { 'info'.freeze }
   mattr_accessor(:plugins) do
     [
-      Delayed::Plugins::Instrumentation,
       Delayed::Plugins::Connection,
+      Delayed::Plugins::Instrumentation,
     ]
   end
 

@@ -20,3 +20,6 @@ Rails/EnvironmentVariableAccess:
 
 RSpec/IndexedLet:
   Enabled: false
+
+Capybara/RSpec/PredicateMatcher:
+  Enabled: false
