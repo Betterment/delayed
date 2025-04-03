@@ -207,6 +207,13 @@ RSpec.describe Delayed::Priority do
     expect(described_class.new(101)).to eq described_class.new(101) # rubocop:disable RSpec/IdenticalEqualityAssertion
   end
 
+  it 'supports explicit casting' do
+    expect(described_class.new(0).to_i).to eq 0
+    expect(described_class.new(3).to_f).to eq 3.0
+    expect(described_class.new(10).to_s).to eq 'user_visible'
+    expect(described_class.new(:eventual).to_d).to eq '20'.to_d
+  end
+
   it 'suports coercion' do
     expect(described_class.new(0)).to eq 0
     expect(described_class.new(8)).to be > 5
