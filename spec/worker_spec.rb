@@ -239,5 +239,37 @@ describe Delayed::Worker do
 
       expect(performances.value).to eq(1)
     end
+
+    it 'wraps perform and cleanup, even when perform raises' do
+      events = []
+
+      plugin = Class.new(Delayed::Plugin) do
+        callbacks do |lifecycle|
+          lifecycle.around(:thread) do |_, &blk|
+            events << :thread_start
+            blk.call
+            events << :thread_end
+          end
+          lifecycle.around(:perform) do |_, &blk|
+            events << :perform_start
+            blk.call
+            events << :perform_end
+          end
+        end
+      end
+
+      Delayed.plugins << plugin
+
+      job_class = Class.new do
+        def perform
+          raise 'boom'
+        end
+      end
+
+      Delayed::Job.enqueue job_class.new
+      described_class.new.work_off
+
+      expect(events).to eq %i(thread_start perform_start thread_end)
+    end
   end
 end
