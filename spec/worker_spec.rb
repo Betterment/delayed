@@ -239,5 +239,35 @@ describe Delayed::Worker do
 
       expect(performances.value).to eq(1)
     end
+
+    it 'wraps perform and cleanup, even when perform raises' do
+      events = []
+      last_error = nil
+
+      plugin = Class.new(Delayed::Plugin) do
+        callbacks do |lifecycle|
+          lifecycle.around(:thread) do |_, &blk|
+            events << :thread_start
+            blk.call
+            events << :thread_end
+          end
+          lifecycle.around(:perform) do |_, job, &blk|
+            events << :perform_start
+            blk.call.tap do
+              last_error = job.last_error
+              events << :perform_end
+            end
+          end
+        end
+      end
+
+      Delayed.plugins << plugin
+
+      Delayed::Job.enqueue ErrorJob.new
+      described_class.new.work_off
+
+      expect(events).to eq %i(thread_start perform_start perform_end thread_end)
+      expect(last_error).to match(/did not work/) # assert that cleanup happened before `:perform_end`
+    end
   end
 end

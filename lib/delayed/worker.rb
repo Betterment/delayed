@@ -142,17 +142,17 @@ module Delayed
           job.destroy
         end
         job_say job, format('COMPLETED after %.4f seconds', run_time)
-      end
-      true # did work
-    rescue DeserializationError => e
-      job_say job, "FAILED permanently with #{e.class.name}: #{e.message}", 'error'
+        true # did work
+      rescue DeserializationError => e
+        job_say job, "FAILED permanently with #{e.class.name}: #{e.message}", 'error'
 
-      job.error = e
-      failed(job)
-      false # work failed
-    rescue Exception => e # rubocop:disable Lint/RescueException
-      self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, e) }
-      false # work failed
+        job.error = e
+        failed(job)
+        false # work failed
+      rescue Exception => e # rubocop:disable Lint/RescueException
+        self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, e) }
+        false # work failed
+      end
     end
 
     # Reschedule the job in the future (when a job fails).

@@ -140,6 +140,7 @@ module Delayed
     attr_reader :value
 
     delegate :to_i, to: :value
+    delegate :to_f, to: :value
     delegate :to_s, to: :name
 
     def initialize(value)
