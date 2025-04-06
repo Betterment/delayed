@@ -549,6 +549,38 @@ describe Delayed::Job do
           expect(job).to be_failed
         end
       end
+
+      describe 'handing off to ActiveJob' do
+        around do |example|
+          old_adapter = ActiveJob::Base.queue_adapter
+          ActiveJob::Base.queue_adapter = :delayed
+
+          example.run
+        ensure
+          ActiveJob::Base.queue_adapter = old_adapter
+        end
+
+        it 'runs everything under the same executor block' do
+          # Ensure the current attributes are persisted in the job, but then reset in this process
+          ActiveJobAttributesJob.results.clear
+          ActiveJobAttributesJob::Current.user_id = 0xC0FFEE
+          ActiveJobAttributesJob.perform_later
+          ActiveJobAttributesJob::Current.clear_all
+
+          # In a rails app this is in ActiveJob's railtie, wrapping the execute in an around callback that
+          # leans on the Rails executor to reset things in jobs. Fake it here with execute around callback
+          # setup the same, and only clear CurrentAttributes directly.
+          ActiveJob::Callbacks.singleton_class.set_callback(:execute, :around, prepend: true) do |_, inner|
+            ActiveSupport::CurrentAttributes.clear_all
+            inner.call
+          end
+
+          worker.work_off
+
+          expect(ActiveJobAttributesJob::Current.user_id).to be_nil
+          expect(ActiveJobAttributesJob.results).to eq([0xC0FFEE])
+        end
+      end
     end
 
     describe 'failed jobs' do
