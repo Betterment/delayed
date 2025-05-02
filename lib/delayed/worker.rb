@@ -101,7 +101,7 @@ module Delayed
         pool = Concurrent::FixedThreadPool.new(jobs.length)
         jobs.each do |job|
           pool.post do
-            self.class.lifecycle.run_callbacks(:thread, self, job) do
+            self.class.lifecycle.run_callbacks(:thread, self) do
               success.increment if perform(job)
             end
           rescue Exception => e # rubocop:disable Lint/RescueException

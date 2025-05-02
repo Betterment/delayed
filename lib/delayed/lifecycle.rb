@@ -8,7 +8,7 @@ module Delayed
       perform: %i(worker job),
       error: %i(worker job),
       failure: %i(worker job),
-      thread: %i(worker job),
+      thread: [:worker],
       invoke_job: [:job],
     }.freeze
 
