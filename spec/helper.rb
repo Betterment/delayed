@@ -42,6 +42,7 @@ db_adapter ||= "sqlite3"
 config = YAML.load(ERB.new(File.read("spec/database.yml")).result)
 ActiveRecord::Base.establish_connection config[db_adapter]
 ActiveRecord::Base.logger = Delayed.logger
+ActiveJob::Base.logger = Delayed.logger
 ActiveRecord::Migration.verbose = false
 
 # MySQL 5.7 no longer supports null default values for the primary key
