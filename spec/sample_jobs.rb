@@ -113,5 +113,5 @@ class EnqueueJobMod < SimpleJob
 end
 
 class ActiveJobJob < ActiveJob::Base # rubocop:disable Rails/ApplicationJob
-  def perform; end
+  def perform(*args, **kwargs); end
 end

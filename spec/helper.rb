@@ -10,6 +10,12 @@ require 'sample_jobs'
 
 require 'rake'
 
+ActiveSupport.on_load(:active_record) do
+  require 'global_id/identification'
+  include GlobalID::Identification
+  GlobalID.app = 'test'
+end
+
 if ActiveSupport.gem_version >= Gem::Version.new('7.1')
   frameworks = [ActiveModel, ActiveRecord, ActionMailer, ActiveJob, ActiveSupport]
   frameworks.each { |framework| framework.deprecator.behavior = :raise }

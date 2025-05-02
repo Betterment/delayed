@@ -62,10 +62,23 @@ RSpec.describe Delayed::ActiveJobAdapter do
     JobClass.perform_later
 
     Delayed::Job.last.tap do |dj|
-      dj.handler = dj.handler.gsub('JobClass', 'MissingJobClass')
+      dj.update!(handler: dj.handler.gsub('JobClass', 'MissingJobClass'))
       expect { dj.payload_object }.not_to raise_error
       expect { dj.payload_object.job_id }.to raise_error(NameError, 'uninitialized constant MissingJobClass')
     end
+    expect(Delayed::Worker.new.work_off).to eq([0, 1])
+    expect(Delayed::Job.last.last_error).to match(/uninitialized constant MissingJobClass/)
+  end
+
+  it 'deserializes even if an underlying argument gid is not defined' do
+    ActiveJobJob.perform_later(story: Story.create!)
+    Delayed::Job.last.tap do |dj|
+      dj.update!(handler: dj.handler.gsub('Story', 'MissingArgumentClass'))
+      expect { dj.payload_object }.not_to raise_error
+      expect { dj.payload_object.perform_now }.to raise_error(ActiveJob::DeserializationError)
+    end
+    expect(Delayed::Worker.new.work_off).to eq([0, 1])
+    expect(Delayed::Job.last.last_error).to match(/Error while trying to deserialize arguments/)
   end
 
   describe '.set' do

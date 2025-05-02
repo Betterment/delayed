@@ -144,13 +144,10 @@ module Delayed
         job_say job, format('COMPLETED after %.4f seconds', run_time)
         true # did work
       rescue DeserializationError => e
-        job_say job, "FAILED permanently with #{e.class.name}: #{e.message}", 'error'
-
-        job.error = e
-        failed(job)
+        handle_unrecoverable_error(job, e)
         false # work failed
       rescue Exception => e # rubocop:disable Lint/RescueException
-        self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, e) }
+        handle_erroring_job(job, e)
         false # work failed
       end
     end
@@ -204,10 +201,21 @@ module Delayed
       " (queue=#{queue})" if queue
     end
 
-    def handle_failed_job(job, error)
+    def handle_erroring_job(job, error)
+      self.class.lifecycle.run_callbacks(:error, self, job) do
+        job.error = error
+        job_say job, "FAILED (#{job.attempts} prior attempts) with #{error.class.name}: #{error.message}", 'error'
+        reschedule(job)
+      rescue Exception => e # rubocop:disable Lint/RescueException
+        handle_unrecoverable_error(job, e)
+      end
+    end
+
+    def handle_unrecoverable_error(job, error)
+      job_say job, "FAILED permanently with #{error.class.name}: #{error.message}", 'error'
+
       job.error = error
-      job_say job, "FAILED (#{job.attempts} prior attempts) with #{error.class.name}: #{error.message}", 'error'
-      reschedule(job)
+      failed(job)
     end
 
     # The backend adapter may return either a list or a single job

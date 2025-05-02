@@ -20,6 +20,12 @@ module Delayed
       job_data['job_class']
     end
 
+    def respond_to?(*, **)
+      super
+    rescue NameError # job failed to deserialize, so we can't respond to delegated methods.
+      false
+    end
+
     def perform
       ActiveJob::Callbacks.run_callbacks(:execute) do
         job.perform_now
