@@ -103,11 +103,13 @@ module Delayed
           pool.post do
             self.class.lifecycle.run_callbacks(:thread, self) do
               success.increment if perform(job)
+            rescue DeserializationError => e
+              handle_unrecoverable_error(job, e)
             rescue Exception => e # rubocop:disable Lint/RescueException
-              job_say job, "Job thread crashed with #{e.class.name}: #{e.message}", 'error'
-              job.error = e
-              failed(job)
+              handle_erroring_job(job, e)
             end
+          rescue Exception => e # rubocop:disable Lint/RescueException
+            say "Job thread crashed with #{e.class.name}: #{e.message}", 'error'
           end
         end
 
