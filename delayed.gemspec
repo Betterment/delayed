@@ -1,3 +1,9 @@
+# frozen_string_literal: true
+
+$LOAD_PATH.push File.expand_path('lib', __dir__)
+
+require 'delayed/version'
+
 Gem::Specification.new do |spec|
   spec.authors        = ['Nathan Griffith', 'Rowan McDonald', 'Cyrus Eslami', 'John Mileham', 'Brandon Keepers', 'Brian Ryckbost',
                          'Chris Gaffney', 'David Genord II', 'Erik Michaels-Ober', 'Matt Griffin', 'Steve Richert', 'Tobias Lütke']
@@ -18,7 +24,7 @@ Gem::Specification.new do |spec|
   spec.require_paths  = ['lib']
   spec.summary        = 'a multi-threaded, SQL-driven ActiveJob backend used at Betterment to process millions of background jobs per day'
 
-  spec.version        = '0.8.0'
+  spec.version        = Delayed::VERSION
   spec.metadata       = {
     'changelog_uri' => 'https://github.com/betterment/delayed/blob/main/CHANGELOG.md',
     'bug_tracker_uri' => 'https://github.com/betterment/delayed/issues',

@@ -10,6 +10,12 @@ require 'sample_jobs'
 
 require 'rake'
 
+ActiveSupport.on_load(:active_record) do
+  require 'global_id/identification'
+  include GlobalID::Identification
+  GlobalID.app = 'test'
+end
+
 if ActiveSupport.gem_version >= Gem::Version.new('7.1')
   frameworks = [ActiveModel, ActiveRecord, ActionMailer, ActiveJob, ActiveSupport]
   frameworks.each { |framework| framework.deprecator.behavior = :raise }
@@ -36,6 +42,7 @@ db_adapter ||= "sqlite3"
 config = YAML.load(ERB.new(File.read("spec/database.yml")).result)
 ActiveRecord::Base.establish_connection config[db_adapter]
 ActiveRecord::Base.logger = Delayed.logger
+ActiveJob::Base.logger = Delayed.logger
 ActiveRecord::Migration.verbose = false
 
 # MySQL 5.7 no longer supports null default values for the primary key
@@ -126,10 +133,7 @@ RSpec.configure do |config|
     read_ahead_was = Delayed::Worker.read_ahead
     sleep_delay_was = Delayed::Worker.sleep_delay
     min_reserve_interval_was = Delayed::Worker.min_reserve_interval
-
-    if Gem.loaded_specs['delayed'].version >= Gem::Version.new('1.0') && min_reserve_interval_was.zero?
-      raise "Min reserve interval should be nonzero in v1.0 release"
-    end
+    plugins_was = Delayed.plugins.dup
 
     Delayed::Worker.sleep_delay = TEST_SLEEP_DELAY
     Delayed::Worker.min_reserve_interval = TEST_MIN_RESERVE_INTERVAL
@@ -151,6 +155,7 @@ RSpec.configure do |config|
     Delayed::Worker.read_ahead = read_ahead_was
     Delayed::Worker.sleep_delay = sleep_delay_was
     Delayed::Worker.min_reserve_interval = min_reserve_interval_was
+    Delayed.plugins = plugins_was
 
     Delayed::Job.delete_all
   end

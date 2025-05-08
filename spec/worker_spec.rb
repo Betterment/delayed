@@ -221,53 +221,134 @@ describe Delayed::Worker do
     end
   end
 
-  describe 'thread callback' do
-    it 'wraps code after thread is checked out' do
-      performances = Concurrent::AtomicFixnum.new(0)
-      plugin = Class.new(Delayed::Plugin) do
-        callbacks do |lifecycle|
-          lifecycle.before(:thread) { performances.increment }
+  describe 'lifecycle callbacks' do
+    let(:plugin) do
+      Class.new(Delayed::Plugin) do
+        class << self
+          attr_accessor :last_error, :raise_on
+
+          def events
+            @events ||= []
+          end
         end
-      end
-      Delayed.plugins << plugin
 
-      Delayed::Job.delete_all
-      Delayed::Job.enqueue SimpleJob.new
-      worker = described_class.new
-
-      worker.work_off
-
-      expect(performances.value).to eq(1)
-    end
-
-    it 'wraps perform and cleanup, even when perform raises' do
-      events = []
-      last_error = nil
-
-      plugin = Class.new(Delayed::Plugin) do
         callbacks do |lifecycle|
           lifecycle.around(:thread) do |_, &blk|
             events << :thread_start
             blk.call
+            raise "oh no" if raise_on == :thread
+
             events << :thread_end
           end
-          lifecycle.around(:perform) do |_, job, &blk|
-            events << :perform_start
-            blk.call.tap do
-              last_error = job.last_error
-              events << :perform_end
+
+          %i(perform error failure).each do |event|
+            lifecycle.around(event) do |_, job, &blk|
+              events << :"#{event}_start"
+              raise "oh no" if raise_on == event
+
+              blk.call.tap do
+                self.last_error = job.last_error if event == :error
+                events << :"#{event}_end"
+              end
             end
           end
         end
       end
+    end
 
+    before do
       Delayed.plugins << plugin
+    end
 
-      Delayed::Job.enqueue ErrorJob.new
+    it 'runs thread and perform callbacks' do
+      Delayed::Job.enqueue SimpleJob.new
       described_class.new.work_off
 
-      expect(events).to eq %i(thread_start perform_start perform_end thread_end)
-      expect(last_error).to match(/did not work/) # assert that cleanup happened before `:perform_end`
+      expect(plugin.events).to eq %i(thread_start perform_start perform_end thread_end)
+      expect(plugin.last_error).to eq(nil)
+      expect(Delayed::Job.count).to eq 0
+    end
+
+    context 'when thread callback raises an error' do
+      before do
+        plugin.raise_on = :thread
+      end
+
+      it 'logs that the thread crashed' do
+        Delayed::Job.enqueue SimpleJob.new
+        described_class.new.work_off
+
+        expect(plugin.events).to eq %i(thread_start perform_start perform_end)
+        expect(plugin.last_error).to eq(nil)
+        expect(Delayed::Job.count).to eq 0
+      end
+    end
+
+    context 'when the perform callback raises an error' do
+      before do
+        plugin.raise_on = :perform
+      end
+
+      it 'runs expected perform and error callbacks' do
+        Delayed::Job.enqueue SimpleJob.new
+        described_class.new.work_off
+
+        expect(plugin.events).to eq %i(thread_start perform_start error_start error_end thread_end)
+        expect(plugin.last_error).to match(/oh no/) # assert that cleanup happened before `:perform_end`
+        expect(Delayed::Job.count).to eq 1
+      end
+    end
+
+    context 'when the perform method raises an error' do
+      it 'runs error callbacks' do
+        Delayed::Job.enqueue ErrorJob.new
+        described_class.new.work_off
+
+        expect(plugin.events).to eq %i(thread_start perform_start error_start error_end thread_end)
+        expect(plugin.last_error).to match(/did not work/) # assert that cleanup happened before `:perform_end`
+        expect(Delayed::Job.count).to eq 1
+      end
+
+      context 'when error callback raises an error' do
+        before do
+          plugin.raise_on = :error
+        end
+
+        it 'runs thread and perform callbacks' do
+          Delayed::Job.enqueue SimpleJob.new
+          described_class.new.work_off
+
+          expect(plugin.events).to eq %i(thread_start perform_start perform_end thread_end)
+          expect(plugin.last_error).to eq(nil)
+          expect(Delayed::Job.count).to eq 0
+        end
+      end
+    end
+
+    context 'when max attempts is exceeded' do
+      it 'runs failure callbacks' do
+        Delayed::Job.enqueue FailureJob.new
+        described_class.new.work_off
+
+        expect(plugin.events).to eq %i(thread_start perform_start error_start failure_start failure_end error_end thread_end)
+        expect(plugin.last_error).to match(/did not work/) # assert that cleanup happened before `:perform_end`
+        expect(Delayed::Job.count).to eq 1
+      end
+
+      context 'when failure callback raises an error' do
+        before do
+          plugin.raise_on = :failure
+        end
+
+        it 'runs thread and perform callbacks' do
+          Delayed::Job.enqueue SimpleJob.new
+          described_class.new.work_off
+
+          expect(plugin.events).to eq %i(thread_start perform_start perform_end thread_end)
+          expect(plugin.last_error).to eq(nil)
+          expect(Delayed::Job.count).to eq 0
+        end
+      end
     end
   end
 end

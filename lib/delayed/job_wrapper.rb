@@ -20,6 +20,24 @@ module Delayed
       job_data['job_class']
     end
 
+    # If job failed to deserialize, we can't respond to delegated methods.
+    # Returning false here prevents instance method checks from blocking job cleanup.
+    # There is a (currently) unreleased Rails PR that changes the exception class in this case:
+    # https://github.com/rails/rails/pull/53770
+    if defined?(ActiveJob::UnknownJobClassError)
+      def respond_to?(*, **)
+        super
+      rescue ActiveJob::UnknownJobClassError
+        false
+      end
+    else
+      def respond_to?(*, **)
+        super
+      rescue NameError
+        false
+      end
+    end
+
     def perform
       ActiveJob::Callbacks.run_callbacks(:execute) do
         job.perform_now

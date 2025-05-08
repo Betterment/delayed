@@ -101,12 +101,15 @@ module Delayed
         pool = Concurrent::FixedThreadPool.new(jobs.length)
         jobs.each do |job|
           pool.post do
-            self.class.lifecycle.run_callbacks(:thread, self, job) do
+            self.class.lifecycle.run_callbacks(:thread, self) do
               success.increment if perform(job)
+            rescue DeserializationError => e
+              handle_unrecoverable_error(job, e)
+            rescue Exception => e # rubocop:disable Lint/RescueException
+              handle_erroring_job(job, e)
             end
           rescue Exception => e # rubocop:disable Lint/RescueException
-            job_say job, "Job thread crashed with #{e.class.name}: #{e.message}", 'error'
-            job.error = e
+            say "Job thread crashed with #{e.class.name}: #{e.message}", 'error'
           end
         end
 
@@ -142,17 +145,14 @@ module Delayed
           job.destroy
         end
         job_say job, format('COMPLETED after %.4f seconds', run_time)
-        true # did work
-      rescue DeserializationError => e
-        job_say job, "FAILED permanently with #{e.class.name}: #{e.message}", 'error'
-
-        job.error = e
-        failed(job)
-        false # work failed
-      rescue Exception => e # rubocop:disable Lint/RescueException
-        self.class.lifecycle.run_callbacks(:error, self, job) { handle_failed_job(job, e) }
-        false # work failed
       end
+      true # did work
+    rescue DeserializationError => e
+      handle_unrecoverable_error(job, e)
+      false # work failed
+    rescue Exception => e # rubocop:disable Lint/RescueException
+      handle_erroring_job(job, e)
+      false # work failed
     end
 
     # Reschedule the job in the future (when a job fails).
@@ -172,12 +172,12 @@ module Delayed
     def failed(job)
       self.class.lifecycle.run_callbacks(:failure, self, job) do
         job.hook(:failure)
-      rescue StandardError => e
-        say "Error when running failure callback: #{e}", 'error'
-        say e.backtrace.join("\n"), 'error'
-      ensure
-        job.destroy_failed_jobs? ? job.destroy : job.fail!
       end
+    rescue StandardError => e
+      say "Error when running failure callback: #{e}", 'error'
+      say e.backtrace.join("\n"), 'error'
+    ensure
+      job.destroy_failed_jobs? ? job.destroy : job.fail!
     end
 
     def job_say(job, text, level = Delayed.default_log_level)
@@ -204,10 +204,21 @@ module Delayed
       " (queue=#{queue})" if queue
     end
 
-    def handle_failed_job(job, error)
+    def handle_erroring_job(job, error)
+      self.class.lifecycle.run_callbacks(:error, self, job) do
+        job.error = error
+        job_say job, "FAILED (#{job.attempts} prior attempts) with #{error.class.name}: #{error.message}", 'error'
+        reschedule(job)
+      end
+    rescue Exception => e # rubocop:disable Lint/RescueException
+      handle_unrecoverable_error(job, e)
+    end
+
+    def handle_unrecoverable_error(job, error)
+      job_say job, "FAILED permanently with #{error.class.name}: #{error.message}", 'error'
+
       job.error = error
-      job_say job, "FAILED (#{job.attempts} prior attempts) with #{error.class.name}: #{error.message}", 'error'
-      reschedule(job)
+      failed(job)
     end
 
     # The backend adapter may return either a list or a single job
