@@ -49,10 +49,10 @@ RSpec.describe Delayed::ActiveJobAdapter do
         /  priority: ?\n/,
         "  arguments: []\n",
         "  executions: 0\n",
-        ("  exception_executions: {}\n" if ActiveJob.gem_version >= Gem::Version.new('6.0')),
+        "  exception_executions: {}\n",
         "  locale: en\n",
-        (/  timezone: ?\n/ if ActiveJob.gem_version >= Gem::Version.new('6.0')),
-        (/  enqueued_at: '2023-01-20T18:52:29(\.\d+)?Z'\n/ if ActiveJob.gem_version >= Gem::Version.new('6.0')),
+        /  timezone: ?\n/,
+        /  enqueued_at: '2023-01-20T18:52:29(\.\d+)?Z'\n/,
         (/  scheduled_at: ?\n/ if ActiveJob.gem_version >= Gem::Version.new('7.1')),
       ].compact
     end

@@ -10,6 +10,7 @@ inherit_mode:
 
 AllCops:
   TargetRubyVersion: 2.6
+  TargetRailsVersion: 6.0
   Exclude:
     - 'gemfiles/*.gemfile'
     - 'lib/generators/delayed/templates/*.rb'
