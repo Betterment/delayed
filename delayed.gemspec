@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
     'source_code_uri' => 'https://github.com/betterment/delayed',
     'rubygems_mfa_required' => 'true',
   }
-  spec.required_ruby_version = '>= 2.6'
+  spec.required_ruby_version = '>= 3.0'
 
   spec.add_dependency 'activerecord', '>= 6.0'
   spec.add_dependency 'concurrent-ruby'

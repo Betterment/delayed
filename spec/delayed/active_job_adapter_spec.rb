@@ -358,11 +358,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
       it 'applies the default ActiveJob queue and priority' do
         JobClass.perform_later
 
-        if ActiveJob.gem_version < Gem::Version.new('6')
-          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, queue: 'default')
-        else
-          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => nil, queue: 'default')
-        end
+        expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => nil, queue: 'default')
       end
 
       context 'when ActiveJob specifies a different default queue and priority' do
@@ -374,22 +370,14 @@ RSpec.describe Delayed::ActiveJobAdapter do
         it 'applies the default ActiveJob queue and priority' do
           JobClass.perform_later
 
-          if ActiveJob.gem_version < Gem::Version.new('6')
-            expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, queue: 'aj_default')
-          else
-            expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 11, queue: 'aj_default')
-          end
+          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 11, queue: 'aj_default')
         end
       end
 
       it 'supports overriding queue, priority, and wait_until' do
         JobClass.set(queue: 'a', priority: 3, wait_until: arbitrary_time).perform_later
 
-        if ActiveJob.gem_version < Gem::Version.new('6')
-          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, queue: 'a', at: arbitrary_time.to_f)
-        else
-          expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 3, queue: 'a', at: arbitrary_time.to_f)
-        end
+        expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 3, queue: 'a', at: arbitrary_time.to_f)
       end
     end
   end

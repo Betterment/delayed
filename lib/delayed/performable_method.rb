@@ -26,7 +26,7 @@ module Delayed
     def perform
       return unless object
 
-      if kwargs.nil? || (RUBY_VERSION < '2.7' && kwargs.empty?)
+      if kwargs.nil?
         object.send(method_name, *args)
       else
         object.send(method_name, *args, **kwargs)
