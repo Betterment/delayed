@@ -55,7 +55,7 @@ module Delayed
       end
       alias failed failed?
 
-      ParseObjectFromYaml = %r{!ruby/\w+:([^\s]+)}.freeze # rubocop:disable Naming/ConstantName
+      ParseObjectFromYaml = %r{!ruby/\w+:([^\s]+)} # rubocop:disable Naming/ConstantName
 
       def name # rubocop:disable Metrics/AbcSize
         @name ||= payload_object.job_data['job_class'] if payload_object.respond_to?(:job_data)

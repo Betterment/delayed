@@ -1,10 +1,3 @@
-appraise 'rails-5-2' do
-  gem 'actionmailer', '~> 5.2.0'
-  gem 'activejob', '~> 5.2.0'
-  gem 'activerecord', '~> 5.2.0'
-  gem 'sqlite3', '~> 1.3', '>= 1.3.6'
-end
-
 appraise 'rails-6-0' do
   gem 'actionmailer', '~> 6.0.0'
   gem 'activejob', '~> 6.0.0'
