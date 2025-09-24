@@ -76,7 +76,7 @@ Before you can enqueue and run jobs, you will need a jobs table. You can create 
 running the following command:
 
 ```bash
-rails generate delayed:migration
+rake delayed:install:migrations
 rails db:migrate
 ```
 
