@@ -15,7 +15,7 @@ module Delayed
     scope :workable, ->(timestamp) { not_locked.not_failed.where("run_at <= ?", timestamp) }
     scope :working, -> { locked.not_failed }
 
-    before_save :set_default_run_at
+    before_save :set_default_run_at, :set_name
 
     REENQUEUE_BUFFER = 30.seconds
 
@@ -251,6 +251,13 @@ module Delayed
 
     def attempts_alert?
       alert_attempts&.<= attempts
+    end
+
+    private
+
+    def set_name
+      # [feat:NameColumn] remove 'if' statement once the 'name' column is required.
+      self.name ||= display_name if respond_to?(:name=)
     end
   end
 end

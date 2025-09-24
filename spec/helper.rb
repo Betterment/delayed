@@ -64,13 +64,17 @@ Dir['db/migrate/*.rb'].each { |f| require_relative("../#{f}") }
 ActiveRecord::Schema.define do
   drop_table :delayed_jobs, if_exists: true
 
-  CreateDelayedJobs.up
+  CreateDelayedJobs.migrate(:up)
+  AddNameToDelayedJobs.migrate(:up)
+  AddIndexToDelayedJobsName.migrate(:up)
 
   create_table :stories, primary_key: :story_id, force: true do |table|
     table.string :text
     table.boolean :scoped, default: true
   end
 end
+
+Delayed::Job.reset_column_information
 
 class Story < ActiveRecord::Base
   self.primary_key = :story_id
