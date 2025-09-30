@@ -627,7 +627,8 @@ describe Delayed::Job do
 
       context 'when the job raises a deserialization error' do
         it 'marks the job as failed' do
-          job = described_class.create! handler: '--- !ruby/object:JobThatDoesNotExist {}'
+          job = described_class.create! payload_object: LongRunningJob.new
+          job.update_columns(handler: '--- !ruby/object:JobThatDoesNotExist {}') # rubocop:disable Rails/SkipsModelValidations
           expect_any_instance_of(described_class).to receive(:destroy_failed_jobs?).and_return(false)
           worker.work_off
           job.reload

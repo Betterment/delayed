@@ -158,6 +158,8 @@ module Delayed
         @display_name ||= payload_object.display_name if payload_object.respond_to?(:display_name)
         @display_name ||= payload_object.class.name
       rescue DeserializationError # [feat:NameColumn] remove this `rescue` once the "name" column is required.
+        raise if !persisted? && self.class.column_names.include?('name')
+
         ParseObjectFromYaml.match(handler)[1]
       end
 
