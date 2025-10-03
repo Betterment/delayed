@@ -59,38 +59,22 @@ if db_adapter == "mysql2"
   types[:primary_key] = types[:primary_key].sub(" DEFAULT NULL", "")
 end
 
-migration_template = File.open("lib/generators/delayed/templates/migration.rb")
-
-# need to eval the template with the migration_version intact
-migration_context =
-  Class.new do
-    def my_binding
-      binding
-    end
-
-    private
-
-    def migration_version
-      "[#{ActiveRecord::VERSION::MAJOR}.#{ActiveRecord::VERSION::MINOR}]" if ActiveRecord::VERSION::MAJOR >= 5
-    end
-  end
-
-migration_ruby = ERB.new(migration_template.read).result(migration_context.new.my_binding)
-eval(migration_ruby) # rubocop:disable Security/Eval
+Dir['db/migrate/*.rb'].each { |f| require_relative("../#{f}") }
 
 ActiveRecord::Schema.define do
-  if table_exists?(:delayed_jobs)
-    # `if_exists: true` was only added in Rails 5
-    drop_table :delayed_jobs
-  end
+  drop_table :delayed_jobs, if_exists: true
 
-  CreateDelayedJobs.up
+  CreateDelayedJobs.migrate(:up)
+  AddNameToDelayedJobs.migrate(:up)
+  AddIndexToDelayedJobsName.migrate(:up)
 
   create_table :stories, primary_key: :story_id, force: true do |table|
     table.string :text
     table.boolean :scoped, default: true
   end
 end
+
+Delayed::Job.reset_column_information
 
 class Story < ActiveRecord::Base
   self.primary_key = :story_id

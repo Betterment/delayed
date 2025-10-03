@@ -253,29 +253,114 @@ describe Delayed::Job do
   end
 
   describe '#name' do
-    it 'is the class name of the job that was enqueued' do
-      expect(described_class.create(payload_object: ErrorJob.new).name).to eq('ErrorJob')
+    context 'when name column is populated' do
+      it 'is the class name of the job that was enqueued' do
+        job = described_class.new(payload_object: ErrorJob.new)
+        expect(job.name).to eq('ErrorJob')
+        job.save!
+        expect(job.reload.name).to eq('ErrorJob')
+      end
+
+      it 'is the class name of the performable job if it is an ActiveJob' do
+        job_wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
+        job = described_class.new(payload_object: job_wrapper)
+        expect(job.name).to eq('ActiveJobJob')
+        job.save!
+        expect(job.reload.name).to eq('ActiveJobJob')
+      end
+
+      it 'is the returned display_name if display_name is defined on the job object' do
+        job = described_class.new(payload_object: NamedJob.new)
+        expect(job.name).to eq('named_job')
+        job.save!
+        expect(job.reload.name).to eq('named_job')
+      end
+
+      it 'is the instance method that will be called if its a performable method object' do
+        job = Story.create(text: '...').delay.save
+        expect(job.name).to eq('Story#save')
+      end
+
+      it 'is the custom name value when set explicitly' do
+        job = described_class.new(payload_object: ErrorJob.new)
+        job.name = 'Custom Name'
+        job.save!
+        expect(job.reload.name).to eq('Custom Name')
+      end
     end
 
-    it 'is the class name of the performable job if it is an ActiveJob' do
-      job_wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
-      expect(described_class.create(payload_object: job_wrapper).name).to eq('ActiveJobJob')
+    context 'when name column is NULL' do
+      it 'is the class name of the job that was enqueued' do
+        job = described_class.create(payload_object: ErrorJob.new)
+        job.update_column(:name, nil) # rubocop:disable Rails/SkipsModelValidations
+        expect(job.reload.name).to eq('ErrorJob')
+      end
+
+      it 'is the class name of the performable job if it is an ActiveJob' do
+        job_wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
+        job = described_class.create(payload_object: job_wrapper)
+        job.update_column(:name, nil) # rubocop:disable Rails/SkipsModelValidations
+        expect(job.reload.name).to eq('ActiveJobJob')
+      end
+
+      it 'parses from handler on deserialization error' do
+        job = Story.create(text: '...').delay.text
+        job.payload_object.object.destroy
+        job.save!
+        job.update_column(:name, nil) # rubocop:disable Rails/SkipsModelValidations
+        expect(job.reload.name).to eq('Delayed::PerformableMethod')
+      end
     end
 
-    it 'is the method that will be called if its a performable method object' do
-      job = described_class.new(payload_object: NamedJob.new)
-      expect(job.name).to eq('named_job')
-    end
+    context 'when name column does not exist' do
+      before do
+        ActiveRecord::Schema.define do
+          AddIndexToDelayedJobsName.migrate(:down)
+          AddNameToDelayedJobs.migrate(:down)
+        end
+        described_class.reset_column_information
+      end
 
-    it 'is the instance method that will be called if its a performable method object' do
-      job = Story.create(text: '...').delay.save
-      expect(job.name).to eq('Story#save')
-    end
+      after do
+        ActiveRecord::Schema.define do
+          AddNameToDelayedJobs.migrate(:up)
+          AddIndexToDelayedJobsName.migrate(:up)
+        end
+        described_class.reset_column_information
+      end
 
-    it 'parses from handler on deserialization error' do
-      job = Story.create(text: '...').delay.text
-      job.payload_object.object.destroy
-      expect(job.reload.name).to eq('Delayed::PerformableMethod')
+      it 'is the class name of the job that was enqueued' do
+        job = described_class.new(payload_object: ErrorJob.new)
+        expect(job.name).to eq('ErrorJob')
+        job.save!
+        expect(job.reload.name).to eq('ErrorJob')
+      end
+
+      it 'is the class name of the performable job if it is an ActiveJob' do
+        job_wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
+        job = described_class.new(payload_object: job_wrapper)
+        expect(job.name).to eq('ActiveJobJob')
+        job.save!
+        expect(job.reload.name).to eq('ActiveJobJob')
+      end
+
+      it 'is the returned display_name if display_name is defined on the job object' do
+        job = described_class.new(payload_object: NamedJob.new)
+        expect(job.name).to eq('named_job')
+        job.save!
+        expect(job.reload.name).to eq('named_job')
+      end
+
+      it 'is the instance method that will be called if its a performable method object' do
+        job = Story.create(text: '...').delay.save
+        expect(job.name).to eq('Story#save')
+      end
+
+      it 'parses from handler on deserialization error' do
+        job = Story.create(text: '...').delay.text
+        job.payload_object.object.destroy
+        expect(job.reload.name).to eq('Delayed::PerformableMethod')
+      end
     end
   end
 
@@ -542,7 +627,8 @@ describe Delayed::Job do
 
       context 'when the job raises a deserialization error' do
         it 'marks the job as failed' do
-          job = described_class.create! handler: '--- !ruby/object:JobThatDoesNotExist {}'
+          job = described_class.create! payload_object: LongRunningJob.new
+          job.update_columns(handler: '--- !ruby/object:JobThatDoesNotExist {}') # rubocop:disable Rails/SkipsModelValidations
           expect_any_instance_of(described_class).to receive(:destroy_failed_jobs?).and_return(false)
           worker.work_off
           job.reload

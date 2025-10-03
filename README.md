@@ -76,9 +76,14 @@ Before you can enqueue and run jobs, you will need a jobs table. You can create 
 running the following command:
 
 ```bash
-rails generate delayed:migration
+rake delayed:install:migrations
 rails db:migrate
 ```
+
+This will produce a series of migrations ready to be run in sequence.
+(Re-running the command should be safe and will **not** duplicate previous
+migrations, but if you have an existing `delayed_jobs` table, you may need to
+adjust the generated migrations to avoid conflicts.)
 
 Then, to use this background job processor with ActiveJob, add the following to your application config:
 
@@ -535,7 +540,7 @@ class OrderPurchaseJob < ApplicationJob
 end
 ```
 
-#### Migrating from DelayedJob
+## Migrating from DelayedJob
 
 If you choose to use `delayed` in an app that was originally written against `delayed_job`, several
 non-ActiveJob APIs are still available. These include "plugins", lifecycle hooks, and the `.delay`
@@ -557,6 +562,21 @@ Delayed::Worker.destroy_failed_jobs = true # WARNING: This will irreversably del
 
 Note that some configurations, like `queue_attributes`, `exit_on_complete`, `backend`, and
 `raise_signal_exceptions` have been removed entirely.
+
+Furthermore, there are optional schema migrations that you may wish to apply, to take advantage of
+new behaviors that are unique to `delayed`:
+
+```bash
+rake delayed:install:migrations
+rails db:migrate
+```
+
+As of writing, this will add the following:
+- `delayed_jobs.name`: a string representation of the job's performable class name, populated on
+  enqueue.
+
+Note: Schema changes may become non-optional in future `delayed` releases, and will be documented in
+the README and release notes.
 
 ## How to Contribute
 
