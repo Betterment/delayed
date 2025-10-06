@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    delayed (1.2.0)
+    delayed (1.2.1)
       activerecord (>= 6.0)
       concurrent-ruby
 

@@ -259,6 +259,7 @@ describe Delayed::Job do
         expect(job.name).to eq('ErrorJob')
         job.save!
         expect(job.reload.name).to eq('ErrorJob')
+        expect(described_class.group(:name).count).to eq('ErrorJob' => 1)
       end
 
       it 'is the class name of the performable job if it is an ActiveJob' do
@@ -267,6 +268,7 @@ describe Delayed::Job do
         expect(job.name).to eq('ActiveJobJob')
         job.save!
         expect(job.reload.name).to eq('ActiveJobJob')
+        expect(described_class.group(:name).count).to eq('ActiveJobJob' => 1)
       end
 
       it 'is the returned display_name if display_name is defined on the job object' do
@@ -274,11 +276,13 @@ describe Delayed::Job do
         expect(job.name).to eq('named_job')
         job.save!
         expect(job.reload.name).to eq('named_job')
+        expect(described_class.group(:name).count).to eq('named_job' => 1)
       end
 
       it 'is the instance method that will be called if its a performable method object' do
         job = Story.create(text: '...').delay.save
         expect(job.name).to eq('Story#save')
+        expect(described_class.group(:name).count).to eq('Story#save' => 1)
       end
 
       it 'is the custom name value when set explicitly' do
@@ -286,6 +290,7 @@ describe Delayed::Job do
         job.name = 'Custom Name'
         job.save!
         expect(job.reload.name).to eq('Custom Name')
+        expect(described_class.group(:name).count).to eq('Custom Name' => 1)
       end
     end
 
