@@ -256,8 +256,8 @@ module Delayed
     private
 
     def set_name
-      # [feat:NameColumn] remove 'if' statement once the 'name' column is required.
-      self.name ||= display_name if respond_to?(:name=)
+      # [feat:NameColumn] remove 'if' statement and use `||=` once the 'name' column is required.
+      self.name = display_name if respond_to?(:name=) && attributes.fetch('name').nil?
     end
   end
 end
