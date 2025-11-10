@@ -328,7 +328,7 @@ RSpec.describe Delayed::Monitor do
           END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an,
           "delayed_jobs"."queue" AS delayed_jobs_queue
         FROM "delayed_jobs"
-        WHERE (run_at > '2025-11-10 17:20:13')
+        WHERE "delayed_jobs"."run_at" > '2025-11-10 17:20:13'
         GROUP BY
           CASE WHEN priority >= 0 AND priority < 10 THEN 0
             WHEN priority >= 10 AND priority < 20 THEN 10
@@ -436,7 +436,7 @@ RSpec.describe Delayed::Monitor do
         FROM "delayed_jobs"
         WHERE "delayed_jobs"."locked_at" IS NULL
           AND "delayed_jobs"."failed_at" IS NULL
-          AND (run_at <= '2025-11-10 17:20:13')
+          AND "delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
         GROUP BY
           CASE WHEN priority >= 0 AND priority < 10 THEN 0
             WHEN priority >= 10 AND priority < 20 THEN 10
@@ -481,7 +481,7 @@ RSpec.describe Delayed::Monitor do
         FROM "delayed_jobs"
         WHERE "delayed_jobs"."locked_at" IS NULL
           AND "delayed_jobs"."failed_at" IS NULL
-          AND (run_at <= '2025-11-10 17:20:13')
+          AND "delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
         GROUP BY
           CASE WHEN priority >= 0 AND priority < 10 THEN 0
             WHEN priority >= 10 AND priority < 20 THEN 10
@@ -504,7 +504,7 @@ RSpec.describe Delayed::Monitor do
         FROM "delayed_jobs"
         WHERE "delayed_jobs"."locked_at" IS NULL
           AND "delayed_jobs"."failed_at" IS NULL
-          AND (run_at <= '2025-11-10 17:20:13')
+          AND "delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
         GROUP BY
           CASE WHEN priority >= 0 AND priority < 10 THEN 0
             WHEN priority >= 10 AND priority < 20 THEN 10

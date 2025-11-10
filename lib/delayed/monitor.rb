@@ -71,11 +71,11 @@ module Delayed
     end
 
     def future_count_grouped
-      jobs.where("run_at > ?", Job.db_time_now).count
+      jobs.future.count
     end
 
     def locked_count_grouped
-      jobs.locked.count
+      jobs.claimed.count
     end
 
     def erroring_count_grouped
@@ -106,7 +106,7 @@ module Delayed
     end
 
     def workable_count_grouped
-      jobs.workable(Job.db_time_now).count
+      jobs.workable.count
     end
 
     def working_count_grouped
@@ -118,7 +118,7 @@ module Delayed
     end
 
     def oldest_workable_job_grouped
-      jobs.workable(Job.db_time_now).select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
+      jobs.workable.select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
     end
 
     def priority_case_statement

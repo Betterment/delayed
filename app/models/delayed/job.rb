@@ -2,21 +2,36 @@ module Delayed
   class Job < ::ActiveRecord::Base
     include Delayed::Backend::Base
 
-    scope :by_priority, lambda { order("priority ASC, run_at ASC") }
-    scope :min_priority, lambda { |priority| where("priority >= ?", priority) if priority }
-    scope :max_priority, lambda { |priority| where("priority <= ?", priority) if priority }
-    scope :for_queues, lambda { |queues| where(queue: queues) if queues.any? }
+    # worker config scopes
+    scope :by_priority, -> { order(:priority, :run_at) }
+    scope :min_priority, ->(priority) { where(arel_table[:priority].gteq(priority)) if priority }
+    scope :max_priority, ->(priority) { where(arel_table[:priority].lteq(priority)) if priority }
+    scope :for_queues, ->(queues) { where(queue: queues) if queues.any? }
 
-    scope :locked, -> { where.not(locked_at: nil) }
-    scope :erroring, -> { where.not(last_error: nil) }
+    # high-level queue states
+    scope :live, -> { where(failed_at: nil) }
     scope :failed, -> { where.not(failed_at: nil) }
-    scope :not_locked, -> { where(locked_at: nil) }
-    scope :not_failed, -> { where(failed_at: nil) }
-    scope :workable, ->(timestamp) { not_locked.not_failed.where("run_at <= ?", timestamp) }
-    scope :working, -> { locked.not_failed }
+    scope :erroring, -> { where.not(last_error: nil) }
+
+    # claim/lock states
+    scope :claimed, -> { where.not(locked_at: nil) }
+    scope :claimed_by, ->(worker) { where(locked_by: worker.name) }
+    scope :unclaimed, -> { where(locked_at: nil) }
+
+    # run_at states
+    scope :future, ->(as_of: db_time_now) { where(arel_table[:run_at].gt(as_of)) }
+    scope :pending, ->(as_of: db_time_now) { where(arel_table[:run_at].lteq(as_of)) }
+
+    # workability states
+    scope :working, -> { claimed.live }
+    scope :workable, -> { unclaimed.live.pending }
     scope :workable_by, ->(worker) {
-      ready_to_run(worker.name)
-        .min_priority(worker.min_priority)
+      where(
+        "((run_at <= ? AND (locked_at IS NULL OR locked_at < ?)) OR locked_by = ?) AND failed_at IS NULL",
+        db_time_now,
+        db_time_now - lock_timeout,
+        worker.name,
+      ).min_priority(worker.min_priority)
         .max_priority(worker.max_priority)
         .for_queues(worker.queues)
         .by_priority
@@ -32,15 +47,6 @@ module Delayed
     end
 
     set_delayed_job_table_name
-
-    def self.ready_to_run(worker_name)
-      where(
-        "((run_at <= ? AND (locked_at IS NULL OR locked_at < ?)) OR locked_by = ?) AND failed_at IS NULL",
-        db_time_now,
-        db_time_now - lock_timeout,
-        worker_name,
-      )
-    end
 
     def self.lock_timeout
       Worker.max_run_time + REENQUEUE_BUFFER
