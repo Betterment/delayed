@@ -14,8 +14,8 @@ module Delayed
     scope :not_failed, -> { where(failed_at: nil) }
     scope :workable, ->(timestamp) { not_locked.not_failed.where("run_at <= ?", timestamp) }
     scope :working, -> { locked.not_failed }
-    scope :workable_by, ->(worker, max_run_time = Worker.max_run_time) {
-      ready_to_run(worker.name, max_run_time)
+    scope :workable_by, ->(worker) {
+      ready_to_run(worker.name)
         .min_priority(worker.min_priority)
         .max_priority(worker.max_priority)
         .for_queues(worker.queues)
@@ -33,13 +33,17 @@ module Delayed
 
     set_delayed_job_table_name
 
-    def self.ready_to_run(worker_name, max_run_time)
+    def self.ready_to_run(worker_name)
       where(
         "((run_at <= ? AND (locked_at IS NULL OR locked_at < ?)) OR locked_by = ?) AND failed_at IS NULL",
         db_time_now,
-        db_time_now - (max_run_time + REENQUEUE_BUFFER),
+        db_time_now - lock_timeout,
         worker_name,
       )
+    end
+
+    def self.lock_timeout
+      Worker.max_run_time + REENQUEUE_BUFFER
     end
 
     # When a worker is exiting, make sure we don't have any locked jobs.
@@ -47,9 +51,9 @@ module Delayed
       where(locked_by: worker_name).update_all(locked_by: nil, locked_at: nil)
     end
 
-    def self.reserve(worker, max_run_time = Worker.max_run_time)
+    def self.reserve(worker)
       ActiveSupport::Notifications.instrument('delayed.worker.reserve_jobs', worker_tags(worker)) do
-        reserve_with_scope(workable_by(worker, max_run_time), worker, db_time_now)
+        reserve_with_scope(workable_by(worker), worker, db_time_now)
       end
     end
 
