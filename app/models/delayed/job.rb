@@ -11,25 +11,25 @@ module Delayed
     # high-level queue states
     scope :live, -> { where(failed_at: nil) }
     scope :failed, -> { where.not(failed_at: nil) }
-    scope :erroring, -> { where.not(last_error: nil) }
+    scope :erroring, -> { where.not(last_error: nil).merge(unscoped.live) }
 
     # claim/lock states
-    scope :claimed, -> { where.not(locked_at: nil) }
-    scope :claimed_by, ->(worker) { where(locked_by: worker.name) }
-    scope :unclaimed, -> { where(locked_at: nil) }
+    scope :claimed, -> { where.not(locked_at: nil).merge(unscoped.live) }
+    scope :claimed_by, ->(worker) { where(locked_by: worker.name).merge(unscoped.live) }
+    scope :unclaimed, -> { where(locked_at: nil).merge(unscoped.live) }
 
     # run_at states
-    scope :future, ->(as_of: db_time_now) { where(arel_table[:run_at].gt(as_of)) }
-    scope :pending, ->(as_of: db_time_now) { where(arel_table[:run_at].lteq(as_of)) }
+    scope :future, ->(as_of: db_time_now) { merge(unscoped.live).where(arel_table[:run_at].gt(as_of)) }
+    scope :pending, ->(as_of: db_time_now) { merge(unscoped.live).where(arel_table[:run_at].lteq(as_of)) }
 
     # workability states
-    scope :working, -> { claimed.live }
-    scope :workable, -> { unclaimed.live.pending }
+    scope :working, -> { claimed }
+    scope :workable, -> { unclaimed.pending }
     scope :workable_by, ->(worker) {
       pending
-        .merge(unclaimed.or(where(arel_table[:locked_at].lt(db_time_now - lock_timeout))))
+        .merge(where(locked_at: nil).or(where(arel_table[:locked_at].lt(db_time_now - lock_timeout))))
         .or(claimed_by(worker))
-        .live
+        .merge(unscoped.live)
         .min_priority(worker.min_priority)
         .max_priority(worker.max_priority)
         .for_queues(worker.queues)
