@@ -14,6 +14,13 @@ module Delayed
     scope :not_failed, -> { where(failed_at: nil) }
     scope :workable, ->(timestamp) { not_locked.not_failed.where("run_at <= ?", timestamp) }
     scope :working, -> { locked.not_failed }
+    scope :workable_by, ->(worker, max_run_time = Worker.max_run_time) {
+      ready_to_run(worker.name, max_run_time)
+        .min_priority(worker.min_priority)
+        .max_priority(worker.max_priority)
+        .for_queues(worker.queues)
+        .by_priority
+    }
 
     before_save :set_default_run_at, :set_name
 
@@ -41,15 +48,8 @@ module Delayed
     end
 
     def self.reserve(worker, max_run_time = Worker.max_run_time)
-      ready_scope =
-        ready_to_run(worker.name, max_run_time)
-          .min_priority(worker.min_priority)
-          .max_priority(worker.max_priority)
-          .for_queues(worker.queues)
-          .by_priority
-
       ActiveSupport::Notifications.instrument('delayed.worker.reserve_jobs', worker_tags(worker)) do
-        reserve_with_scope(ready_scope, worker, db_time_now)
+        reserve_with_scope(workable_by(worker, max_run_time), worker, db_time_now)
       end
     end
 
