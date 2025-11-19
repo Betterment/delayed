@@ -45,6 +45,12 @@ ActiveRecord::Base.logger = Delayed.logger
 ActiveJob::Base.logger = Delayed.logger
 ActiveRecord::Migration.verbose = false
 
+if ActiveRecord.respond_to?(:default_timezone=)
+  ActiveRecord.default_timezone = :utc
+else
+  ActiveRecord::Base.default_timezone = :utc
+end
+
 # MySQL 5.7 no longer supports null default values for the primary key
 # Override the default primary key type in Rails <= 4.0
 # https://stackoverflow.com/a/34555109

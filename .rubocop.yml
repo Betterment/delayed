@@ -22,5 +22,9 @@ Rails/EnvironmentVariableAccess:
 RSpec/IndexedLet:
   Enabled: false
 
+Rails/SquishedSQLHeredocs:
+  Exclude:
+    - 'spec/**/*'
+
 Capybara/RSpec/PredicateMatcher:
   Enabled: false
