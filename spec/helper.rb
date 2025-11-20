@@ -211,3 +211,27 @@ def current_database
     'delayed_job_test'
   end
 end
+
+RSpec::Matchers.define :match_sql do |expected_sql|
+  match do |actual_sql|
+    normalize_sql(actual_sql) == normalize_sql(expected_sql)
+  end
+
+  failure_message do |actual_sql|
+    <<~MSG
+      Expected SQL to match:
+        #{normalize_sql(expected_sql)}
+
+      But got:
+        #{normalize_sql(actual_sql)}
+    MSG
+  end
+
+  def normalize_sql(sql)
+    sql.squish
+      # normalize delimited identifier quotes
+      .tr('`', '"')
+      # normalize and truncate 'AS' names/aliases
+      .gsub(/AS "?(\w+)"?/) { "AS #{Regexp.last_match(1)[0...63]}" }
+  end
+end
