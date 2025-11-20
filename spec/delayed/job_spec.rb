@@ -197,6 +197,57 @@ describe Delayed::Job do
     end
   end
 
+  describe '.workable_by' do
+    let(:now) { '2025-11-10 17:20:13 UTC' }
+    let(:worker) do
+      instance_double(Delayed::Worker, name: "worker1", read_ahead: 1, max_claims: 1, min_priority: nil, max_priority: nil, queues: queues)
+    end
+    let(:queues) { [] }
+    let(:query) { described_class.workable_by(worker) }
+
+    around { |example| Timecop.freeze(now) { example.run } }
+
+    it 'generates the expected SQL query' do
+      expect(query.to_sql).to match_sql(<<~SQL)
+        SELECT "delayed_jobs".*
+        FROM "delayed_jobs"
+        WHERE (((run_at <= '2025-11-10 17:20:13' AND (locked_at IS NULL OR locked_at < '2025-11-10 16:59:43')) OR locked_by = 'worker1')
+          AND failed_at IS NULL)
+        ORDER BY priority ASC, run_at ASC
+      SQL
+    end
+
+    context 'when a single queue is specified' do
+      let(:queues) { %w(default) }
+
+      it 'generates the expected SQL query' do
+        expect(query.to_sql).to match_sql(<<~SQL)
+          SELECT "delayed_jobs".*
+          FROM "delayed_jobs"
+          WHERE (((run_at <= '2025-11-10 17:20:13' AND (locked_at IS NULL OR locked_at < '2025-11-10 16:59:43')) OR locked_by = 'worker1')
+            AND failed_at IS NULL)
+            AND "delayed_jobs"."queue" = 'default'
+          ORDER BY priority ASC, run_at ASC
+        SQL
+      end
+    end
+
+    context 'multiple queues are specified' do
+      let(:queues) { %w(default mailers tracking) }
+
+      it 'generates the expected SQL query' do
+        expect(query.to_sql).to match_sql(<<~SQL)
+          SELECT "delayed_jobs".*
+          FROM "delayed_jobs"
+          WHERE (((run_at <= '2025-11-10 17:20:13' AND (locked_at IS NULL OR locked_at < '2025-11-10 16:59:43')) OR locked_by = 'worker1')
+            AND failed_at IS NULL)
+            AND "delayed_jobs"."queue" IN ('default', 'mailers', 'tracking')
+          ORDER BY priority ASC, run_at ASC
+        SQL
+      end
+    end
+  end
+
   describe 'reserve' do
     before do
       Delayed::Worker.max_run_time = 2.minutes
@@ -839,7 +890,7 @@ describe Delayed::Job do
   context "db_time_now" do
     after do
       Time.zone = nil
-      self.default_timezone = :local
+      self.default_timezone = :utc
     end
 
     it "returns time in current time zone if set" do

@@ -45,6 +45,12 @@ ActiveRecord::Base.logger = Delayed.logger
 ActiveJob::Base.logger = Delayed.logger
 ActiveRecord::Migration.verbose = false
 
+if ActiveRecord.respond_to?(:default_timezone=)
+  ActiveRecord.default_timezone = :utc
+else
+  ActiveRecord::Base.default_timezone = :utc
+end
+
 # MySQL 5.7 no longer supports null default values for the primary key
 # Override the default primary key type in Rails <= 4.0
 # https://stackoverflow.com/a/34555109
@@ -209,5 +215,29 @@ def current_database
     a_string_ending_with('tmp/database.sqlite')
   else
     'delayed_job_test'
+  end
+end
+
+RSpec::Matchers.define :match_sql do |expected_sql|
+  match do |actual_sql|
+    normalize_sql(actual_sql) == normalize_sql(expected_sql)
+  end
+
+  failure_message do |actual_sql|
+    <<~MSG
+      Expected SQL to match:
+        #{normalize_sql(expected_sql)}
+
+      But got:
+        #{normalize_sql(actual_sql)}
+    MSG
+  end
+
+  def normalize_sql(sql)
+    sql.squish
+      # normalize delimited identifier quotes
+      .tr('`', '"')
+      # normalize and truncate 'AS' names/aliases
+      .gsub(/AS "?(\w+)"?/) { "AS #{Regexp.last_match(1)[0...63]}" }
   end
 end
