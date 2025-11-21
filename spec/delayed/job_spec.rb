@@ -248,6 +248,16 @@ describe Delayed::Job do
     end
   end
 
+  describe '.lock_timeout' do
+    it 'changes relative to Worker.max_run_time' do
+      Delayed::Worker.max_run_time = 5.minutes
+      expect(described_class.lock_timeout).to eq(5.minutes + described_class::REENQUEUE_BUFFER)
+
+      Delayed::Worker.max_run_time = 10.minutes
+      expect(described_class.lock_timeout).to eq(10.minutes + described_class::REENQUEUE_BUFFER)
+    end
+  end
+
   describe 'reserve' do
     before do
       Delayed::Worker.max_run_time = 2.minutes
