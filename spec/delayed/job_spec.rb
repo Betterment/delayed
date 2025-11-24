@@ -211,8 +211,10 @@ describe Delayed::Job do
       expect(query.to_sql).to match_sql(<<~SQL)
         SELECT "delayed_jobs".*
         FROM "delayed_jobs"
-        WHERE (((run_at <= '2025-11-10 17:20:13' AND (locked_at IS NULL OR locked_at < '2025-11-10 16:59:43')) OR locked_by = 'worker1')
-          AND failed_at IS NULL)
+        WHERE ("delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
+            AND ("delayed_jobs"."locked_at" IS NULL OR "delayed_jobs"."locked_at" < '2025-11-10 16:59:43')
+            OR "delayed_jobs"."locked_by" = 'worker1')
+          AND "delayed_jobs"."failed_at" IS NULL
         ORDER BY "delayed_jobs"."priority" ASC, "delayed_jobs"."run_at" ASC
       SQL
     end
@@ -224,8 +226,10 @@ describe Delayed::Job do
         expect(query.to_sql).to match_sql(<<~SQL)
           SELECT "delayed_jobs".*
           FROM "delayed_jobs"
-          WHERE (((run_at <= '2025-11-10 17:20:13' AND (locked_at IS NULL OR locked_at < '2025-11-10 16:59:43')) OR locked_by = 'worker1')
-            AND failed_at IS NULL)
+          WHERE ("delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
+              AND ("delayed_jobs"."locked_at" IS NULL OR "delayed_jobs"."locked_at" < '2025-11-10 16:59:43')
+              OR "delayed_jobs"."locked_by" = 'worker1')
+            AND "delayed_jobs"."failed_at" IS NULL
             AND "delayed_jobs"."queue" = 'default'
           ORDER BY "delayed_jobs"."priority" ASC, "delayed_jobs"."run_at" ASC
         SQL
@@ -239,8 +243,10 @@ describe Delayed::Job do
         expect(query.to_sql).to match_sql(<<~SQL)
           SELECT "delayed_jobs".*
           FROM "delayed_jobs"
-          WHERE (((run_at <= '2025-11-10 17:20:13' AND (locked_at IS NULL OR locked_at < '2025-11-10 16:59:43')) OR locked_by = 'worker1')
-            AND failed_at IS NULL)
+          WHERE ("delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
+              AND ("delayed_jobs"."locked_at" IS NULL OR "delayed_jobs"."locked_at" < '2025-11-10 16:59:43')
+              OR "delayed_jobs"."locked_by" = 'worker1')
+            AND "delayed_jobs"."failed_at" IS NULL
             AND "delayed_jobs"."queue" IN ('default', 'mailers', 'tracking')
           ORDER BY "delayed_jobs"."priority" ASC, "delayed_jobs"."run_at" ASC
         SQL

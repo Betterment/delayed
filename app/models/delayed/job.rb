@@ -26,12 +26,11 @@ module Delayed
     scope :working, -> { claimed.live }
     scope :workable, -> { unclaimed.live.pending }
     scope :workable_by, ->(worker) {
-      where(
-        "((run_at <= ? AND (locked_at IS NULL OR locked_at < ?)) OR locked_by = ?) AND failed_at IS NULL",
-        db_time_now,
-        db_time_now - lock_timeout,
-        worker.name,
-      ).min_priority(worker.min_priority)
+      pending
+        .merge(unclaimed.or(where(arel_table[:locked_at].lt(db_time_now - lock_timeout))))
+        .or(claimed_by(worker))
+        .live
+        .min_priority(worker.min_priority)
         .max_priority(worker.max_priority)
         .for_queues(worker.queues)
         .by_priority
