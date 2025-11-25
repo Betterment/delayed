@@ -10,6 +10,8 @@ require 'sample_jobs'
 
 require 'rake'
 
+require 'snapshot_testing/rspec'
+
 ActiveSupport.on_load(:active_record) do
   require 'global_id/identification'
   include GlobalID::Identification
@@ -107,6 +109,8 @@ TEST_MIN_RESERVE_INTERVAL = -10
 TEST_SLEEP_DELAY = -100
 
 RSpec.configure do |config|
+  config.include SnapshotTesting::RSpec
+
   config.around(:each) do |example|
     aj_priority_was = ActiveJob::Base.priority
     aj_queue_name_was = ActiveJob::Base.queue_name
@@ -218,26 +222,17 @@ def current_database
   end
 end
 
-RSpec::Matchers.define :match_sql do |expected_sql|
-  match do |actual_sql|
-    normalize_sql(actual_sql) == normalize_sql(expected_sql)
+QueryUnderTest = Struct.new(:sql, :connection) do
+  def self.for(query, connection: ActiveRecord::Base.connection)
+    new(query.respond_to?(:to_sql) ? query.to_sql : query.to_s, connection)
   end
 
-  failure_message do |actual_sql|
-    <<~MSG
-      Expected SQL to match:
-        #{normalize_sql(expected_sql)}
-
-      But got:
-        #{normalize_sql(actual_sql)}
-    MSG
-  end
-
-  def normalize_sql(sql)
+  def formatted
     sql.squish
-      # normalize delimited identifier quotes
-      .tr('`', '"')
-      # normalize and truncate 'AS' names/aliases
-      .gsub(/AS "?(\w+)"?/) { "AS #{Regexp.last_match(1)[0...63]}" }
+      # basic formatting for easier git diffing
+      .gsub(/ (SELECT|FROM|WHERE|GROUP BY|ORDER BY) /) { "\n  #{Regexp.last_match(1).strip} " }
+      .gsub(' AND ', "\n    AND ")
+      # normalize and truncate 'AS' names/aliases (changes across Rails versions)
+      .gsub(/AS ("|`)?(\w+)("|`)?/) { "AS #{Regexp.last_match(2)[0...63]}" }
   end
 end
