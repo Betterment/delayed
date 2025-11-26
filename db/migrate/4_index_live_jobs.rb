@@ -9,7 +9,7 @@ class IndexLiveJobs < ActiveRecord::Migration[6.0]
 
   def change
     opts = {}
-    columns = %i(priority run_at queue)
+    columns = %i(priority run_at queue attempts)
 
     # Postgres supports creating indexes concurrently,
     # which avoids locking the table while the index is building:
