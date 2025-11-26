@@ -103,11 +103,11 @@ RSpec.describe Delayed::Monitor do
         attempts: 0,
       }
     end
-    let(:failed_attributes) { { run_at: now - 1.week, last_error: '123', failed_at: now - 1.day } }
+    let(:failed_attributes) { { run_at: now - 1.week, last_error: '123', failed_at: now - 1.day, locked_at: now - 1.day } }
     let(:p0_attributes) { job_attributes.merge(priority: 1, last_error: '123') }
-    let(:p10_attributes) { job_attributes.merge(priority: 13) }
+    let(:p10_attributes) { job_attributes.merge(priority: 13, locked_at: now - 1.day) }
     let(:p20_attributes) { job_attributes.merge(priority: 23, last_error: '123') }
-    let(:p30_attributes) { job_attributes.merge(priority: 999) }
+    let(:p30_attributes) { job_attributes.merge(priority: 999, locked_at: now - 1.day) }
     let(:p0_payload) { default_payload.merge(priority: 'interactive') }
     let(:p10_payload) { default_payload.merge(priority: 'user_visible') }
     let(:p20_payload) { default_payload.merge(priority: 'eventual') }
