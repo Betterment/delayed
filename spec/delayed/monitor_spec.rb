@@ -293,19 +293,19 @@ RSpec.describe Delayed::Monitor do
       end
     end
 
-    def query_for(metric)
+    def queries_for(metric)
       monitor.query_for(metric)
-      QueryUnderTest.for(queries.first || raise("Expected a query for #{metric}, but none was executed"))
+      queries.map { |q| QueryUnderTest.for(q) }
     end
 
     described_class::METRICS.each do |metric|
       context "('#{metric}')" do
         it "runs the expected #{current_adapter} query for #{metric}" do
-          expect(query_for(metric).formatted).to match_snapshot
+          expect(queries_for(metric).map(&:formatted).join("\n")).to match_snapshot
         end
 
         it "produces the expected #{current_adapter} query plan for #{metric}" do
-          expect(query_for(metric).explain).to match_snapshot
+          expect(queries_for(metric).map(&:explain).join("\n")).to match_snapshot
         end
 
         context 'when using the legacy index', index: :legacy do

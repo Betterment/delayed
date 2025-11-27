@@ -4,6 +4,17 @@ SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"delayed_jobs\".\"queue\" AS delayed_jobs_queue
   FROM \"delayed_jobs\"
+  WHERE \"delayed_jobs\".\"failed_at\" IS NOT NULL
+  GROUP BY CASE WHEN priority >= 0
+    AND priority < 10 THEN 0 WHEN priority >= 10
+    AND priority < 20 THEN 10 WHEN priority >= 20
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"delayed_jobs\".\"queue\"
+SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
+    AND priority < 10 THEN 0 WHEN priority >= 10
+    AND priority < 20 THEN 10 WHEN priority >= 20
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"delayed_jobs\".\"queue\" AS delayed_jobs_queue
+  FROM \"delayed_jobs\"
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
   GROUP BY CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
@@ -17,7 +28,15 @@ GroupAggregate  (cost=...)
   ->  Sort  (cost=...)
         Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
         Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
-        ->  Seq Scan on public.delayed_jobs  (cost=...)
+        ->  Index Only Scan using idx_delayed_jobs_failed on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+GroupAggregate  (cost=...)
+  Output: count(*), (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Index Only Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
               Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
 SNAP
 
@@ -400,6 +419,17 @@ SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"delayed_jobs\".\"queue\" AS delayed_jobs_queue
   FROM \"delayed_jobs\"
+  WHERE \"delayed_jobs\".\"failed_at\" IS NOT NULL
+  GROUP BY CASE WHEN priority >= 0
+    AND priority < 10 THEN 0 WHEN priority >= 10
+    AND priority < 20 THEN 10 WHEN priority >= 20
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"delayed_jobs\".\"queue\"
+SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
+    AND priority < 10 THEN 0 WHEN priority >= 10
+    AND priority < 20 THEN 10 WHEN priority >= 20
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"delayed_jobs\".\"queue\" AS delayed_jobs_queue
+  FROM \"delayed_jobs\"
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
   GROUP BY CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
@@ -407,7 +437,9 @@ SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
 SNAP
 
 snapshots["produces the expected sqlite3 query plan for count 1"] = <<-SNAP
-SCAN delayed_jobs
+SCAN delayed_jobs USING INDEX idx_delayed_jobs_failed
+USE TEMP B-TREE FOR GROUP BY
+SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
 USE TEMP B-TREE FOR GROUP BY
 SNAP
 
