@@ -14,19 +14,20 @@ module Delayed
         end
       end
 
-      def upsert_index(table, columns, wait_timeout: 5.minutes, statement_timeout: 1.minute, lock_timeout: 5.seconds, **opts)
-        columns_or_name = opts.slice(:name).presence || columns
+      def upsert_index(*args, **opts)
+        dir(:both) { _drop_index_if_exists(*args, **opts) }
+        dir(:up) { _add_index(*args, **opts) }
+      end
 
-        with_timeouts(statement_timeout: statement_timeout, lock_timeout: lock_timeout) do
+      def remove_index_if_exists(*args, **opts)
+        dir(:down) { _add_index(*args, **opts) }
+        dir(:both) { _drop_index_if_exists(*args, **opts) }
+      end
+
+      def with_retry_loop(wait_timeout: 5.minutes, **opts)
+        with_timeouts(**opts) do
           loop do
-            reversible do |dir|
-              dir.up do
-                remove_index(table, columns_or_name) if index_exists?(table, columns_or_name)
-                add_index(table, columns, **opts)
-              end
-              dir.down { remove_index(table, columns_or_name) }
-            end
-
+            yield
             break
           rescue ActiveRecord::LockWaitTimeout, ActiveRecord::StatementTimeout => e
             raise if Delayed::Job.db_time_now - @migration_start > wait_timeout
@@ -36,19 +37,32 @@ module Delayed
         end
       end
 
-      def with_timeouts(statement_timeout:, lock_timeout:)
-        both_dirs { set_timeouts!(statement_timeout: statement_timeout, lock_timeout: lock_timeout) }
+      def with_timeouts(statement_timeout: 1.minute, lock_timeout: 5.seconds)
+        dir(:both) { set_timeouts!(statement_timeout: statement_timeout, lock_timeout: lock_timeout) }
         yield
       ensure
-        both_dirs { set_timeouts!(statement_timeout: nil, lock_timeout: nil) }
+        dir(:both) { set_timeouts!(statement_timeout: nil, lock_timeout: nil) }
       end
 
       private
 
-      def both_dirs(&block)
+      def _add_index(*args, wait_timeout: nil, statement_timeout: nil, lock_timeout: nil, **opts)
+        with_retry_loop(wait_timeout: wait_timeout, statement_timeout: statement_timeout, lock_timeout: lock_timeout) do
+          add_index(*args, **opts)
+        end
+      end
+
+      def _drop_index_if_exists(table, columns = nil, wait_timeout: nil, statement_timeout: nil, lock_timeout: nil, **opts)
+        columns_or_name = opts.slice(:name).presence || columns
+        with_retry_loop(wait_timeout: wait_timeout, statement_timeout: statement_timeout, lock_timeout: lock_timeout) do
+          remove_index(table, columns_or_name) if index_exists?(table, columns_or_name)
+        end
+      end
+
+      def dir(direction, &block)
         reversible do |dir|
-          dir.up(&block)
-          dir.down(&block)
+          dir.up(&block) if %i(up both).include?(direction)
+          dir.down(&block) if %i(down both).include?(direction)
         end
       end
 

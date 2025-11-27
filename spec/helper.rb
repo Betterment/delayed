@@ -82,6 +82,7 @@ ActiveRecord::Schema.define do
   IndexLiveJobs.migrate(:up)
   IndexFailedJobs.migrate(:up)
   SetPostgresFillfactor.migrate(:up)
+  RemoveLegacyIndex.migrate(:up)
 
   create_table :stories, primary_key: :story_id, force: true do |table|
     table.string :text
