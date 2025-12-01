@@ -203,53 +203,27 @@ describe Delayed::Job do
       instance_double(Delayed::Worker, name: "worker1", read_ahead: 1, max_claims: 1, min_priority: nil, max_priority: nil, queues: queues)
     end
     let(:queues) { [] }
-    let(:query) { described_class.workable_by(worker) }
+    let(:query) { QueryUnderTest.for(described_class.workable_by(worker)) }
 
     around { |example| Timecop.freeze(now) { example.run } }
 
-    it 'generates the expected SQL query' do
-      expect(query.to_sql).to match_sql(<<~SQL)
-        SELECT "delayed_jobs".*
-        FROM "delayed_jobs"
-        WHERE ("delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
-            AND ("delayed_jobs"."locked_at" IS NULL OR "delayed_jobs"."locked_at" < '2025-11-10 16:59:43')
-            OR "delayed_jobs"."locked_by" = 'worker1')
-          AND "delayed_jobs"."failed_at" IS NULL
-        ORDER BY "delayed_jobs"."priority" ASC, "delayed_jobs"."run_at" ASC
-      SQL
+    it "generates the expected #{current_adapter} query" do
+      expect(query.formatted).to match_snapshot
     end
 
     context 'when a single queue is specified' do
       let(:queues) { %w(default) }
 
-      it 'generates the expected SQL query' do
-        expect(query.to_sql).to match_sql(<<~SQL)
-          SELECT "delayed_jobs".*
-          FROM "delayed_jobs"
-          WHERE ("delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
-              AND ("delayed_jobs"."locked_at" IS NULL OR "delayed_jobs"."locked_at" < '2025-11-10 16:59:43')
-              OR "delayed_jobs"."locked_by" = 'worker1')
-            AND "delayed_jobs"."failed_at" IS NULL
-            AND "delayed_jobs"."queue" = 'default'
-          ORDER BY "delayed_jobs"."priority" ASC, "delayed_jobs"."run_at" ASC
-        SQL
+      it "generates the expected #{current_adapter} query for one queue" do
+        expect(query.formatted).to match_snapshot
       end
     end
 
     context 'multiple queues are specified' do
       let(:queues) { %w(default mailers tracking) }
 
-      it 'generates the expected SQL query' do
-        expect(query.to_sql).to match_sql(<<~SQL)
-          SELECT "delayed_jobs".*
-          FROM "delayed_jobs"
-          WHERE ("delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
-              AND ("delayed_jobs"."locked_at" IS NULL OR "delayed_jobs"."locked_at" < '2025-11-10 16:59:43')
-              OR "delayed_jobs"."locked_by" = 'worker1')
-            AND "delayed_jobs"."failed_at" IS NULL
-            AND "delayed_jobs"."queue" IN ('default', 'mailers', 'tracking')
-          ORDER BY "delayed_jobs"."priority" ASC, "delayed_jobs"."run_at" ASC
-        SQL
+      it "generates the expected #{current_adapter} query for multiple queue" do
+        expect(query.formatted).to match_snapshot
       end
     end
   end

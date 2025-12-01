@@ -201,6 +201,7 @@ GEM
       rubocop (~> 1.61)
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
+    snapshot_testing (0.3.4)
     sqlite3 (2.6.0-aarch64-linux-gnu)
     sqlite3 (2.6.0-aarch64-linux-musl)
     sqlite3 (2.6.0-arm-linux-gnu)
@@ -242,6 +243,7 @@ DEPENDENCIES
   pg
   rake
   rspec
+  snapshot_testing
   sqlite3 (>= 1.4)
   timecop
   zeitwerk

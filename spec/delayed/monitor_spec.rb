@@ -295,224 +295,47 @@ RSpec.describe Delayed::Monitor do
 
     def query_for(metric)
       monitor.query_for(metric)
-      queries.first || raise("Expected a query for #{metric}, but none was executed")
+      QueryUnderTest.for(queries.first || raise("Expected a query for #{metric}, but none was executed"))
     end
 
-    it 'runs the expected SQL for count' do
-      expect(query_for('count')).to match_sql(<<~SQL)
-        SELECT COUNT(*) AS count_all,
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an,
-          "delayed_jobs"."queue" AS delayed_jobs_queue
-        FROM "delayed_jobs"
-        GROUP BY
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END,
-          "delayed_jobs"."queue"
-      SQL
+    it "runs the expected #{current_adapter} query for count" do
+      expect(query_for('count').formatted).to match_snapshot
     end
 
-    it 'runs the expected SQL for future_count' do
-      expect(query_for('future_count')).to match_sql(<<~SQL)
-        SELECT COUNT(*) AS count_all,
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an,
-          "delayed_jobs"."queue" AS delayed_jobs_queue
-        FROM "delayed_jobs"
-        WHERE "delayed_jobs"."run_at" > '2025-11-10 17:20:13'
-        GROUP BY
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END,
-          "delayed_jobs"."queue"
-      SQL
+    it "runs the expected #{current_adapter} query for future_count" do
+      expect(query_for('future_count').formatted).to match_snapshot
     end
 
-    it 'runs the expected SQL for locked_count' do
-      expect(query_for('locked_count')).to match_sql(<<~SQL)
-        SELECT COUNT(*) AS count_all,
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an,
-          "delayed_jobs"."queue" AS delayed_jobs_queue
-        FROM "delayed_jobs"
-        WHERE "delayed_jobs"."locked_at" IS NOT NULL
-        GROUP BY
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END,
-          "delayed_jobs"."queue"
-      SQL
+    it "runs the expected #{current_adapter} query for locked_count" do
+      expect(query_for('locked_count').formatted).to match_snapshot
     end
 
-    it 'runs the expected SQL for erroring_count' do
-      expect(query_for('erroring_count')).to match_sql(<<~SQL)
-        SELECT COUNT(*) AS count_all,
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an,
-          "delayed_jobs"."queue" AS delayed_jobs_queue
-        FROM "delayed_jobs"
-        WHERE "delayed_jobs"."last_error" IS NOT NULL
-        GROUP BY
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END,
-          "delayed_jobs"."queue"
-      SQL
+    it "runs the expected #{current_adapter} query for erroring_count" do
+      expect(query_for('erroring_count').formatted).to match_snapshot
     end
 
-    it 'runs the expected SQL for failed_count' do
-      expect(query_for('failed_count')).to match_sql(<<~SQL)
-        SELECT COUNT(*) AS count_all,
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an,
-          "delayed_jobs"."queue" AS delayed_jobs_queue
-        FROM "delayed_jobs"
-        WHERE "delayed_jobs"."failed_at" IS NOT NULL
-        GROUP BY
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END,
-          "delayed_jobs"."queue"
-      SQL
+    it "runs the expected #{current_adapter} query for failed_count" do
+      expect(query_for('failed_count').formatted).to match_snapshot
     end
 
-    it 'runs the expected SQL for max_lock_age' do
-      expect(query_for('max_lock_age')).to match_sql(<<~SQL)
-        SELECT CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END AS priority,
-          queue,
-          MIN(locked_at) AS locked_at
-        FROM "delayed_jobs"
-        WHERE "delayed_jobs"."locked_at" IS NOT NULL
-          AND "delayed_jobs"."failed_at" IS NULL
-        GROUP BY
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END,
-          "delayed_jobs"."queue"
-      SQL
+    it "runs the expected #{current_adapter} query for max_lock_age" do
+      expect(query_for('max_lock_age').formatted).to match_snapshot
     end
 
-    it 'runs the expected SQL for max_age' do
-      expect(query_for('max_age')).to match_sql(<<~SQL)
-        SELECT (CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END) AS priority,
-          queue,
-          MIN(run_at) AS run_at
-        FROM "delayed_jobs"
-        WHERE "delayed_jobs"."locked_at" IS NULL
-          AND "delayed_jobs"."failed_at" IS NULL
-          AND "delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
-        GROUP BY
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END,
-          "delayed_jobs"."queue"
-      SQL
+    it "runs the expected #{current_adapter} query for max_age" do
+      expect(query_for('max_age').formatted).to match_snapshot
     end
 
-    it 'runs the expected SQL for working_count' do
-      expect(query_for('working_count')).to match_sql(<<~SQL)
-        SELECT COUNT(*) AS count_all,
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an,
-          "delayed_jobs"."queue" AS delayed_jobs_queue
-        FROM "delayed_jobs"
-        WHERE "delayed_jobs"."locked_at" IS NOT NULL
-          AND "delayed_jobs"."failed_at" IS NULL
-        GROUP BY
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END,
-          "delayed_jobs"."queue"
-      SQL
+    it "runs the expected #{current_adapter} query for working_count" do
+      expect(query_for('working_count').formatted).to match_snapshot
     end
 
-    it 'runs the expected SQL for workable_count' do
-      expect(query_for('workable_count')).to match_sql(<<~SQL)
-        SELECT COUNT(*) AS count_all,
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an,
-          "delayed_jobs"."queue" AS delayed_jobs_queue
-        FROM "delayed_jobs"
-        WHERE "delayed_jobs"."locked_at" IS NULL
-          AND "delayed_jobs"."failed_at" IS NULL
-          AND "delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
-        GROUP BY
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END,
-          "delayed_jobs"."queue"
-      SQL
+    it "runs the expected #{current_adapter} query for workable_count" do
+      expect(query_for('workable_count').formatted).to match_snapshot
     end
 
-    it 'runs the expected SQL for alert_age_percent' do
-      expect(query_for('alert_age_percent')).to match_sql(<<~SQL)
-        SELECT (CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END) AS priority,
-          queue,
-          MIN(run_at) AS run_at
-        FROM "delayed_jobs"
-        WHERE "delayed_jobs"."locked_at" IS NULL
-          AND "delayed_jobs"."failed_at" IS NULL
-          AND "delayed_jobs"."run_at" <= '2025-11-10 17:20:13'
-        GROUP BY
-          CASE WHEN priority >= 0 AND priority < 10 THEN 0
-            WHEN priority >= 10 AND priority < 20 THEN 10
-            WHEN priority >= 20 AND priority < 30 THEN 20
-            WHEN priority >= 30 THEN 30
-          END,
-          "delayed_jobs"."queue"
-      SQL
+    it "runs the expected #{current_adapter} query for alert_age_percent" do
+      expect(query_for('alert_age_percent').formatted).to match_snapshot
     end
   end
 end

@@ -14,5 +14,6 @@ gem "rspec"
 gem "timecop"
 gem "zeitwerk"
 gem "sqlite3", ">= 2.1"
+gem "snapshot_testing"
 
 gemspec path: "../"
