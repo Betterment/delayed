@@ -25,7 +25,7 @@ jobs:
             gemfile: gemfiles/rails_8_0.gemfile
     services:
       postgres:
-        image: postgres
+        image: postgres:15
         env:
           POSTGRES_USER: runner
           POSTGRES_PASSWORD: postgres
@@ -40,7 +40,7 @@ jobs:
           # Maps tcp port 5432 on service container to the host
           - 5432:5432
       mysql:
-        image: mysql:5.7
+        image: mysql:9.5
         env:
           MYSQL_ALLOW_EMPTY_PASSWORD: yes
           MYSQL_DATABASE: delayed_job_test
