@@ -298,44 +298,16 @@ RSpec.describe Delayed::Monitor do
       QueryUnderTest.for(queries.first || raise("Expected a query for #{metric}, but none was executed"))
     end
 
-    it "runs the expected #{current_adapter} query for count" do
-      expect(query_for('count').formatted).to match_snapshot
-    end
+    described_class::METRICS.each do |metric|
+      context "('#{metric}')" do
+        it "runs the expected #{current_adapter} query for #{metric}" do
+          expect(query_for(metric).formatted).to match_snapshot
+        end
 
-    it "runs the expected #{current_adapter} query for future_count" do
-      expect(query_for('future_count').formatted).to match_snapshot
-    end
-
-    it "runs the expected #{current_adapter} query for locked_count" do
-      expect(query_for('locked_count').formatted).to match_snapshot
-    end
-
-    it "runs the expected #{current_adapter} query for erroring_count" do
-      expect(query_for('erroring_count').formatted).to match_snapshot
-    end
-
-    it "runs the expected #{current_adapter} query for failed_count" do
-      expect(query_for('failed_count').formatted).to match_snapshot
-    end
-
-    it "runs the expected #{current_adapter} query for max_lock_age" do
-      expect(query_for('max_lock_age').formatted).to match_snapshot
-    end
-
-    it "runs the expected #{current_adapter} query for max_age" do
-      expect(query_for('max_age').formatted).to match_snapshot
-    end
-
-    it "runs the expected #{current_adapter} query for working_count" do
-      expect(query_for('working_count').formatted).to match_snapshot
-    end
-
-    it "runs the expected #{current_adapter} query for workable_count" do
-      expect(query_for('workable_count').formatted).to match_snapshot
-    end
-
-    it "runs the expected #{current_adapter} query for alert_age_percent" do
-      expect(query_for('alert_age_percent').formatted).to match_snapshot
+        it "produces the expected #{current_adapter} query plan for #{metric}" do
+          expect(query_for(metric).explain).to match_snapshot
+        end
+      end
     end
   end
 end

@@ -211,11 +211,19 @@ describe Delayed::Job do
       expect(query.formatted).to match_snapshot
     end
 
+    it "generates the expected #{current_adapter} query plan" do
+      expect(query.explain).to match_snapshot
+    end
+
     context 'when a single queue is specified' do
       let(:queues) { %w(default) }
 
       it "generates the expected #{current_adapter} query for one queue" do
         expect(query.formatted).to match_snapshot
+      end
+
+      it "generates a #{current_adapter} query plan for one queue" do
+        expect(query.explain).to match_snapshot
       end
     end
 
@@ -224,6 +232,10 @@ describe Delayed::Job do
 
       it "generates the expected #{current_adapter} query for multiple queue" do
         expect(query.formatted).to match_snapshot
+      end
+
+      it "generates a #{current_adapter} query plan for multiple queues" do
+        expect(query.explain).to match_snapshot
       end
     end
   end
