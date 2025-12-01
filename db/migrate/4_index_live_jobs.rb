@@ -1,6 +1,8 @@
 class IndexLiveJobs < ActiveRecord::Migration[6.0]
+  include Delayed::Helpers::Migration
+
   # Concurrent index creation cannot be run inside a transaction:
-  disable_ddl_transaction! if connection.index_algorithms.key?(:concurrently)
+  disable_ddl_transaction! if concurrent_index_creation_supported?
 
   def change
     opts = {}
@@ -8,7 +10,7 @@ class IndexLiveJobs < ActiveRecord::Migration[6.0]
 
     # Postgres supports creating indexes concurrently,
     # which avoids locking the table while the index is building:
-    opts[:algorithm] = :concurrently if connection.index_algorithms.key?(:concurrently)
+    opts[:algorithm] = :concurrently if concurrent_index_creation_supported?
 
     if connection.supports_partial_index?
       # Postgres and SQLite both support partial indexes, allowing us to pre-filter out failed jobs:
@@ -18,6 +20,6 @@ class IndexLiveJobs < ActiveRecord::Migration[6.0]
       columns = %i(failed_at) + columns
     end
 
-    add_index :delayed_jobs, columns, **opts.merge(name: 'idx_delayed_jobs_live')
+    upsert_index :delayed_jobs, columns, **opts.merge(name: 'idx_delayed_jobs_live'), wait_timeout: 5.minutes
   end
 end
