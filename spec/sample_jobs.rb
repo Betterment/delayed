@@ -115,3 +115,13 @@ end
 class ActiveJobJob < ActiveJob::Base # rubocop:disable Rails/ApplicationJob
   def perform(*args, **kwargs); end
 end
+
+class RescuesStandardErrorJob
+  cattr_accessor(:runs) { 0 }
+  def perform
+    self.class.runs += 1
+    sleep 10
+  rescue StandardError => e
+    raise "Rescued: #{e.class}"
+  end
+end
