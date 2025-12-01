@@ -741,7 +741,7 @@ describe Delayed::Job do
         worker.perform(job)
         job.reload
 
-        expect((described_class.db_time_now + 99.minutes - job.run_at).abs).to be < 1
+        expect((described_class.db_time_now + 99.minutes - job.run_at).abs).to be_within(1).of(0.5)
       end
 
       it "does not fail when the triggered error doesn't have a message" do
