@@ -221,6 +221,24 @@ describe Delayed::Worker do
     end
   end
 
+  describe '.max_run_time' do
+    before { described_class.max_run_time = 1 }
+    after { RescuesStandardErrorJob.runs = 0 }
+
+    it 'times out and raises a WorkerTimeout that bypasses any StandardError rescuing' do
+      Delayed::Job.enqueue RescuesStandardErrorJob.new
+      described_class.new.work_off
+
+      expect(Delayed::Job.count).to eq 1
+      expect(RescuesStandardErrorJob.runs).to eq 1
+      Delayed::Job.first.tap do |job|
+        expect(job.attempts).to eq 1
+        expect(job.last_error).to match(/execution expired/)
+        expect(job.last_error).to match(/Delayed::Worker.max_run_time is only 1 second/)
+      end
+    end
+  end
+
   describe 'lifecycle callbacks' do
     let(:plugin) do
       Class.new(Delayed::Plugin) do
