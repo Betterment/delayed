@@ -81,7 +81,7 @@ module Delayed
     end
 
     def locked_count_grouped
-      jobs.claimed.count
+      @memo[:locked_count_grouped] ||= jobs.claimed.count
     end
 
     def erroring_count_grouped
@@ -115,9 +115,7 @@ module Delayed
       jobs.claimable.count
     end
 
-    def working_count_grouped
-      jobs.claimed.count
-    end
+    alias working_count_grouped locked_count_grouped
 
     def oldest_locked_job_grouped
       jobs.claimed.select("#{priority_case_statement} AS priority, queue, MIN(locked_at) AS locked_at")
