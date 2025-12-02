@@ -72,8 +72,10 @@ gem 'delayed'
 
 Then run `bundle install`.
 
-Before you can enqueue and run jobs, you will need a jobs table. You can create this table by
-running the following command:
+#### Database Setup
+
+Before you can enqueue and run jobs, you will need a `delayed_jobs` table. You
+can create this table by running the following command:
 
 ```bash
 rake delayed:install:migrations
@@ -81,11 +83,21 @@ rails db:migrate
 ```
 
 This will produce a series of migrations ready to be run in sequence.
-(Re-running the command should be safe and will **not** duplicate previous
-migrations, but if you have an existing `delayed_jobs` table, you may need to
-adjust the generated migrations to avoid conflicts.)
+(Re-running the command will **not** duplicate previous migrations, so you
+should aim to re-run it after each new release of the gem to pick up any new
+schema changes.)
 
-Then, to use this background job processor with ActiveJob, add the following to your application config:
+⚠️ **Important: If you already have an existing `delayed_jobs` table...** ⚠️
+- ...you may need to adjust the generated migrations to avoid conflicts.
+- ...you should inspect the migrations closely, as they are not guaranteed to be
+  "safe" to run with zero downtime. (We recommend using the
+  [strong_migrations](https://github.com/ankane/strong_migrations) gem to help
+  identify any unsafe operations, and at a certain scale all bets are off
+  without careful testing!)
+
+#### ActiveJob Setup
+
+To use this background job processor with ActiveJob, add the following to your application config:
 
 ```ruby
 config.active_job.queue_adapter = :delayed

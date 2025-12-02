@@ -75,6 +75,8 @@ ActiveRecord::Schema.define do
   CreateDelayedJobs.migrate(:up)
   AddNameToDelayedJobs.migrate(:up)
   AddIndexToDelayedJobsName.migrate(:up)
+  IndexLiveJobs.migrate(:up)
+  IndexFailedJobs.migrate(:up)
 
   create_table :stories, primary_key: :story_id, force: true do |table|
     table.string :text
@@ -270,15 +272,17 @@ QueryUnderTest = Struct.new(:sql, :connection) do
 
   def seed_rows!
     now = Delayed::Job.db_time_now
-    [true, false].repeated_combination(5).each_with_index do |(erroring, failed, locked, future), i|
-      Delayed::Job.create!(
-        run_at: now + (future ? i.minutes : -i.minutes),
-        queue: "queue_#{i}",
-        handler: "--- !ruby/object:SimpleJob\n",
-        attempts: erroring ? i : 0,
-        failed_at: failed ? now - i.minutes : nil,
-        locked_at: locked ? now - i.seconds : nil,
-      )
+    10.times do
+      [true, false].repeated_combination(5).each_with_index do |(erroring, failed, locked, future), i|
+        Delayed::Job.create!(
+          run_at: now + (future ? i.minutes : -i.minutes),
+          queue: "queue_#{i}",
+          handler: "--- !ruby/object:SimpleJob\n",
+          attempts: erroring ? i : 0,
+          failed_at: failed ? now - i.minutes : nil,
+          locked_at: locked ? now - i.seconds : nil,
+        )
+      end
     end
   end
 end
