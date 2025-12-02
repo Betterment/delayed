@@ -15,28 +15,42 @@ module Delayed
       end
 
       def upsert_index(table, columns, wait_timeout: 5.minutes, statement_timeout: 1.minute, lock_timeout: 5.seconds, **opts)
-        set_timeouts!(statement_timeout: statement_timeout, lock_timeout: lock_timeout)
+        columns_or_name = opts.slice(:name).presence || columns
 
-        loop do
-          begin
-            remove_index(table, name: opts[:name]) if index_exists?(table, columns, name: opts[:name])
-
-            reversible do |direction|
-              direction.up { add_index(table, columns, **opts) }
+        with_timeouts(statement_timeout: statement_timeout, lock_timeout: lock_timeout) do
+          loop do
+            reversible do |dir|
+              dir.up do
+                remove_index(table, columns_or_name) if index_exists?(table, columns_or_name)
+                add_index(table, columns, **opts)
+              end
+              dir.down { remove_index(table, columns_or_name) }
             end
 
             break
-          rescue StandardError => e
+          rescue ActiveRecord::LockWaitTimeout, ActiveRecord::StatementTimeout => e
+            raise if Delayed::Job.db_time_now - @migration_start > wait_timeout
+
             Delayed.logger.warn("Index creation failed for #{opts[:name]}: #{e.message}. Retrying...")
           end
-
-          break if Delayed::Job.db_time_now - @migration_start > wait_timeout
         end
+      end
+
+      def with_timeouts(statement_timeout:, lock_timeout:)
+        both_dirs { set_timeouts!(statement_timeout: statement_timeout, lock_timeout: lock_timeout) }
+        yield
       ensure
-        set_timeouts!(statement_timeout: nil, lock_timeout: nil)
+        both_dirs { set_timeouts!(statement_timeout: nil, lock_timeout: nil) }
       end
 
       private
+
+      def both_dirs(&block)
+        reversible do |dir|
+          dir.up(&block)
+          dir.down(&block)
+        end
+      end
 
       def set_timeouts!(statement_timeout:, lock_timeout:)
         case connection.adapter_name
