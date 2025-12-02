@@ -1,6 +1,9 @@
 class IndexLiveJobs < ActiveRecord::Migration[6.0]
   include Delayed::Helpers::Migration
 
+  # Set to the maximum amount of time you want this migration to run:
+  WAIT_TIMEOUT = 5.minutes
+
   # Concurrent index creation cannot be run inside a transaction:
   disable_ddl_transaction! if concurrent_index_creation_supported?
 
@@ -20,6 +23,6 @@ class IndexLiveJobs < ActiveRecord::Migration[6.0]
       columns = %i(failed_at) + columns
     end
 
-    upsert_index :delayed_jobs, columns, **opts.merge(name: 'idx_delayed_jobs_live'), wait_timeout: 5.minutes
+    upsert_index :delayed_jobs, columns, wait_timeout: WAIT_TIMEOUT, name: 'idx_delayed_jobs_live', **opts
   end
 end
