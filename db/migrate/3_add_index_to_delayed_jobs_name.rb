@@ -1,11 +1,11 @@
 class AddIndexToDelayedJobsName < ActiveRecord::Migration[6.0]
-  disable_ddl_transaction!
+  include Delayed::Helpers::Migration
+
+  disable_ddl_transaction! if concurrent_index_creation_supported?
 
   def change
-    if connection.adapter_name == 'PostgreSQL'
-      add_index :delayed_jobs, :name, algorithm: :concurrently
-    else
-      add_index :delayed_jobs, :name
-    end
+    opts = {}
+    opts[:algorithm] = :concurrently if concurrent_index_creation_supported?
+    upsert_index :delayed_jobs, :name, **opts
   end
 end
