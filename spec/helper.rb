@@ -70,7 +70,11 @@ end
 Dir['db/migrate/*.rb'].each { |f| require_relative("../#{f}") }
 
 ActiveRecord::Schema.define do
-  drop_table :delayed_jobs, if_exists: true
+  if ActiveRecord::VERSION::MAJOR >= 7
+    drop_table :delayed_jobs, if_exists: true
+  elsif ActiveRecord::Base.connection.table_exists?(:delayed_jobs)
+    drop_table :delayed_jobs
+  end
 
   CreateDelayedJobs.migrate(:up)
   AddNameToDelayedJobs.migrate(:up)
