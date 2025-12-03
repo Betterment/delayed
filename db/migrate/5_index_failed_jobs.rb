@@ -20,7 +20,6 @@ class IndexFailedJobs < ActiveRecord::Migration[6.0]
     # To aid in monitoring, this adds a separate (smaller) index for failed jobs:
     opts.merge!(name: 'idx_delayed_jobs_failed', where: 'failed_at IS NOT NULL')
 
-    # Set wait_timeout to the maximum amount of time you want this migration to run:
     upsert_index :delayed_jobs, %i(priority queue), wait_timeout: WAIT_TIMEOUT, **opts
   end
 end
