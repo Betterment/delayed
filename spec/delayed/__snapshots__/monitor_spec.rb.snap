@@ -155,7 +155,8 @@ SELECT (CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
     AND \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
   GROUP BY CASE WHEN priority >= 0
@@ -209,7 +210,8 @@ SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"delayed_jobs\".\"queue\" AS delayed_jobs_queue
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
     AND \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
   GROUP BY CASE WHEN priority >= 0
@@ -237,7 +239,8 @@ SELECT (CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
     AND \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
   GROUP BY CASE WHEN priority >= 0
@@ -376,7 +379,8 @@ SELECT (CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
     AND \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
   GROUP BY CASE WHEN priority >= 0
@@ -415,7 +419,8 @@ SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"delayed_jobs\".\"queue\" AS delayed_jobs_queue
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
     AND \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
   GROUP BY CASE WHEN priority >= 0
@@ -435,7 +440,8 @@ SELECT (CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
     AND \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
   GROUP BY CASE WHEN priority >= 0
@@ -577,7 +583,8 @@ SELECT (CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at
   FROM `delayed_jobs`
-  WHERE (`delayed_jobs`.`locked_at` IS NULL OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
+  WHERE (`delayed_jobs`.`locked_at` IS NULL
+    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
     AND `delayed_jobs`.`failed_at` IS NULL
     AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
   GROUP BY CASE WHEN priority >= 0
@@ -620,7 +627,8 @@ SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, `delayed_jobs`.`queue` AS delayed_jobs_queue
   FROM `delayed_jobs`
-  WHERE (`delayed_jobs`.`locked_at` IS NULL OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
+  WHERE (`delayed_jobs`.`locked_at` IS NULL
+    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
     AND `delayed_jobs`.`failed_at` IS NULL
     AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
   GROUP BY CASE WHEN priority >= 0
@@ -642,7 +650,8 @@ SELECT (CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at
   FROM `delayed_jobs`
-  WHERE (`delayed_jobs`.`locked_at` IS NULL OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
+  WHERE (`delayed_jobs`.`locked_at` IS NULL
+    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
     AND `delayed_jobs`.`failed_at` IS NULL
     AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
   GROUP BY CASE WHEN priority >= 0

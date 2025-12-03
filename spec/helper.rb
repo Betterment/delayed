@@ -237,7 +237,7 @@ QueryUnderTest = Struct.new(:sql, :connection) do
     sql.squish
       # basic formatting for easier git diffing
       .gsub(/ (SELECT|FROM|WHERE|GROUP BY|ORDER BY) /) { "\n  #{Regexp.last_match(1).strip} " }
-      .gsub(' AND ', "\n    AND ")
+      .gsub(/ (AND|OR) /) { "\n    #{Regexp.last_match(1).strip} " }
       # normalize and truncate 'AS' names/aliases (changes across Rails versions)
       .gsub(/AS ("|`)?(\w+)("|`)?/) { "AS #{Regexp.last_match(2)[0...63]}" }
   end
