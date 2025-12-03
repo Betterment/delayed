@@ -94,7 +94,7 @@ RSpec.describe Delayed::Monitor do
   end
 
   context 'when there are jobs in the queue' do
-    let(:now) { Time.now.change(nsec: 0) } # rubocop:disable Rails/TimeZone
+    let(:now) { Delayed::Job.db_time_now.change(nsec: 0) }
     let(:job_attributes) do
       {
         run_at: now,
@@ -103,10 +103,10 @@ RSpec.describe Delayed::Monitor do
         attempts: 0,
       }
     end
-    let(:failed_attributes) { { run_at: now - 1.week, last_error: '123', failed_at: now - 1.day, attempts: 4, locked_at: now - 1.day } }
-    let(:p0_attributes) { job_attributes.merge(priority: 1) }
+    let(:failed_attributes) { { run_at: now - 1.week, last_error: '123', failed_at: now - 1.day } }
+    let(:p0_attributes) { job_attributes.merge(priority: 1, last_error: '123') }
     let(:p10_attributes) { job_attributes.merge(priority: 13) }
-    let(:p20_attributes) { job_attributes.merge(priority: 23) }
+    let(:p20_attributes) { job_attributes.merge(priority: 23, last_error: '123') }
     let(:p30_attributes) { job_attributes.merge(priority: 999) }
     let(:p0_payload) { default_payload.merge(priority: 'interactive') }
     let(:p10_payload) { default_payload.merge(priority: 'user_visible') }
@@ -139,8 +139,8 @@ RSpec.describe Delayed::Monitor do
         .to emit_notification("delayed.monitor.run").with_payload(default_payload.except(:queue))
         .and emit_notification("delayed.job.count").with_payload(p0_payload).with_value(4)
         .and emit_notification("delayed.job.future_count").with_payload(p0_payload).with_value(1)
-        .and emit_notification("delayed.job.locked_count").with_payload(p0_payload).with_value(2)
-        .and emit_notification("delayed.job.erroring_count").with_payload(p0_payload).with_value(1)
+        .and emit_notification("delayed.job.locked_count").with_payload(p0_payload).with_value(1)
+        .and emit_notification("delayed.job.erroring_count").with_payload(p0_payload).with_value(3)
         .and emit_notification("delayed.job.failed_count").with_payload(p0_payload).with_value(1)
         .and emit_notification("delayed.job.working_count").with_payload(p0_payload).with_value(1)
         .and emit_notification("delayed.job.workable_count").with_payload(p0_payload).with_value(1)
@@ -149,8 +149,8 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.alert_age_percent").with_payload(p0_payload).with_value(30.0.seconds / 1.minute * 100)
         .and emit_notification("delayed.job.count").with_payload(p10_payload).with_value(4)
         .and emit_notification("delayed.job.future_count").with_payload(p10_payload).with_value(1)
-        .and emit_notification("delayed.job.locked_count").with_payload(p10_payload).with_value(2)
-        .and emit_notification("delayed.job.erroring_count").with_payload(p10_payload).with_value(1)
+        .and emit_notification("delayed.job.locked_count").with_payload(p10_payload).with_value(1)
+        .and emit_notification("delayed.job.erroring_count").with_payload(p10_payload).with_value(0)
         .and emit_notification("delayed.job.failed_count").with_payload(p10_payload).with_value(1)
         .and emit_notification("delayed.job.working_count").with_payload(p10_payload).with_value(1)
         .and emit_notification("delayed.job.workable_count").with_payload(p10_payload).with_value(1)
@@ -159,8 +159,8 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.alert_age_percent").with_payload(p10_payload).with_value(2.0.minutes / 3.minutes * 100)
         .and emit_notification("delayed.job.count").with_payload(p20_payload).with_value(4)
         .and emit_notification("delayed.job.future_count").with_payload(p20_payload).with_value(1)
-        .and emit_notification("delayed.job.locked_count").with_payload(p20_payload).with_value(2)
-        .and emit_notification("delayed.job.erroring_count").with_payload(p20_payload).with_value(1)
+        .and emit_notification("delayed.job.locked_count").with_payload(p20_payload).with_value(1)
+        .and emit_notification("delayed.job.erroring_count").with_payload(p20_payload).with_value(3)
         .and emit_notification("delayed.job.failed_count").with_payload(p20_payload).with_value(1)
         .and emit_notification("delayed.job.working_count").with_payload(p20_payload).with_value(1)
         .and emit_notification("delayed.job.workable_count").with_payload(p20_payload).with_value(1)
@@ -169,8 +169,8 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.alert_age_percent").with_payload(p20_payload).with_value(1.hour / 1.5.hours * 100)
         .and emit_notification("delayed.job.count").with_payload(p30_payload).with_value(4)
         .and emit_notification("delayed.job.future_count").with_payload(p30_payload).with_value(1)
-        .and emit_notification("delayed.job.locked_count").with_payload(p30_payload).with_value(2)
-        .and emit_notification("delayed.job.erroring_count").with_payload(p30_payload).with_value(1)
+        .and emit_notification("delayed.job.locked_count").with_payload(p30_payload).with_value(1)
+        .and emit_notification("delayed.job.erroring_count").with_payload(p30_payload).with_value(0)
         .and emit_notification("delayed.job.failed_count").with_payload(p30_payload).with_value(1)
         .and emit_notification("delayed.job.working_count").with_payload(p30_payload).with_value(1)
         .and emit_notification("delayed.job.workable_count").with_payload(p30_payload).with_value(1)
@@ -196,8 +196,8 @@ RSpec.describe Delayed::Monitor do
           .to emit_notification("delayed.monitor.run").with_payload(default_payload.except(:queue))
           .and emit_notification("delayed.job.count").with_payload(p0_payload).with_value(8)
           .and emit_notification("delayed.job.future_count").with_payload(p0_payload).with_value(2)
-          .and emit_notification("delayed.job.locked_count").with_payload(p0_payload).with_value(4)
-          .and emit_notification("delayed.job.erroring_count").with_payload(p0_payload).with_value(2)
+          .and emit_notification("delayed.job.locked_count").with_payload(p0_payload).with_value(2)
+          .and emit_notification("delayed.job.erroring_count").with_payload(p0_payload).with_value(3)
           .and emit_notification("delayed.job.failed_count").with_payload(p0_payload).with_value(2)
           .and emit_notification("delayed.job.working_count").with_payload(p0_payload).with_value(2)
           .and emit_notification("delayed.job.workable_count").with_payload(p0_payload).with_value(2)
@@ -206,8 +206,8 @@ RSpec.describe Delayed::Monitor do
           .and emit_notification("delayed.job.alert_age_percent").with_payload(p0_payload).with_value(0)
           .and emit_notification("delayed.job.count").with_payload(p20_payload).with_value(8)
           .and emit_notification("delayed.job.future_count").with_payload(p20_payload).with_value(2)
-          .and emit_notification("delayed.job.locked_count").with_payload(p20_payload).with_value(4)
-          .and emit_notification("delayed.job.erroring_count").with_payload(p20_payload).with_value(2)
+          .and emit_notification("delayed.job.locked_count").with_payload(p20_payload).with_value(2)
+          .and emit_notification("delayed.job.erroring_count").with_payload(p20_payload).with_value(3)
           .and emit_notification("delayed.job.failed_count").with_payload(p20_payload).with_value(2)
           .and emit_notification("delayed.job.working_count").with_payload(p20_payload).with_value(2)
           .and emit_notification("delayed.job.workable_count").with_payload(p20_payload).with_value(2)
