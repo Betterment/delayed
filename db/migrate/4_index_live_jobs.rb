@@ -9,7 +9,7 @@ class IndexLiveJobs < ActiveRecord::Migration[6.0]
 
   def change
     opts = {}
-    columns = %i(priority run_at queue attempts)
+    columns = %i(priority run_at locked_at queue attempts)
 
     # Postgres supports creating indexes concurrently,
     # which avoids locking the table while the index is building:
@@ -22,6 +22,11 @@ class IndexLiveJobs < ActiveRecord::Migration[6.0]
       # If partial indexes aren't supported, failed_at will be included in the primary index:
       columns = %i(failed_at) + columns
     end
+
+    # On PostgreSQL, we do not index `locked_at` or `locked_by` to optimize for HOT updates during pickup.
+    # See: https://www.postgresql.org/docs/current/storage-hot.html
+    # (On other databases, we can include `locked_at` to allow for more "covering" index lookups)
+    columns -= %i(locked_at) if connection.adapter_name == 'PostgreSQL'
 
     upsert_index :delayed_jobs, columns, wait_timeout: WAIT_TIMEOUT, name: 'idx_delayed_jobs_live', **opts
   end
