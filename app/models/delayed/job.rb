@@ -15,7 +15,7 @@ module Delayed
 
     # claim/lock states
     scope :claimed, -> { where(arel_table[:locked_at].gteq(db_time_now - lock_timeout)).merge(unscoped.live) }
-    scope :claimed_by, ->(worker) { where(locked_by: worker.name).merge(unscoped.live) }
+    scope :claimed_by, ->(worker) { where(locked_by: worker.name).claimed.merge(unscoped.live) }
     scope :unclaimed, -> { where(locked_at: nil).or(where(arel_table[:locked_at].lt(db_time_now - lock_timeout))).merge(unscoped.live) }
 
     # run_at states
