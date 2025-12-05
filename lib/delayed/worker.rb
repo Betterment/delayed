@@ -83,7 +83,7 @@ module Delayed
     end
 
     def on_exit!
-      Delayed::Job.clear_locks!(name)
+      Delayed::Job.clear_locks!(self)
     end
 
     # Do num jobs and return stats on success/failure.

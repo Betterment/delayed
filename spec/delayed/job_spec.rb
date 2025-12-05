@@ -240,6 +240,22 @@ describe Delayed::Job do
     end
   end
 
+  describe '.claimed_by' do
+    let(:now) { '2025-11-10 17:20:13 UTC' }
+    let(:worker) { instance_double(Delayed::Worker, name: "worker1") }
+    let(:query) { QueryUnderTest.for(described_class.claimed_by(worker).select(:locked_at, :locked_by)) }
+
+    around { |example| Timecop.freeze(now) { example.run } }
+
+    it "generates a well-scoped #{current_adapter} query" do
+      expect(query.formatted).to match_snapshot
+    end
+
+    it "generates an efficient #{current_adapter} query plan" do
+      expect(query.explain).to match_snapshot
+    end
+  end
+
   describe '.lock_timeout' do
     it 'changes relative to Worker.max_run_time' do
       Delayed::Worker.max_run_time = 5.minutes
@@ -465,18 +481,24 @@ describe Delayed::Job do
   end
 
   context 'clear_locks!' do
-    before do
-      @job = create_job(locked_by: 'worker1', locked_at: described_class.db_time_now)
+    let(:worker) do
+      instance_double(Delayed::Worker, name: "worker1", read_ahead: 1, max_claims: 1, min_priority: nil, max_priority: nil, queues: [])
+    end
+    let(:different_worker) do
+      instance_double(Delayed::Worker, name: "worker2", read_ahead: 1, max_claims: 1, min_priority: nil, max_priority: nil, queues: [])
     end
 
     it 'clears locks for the given worker' do
-      described_class.clear_locks!('worker1')
-      expect(described_class.reserve(worker)).to eq([@job])
+      job = create_job(locked_by: 'worker1', locked_at: described_class.db_time_now)
+      described_class.clear_locks!(worker)
+      expect(described_class.reserve(different_worker)).to eq([job])
     end
 
     it 'does not clear locks for other workers' do
-      described_class.clear_locks!('different_worker')
-      expect(described_class.reserve(worker)).not_to include(@job)
+      job = create_job(locked_by: 'worker1', locked_at: described_class.db_time_now)
+      described_class.clear_locks!(different_worker)
+      expect(described_class.reserve(different_worker)).not_to include(job)
+      expect(described_class.reserve(worker)).to eq([job])
     end
   end
 

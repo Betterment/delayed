@@ -51,8 +51,8 @@ module Delayed
     end
 
     # When a worker is exiting, make sure we don't have any locked jobs.
-    def self.clear_locks!(worker_name)
-      where(locked_by: worker_name).update_all(locked_by: nil, locked_at: nil)
+    def self.clear_locks!(worker)
+      claimed_by(worker).update_all(locked_by: nil, locked_at: nil)
     end
 
     def self.reserve(worker)
