@@ -119,7 +119,7 @@ SNAP
 
 snapshots["generates the expected mysql2 query plan 1"] = <<-SNAP
 -> Filter: (((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or ((delayed_jobs.locked_by = 'worker1') and (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
-    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: (delayed_jobs.failed_at is null)  (cost=...)
+    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null))  (cost=...)
 SNAP
 
 snapshots["generates the expected mysql2 query for one queue 1"] = <<-SNAP
@@ -137,7 +137,7 @@ SNAP
 
 snapshots["generates a mysql2 query plan for one queue 1"] = <<-SNAP
 -> Filter: (((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or ((delayed_jobs.locked_by = 'worker1') and (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
-    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.queue = 'default') and (delayed_jobs.failed_at is null))  (cost=...)
+    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.queue = 'default') and (((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null))  (cost=...)
 SNAP
 
 snapshots["generates the expected mysql2 query for multiple queue 1"] = <<-SNAP
@@ -155,5 +155,5 @@ SNAP
 
 snapshots["generates a mysql2 query plan for multiple queues 1"] = <<-SNAP
 -> Filter: (((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or ((delayed_jobs.locked_by = 'worker1') and (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
-    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.failed_at is null) and (delayed_jobs.queue in ('default','mailers','tracking')))  (cost=...)
+    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.queue in ('default','mailers','tracking')))  (cost=...)
 SNAP

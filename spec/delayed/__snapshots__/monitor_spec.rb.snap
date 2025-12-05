@@ -511,8 +511,8 @@ SNAP
 snapshots["produces the expected mysql2 query plan for locked_count 1"] = <<-SNAP
 -> Table scan on <temporary>
     -> Aggregate using temporary table
-        -> Filter: (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')  (cost=...)
-            -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: (delayed_jobs.failed_at is null)  (cost=...)
+        -> Filter: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null))  (cost=...)
+            -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for erroring_count 1"] = <<-SNAP
@@ -573,8 +573,8 @@ SNAP
 snapshots["produces the expected mysql2 query plan for max_lock_age 1"] = <<-SNAP
 -> Table scan on <temporary>
     -> Aggregate using temporary table
-        -> Filter: (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')  (cost=...)
-            -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: (delayed_jobs.failed_at is null)  (cost=...)
+        -> Filter: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null))  (cost=...)
+            -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for max_age 1"] = <<-SNAP
@@ -596,8 +596,8 @@ SNAP
 snapshots["produces the expected mysql2 query plan for max_age 1"] = <<-SNAP
 -> Table scan on <temporary>
     -> Aggregate using temporary table
-        -> Filter: ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))  (cost=...)
-            -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+        -> Filter: (((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+            -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for working_count 1"] = <<-SNAP
@@ -617,8 +617,8 @@ SNAP
 snapshots["produces the expected mysql2 query plan for working_count 1"] = <<-SNAP
 -> Table scan on <temporary>
     -> Aggregate using temporary table
-        -> Filter: (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')  (cost=...)
-            -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: (delayed_jobs.failed_at is null)  (cost=...)
+        -> Filter: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null))  (cost=...)
+            -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for workable_count 1"] = <<-SNAP
@@ -640,8 +640,8 @@ SNAP
 snapshots["produces the expected mysql2 query plan for workable_count 1"] = <<-SNAP
 -> Table scan on <temporary>
     -> Aggregate using temporary table
-        -> Filter: ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))  (cost=...)
-            -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+        -> Filter: (((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+            -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for alert_age_percent 1"] = <<-SNAP
@@ -663,6 +663,6 @@ SNAP
 snapshots["produces the expected mysql2 query plan for alert_age_percent 1"] = <<-SNAP
 -> Table scan on <temporary>
     -> Aggregate using temporary table
-        -> Filter: ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))  (cost=...)
-            -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+        -> Filter: (((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+            -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 SNAP

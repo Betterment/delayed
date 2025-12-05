@@ -81,6 +81,7 @@ ActiveRecord::Schema.define do
   AddIndexToDelayedJobsName.migrate(:up)
   IndexLiveJobs.migrate(:up)
   IndexFailedJobs.migrate(:up)
+  SetPostgresFillfactor.migrate(:up)
 
   create_table :stories, primary_key: :story_id, force: true do |table|
     table.string :text
