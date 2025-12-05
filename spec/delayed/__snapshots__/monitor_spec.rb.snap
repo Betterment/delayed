@@ -79,7 +79,7 @@ SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"delayed_jobs\".\"queue\" AS delayed_jobs_queue
   FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"last_error\" IS NOT NULL
+  WHERE \"delayed_jobs\".\"attempts\" > 0
     AND \"delayed_jobs\".\"failed_at\" IS NULL
   GROUP BY CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -94,9 +94,9 @@ GroupAggregate  (cost=...)
   ->  Sort  (cost=...)
         Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
         Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
-        ->  Index Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
+        ->  Index Only Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
               Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
-              Filter: (delayed_jobs.last_error IS NOT NULL)
+              Index Cond: (delayed_jobs.attempts > 0)
 SNAP
 
 snapshots["runs the expected postgresql query for failed_count 1"] = <<-SNAP
@@ -323,7 +323,7 @@ SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"delayed_jobs\".\"queue\" AS delayed_jobs_queue
   FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"last_error\" IS NOT NULL
+  WHERE \"delayed_jobs\".\"attempts\" > 0
     AND \"delayed_jobs\".\"failed_at\" IS NULL
   GROUP BY CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -521,7 +521,7 @@ SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 20 THEN 10 WHEN priority >= 20
     AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, `delayed_jobs`.`queue` AS delayed_jobs_queue
   FROM `delayed_jobs`
-  WHERE `delayed_jobs`.`last_error` IS NOT NULL
+  WHERE `delayed_jobs`.`attempts` > 0
     AND `delayed_jobs`.`failed_at` IS NULL
   GROUP BY CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -532,8 +532,8 @@ SNAP
 snapshots["produces the expected mysql2 query plan for erroring_count 1"] = <<-SNAP
 -> Table scan on <temporary>
     -> Aggregate using temporary table
-        -> Filter: (delayed_jobs.last_error is not null)  (cost=...)
-            -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: (delayed_jobs.failed_at is null)  (cost=...)
+        -> Filter: ((delayed_jobs.attempts > 0) and (delayed_jobs.failed_at is null))  (cost=...)
+            -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for failed_count 1"] = <<-SNAP

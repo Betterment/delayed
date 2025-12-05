@@ -11,7 +11,7 @@ module Delayed
     # high-level queue states
     scope :live, -> { where(failed_at: nil) }
     scope :failed, -> { where.not(failed_at: nil) }
-    scope :erroring, -> { where.not(last_error: nil).merge(unscoped.live) }
+    scope :erroring, -> { where(arel_table[:attempts].gt(0)).merge(unscoped.live) }
 
     # claim/lock states
     scope :claimed, -> { where(arel_table[:locked_at].gteq(db_time_now - lock_timeout)).merge(unscoped.live) }
