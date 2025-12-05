@@ -76,12 +76,26 @@ ActiveRecord::Schema.define do
     drop_table :delayed_jobs
   end
 
-  CreateDelayedJobs.migrate(:up)
-  AddNameToDelayedJobs.migrate(:up)
+  # Let's prove reversibility when we set up our test DB:
+  def run_migration(klass)
+    klass.migrate(:up)
+    klass.migrate(:down)
+    klass.migrate(:up)
+  end
+
+  run_migration(CreateDelayedJobs)
+  run_migration(AddNameToDelayedJobs)
+  run_migration(AddIndexToDelayedJobsName)
+  run_migration(IndexLiveJobs)
+  run_migration(IndexFailedJobs)
+  run_migration(SetPostgresFillfactor)
+  run_migration(RemoveLegacyIndex)
+
+  # Test that these index migrations can be re-applied idempotently.
+  # (In case identical indexes had been manually applied previously.)
   AddIndexToDelayedJobsName.migrate(:up)
   IndexLiveJobs.migrate(:up)
   IndexFailedJobs.migrate(:up)
-  SetPostgresFillfactor.migrate(:up)
   RemoveLegacyIndex.migrate(:up)
 
   create_table :stories, primary_key: :story_id, force: true do |table|

@@ -15,13 +15,13 @@ module Delayed
       end
 
       def upsert_index(*args, **opts)
-        dir(:both) { _drop_index_if_exists(*args, **opts) }
+        dir(:both) { _drop_index_if_exists(*args) }
         dir(:up) { _add_index(*args, **opts) }
       end
 
       def remove_index_if_exists(*args, **opts)
         dir(:down) { _add_index(*args, **opts) }
-        dir(:both) { _drop_index_if_exists(*args, **opts) }
+        dir(:both) { _drop_index_if_exists(*args) }
       end
 
       def with_retry_loop(wait_timeout: 5.minutes, **opts)
@@ -52,10 +52,9 @@ module Delayed
         end
       end
 
-      def _drop_index_if_exists(table, columns = nil, wait_timeout: nil, statement_timeout: nil, lock_timeout: nil, **opts)
-        columns_or_name = opts.slice(:name).presence || columns
+      def _drop_index_if_exists(table, columns = nil, wait_timeout: nil, statement_timeout: nil, lock_timeout: nil)
         with_retry_loop(wait_timeout: wait_timeout, statement_timeout: statement_timeout, lock_timeout: lock_timeout) do
-          remove_index(table, columns_or_name) if index_exists?(table, columns_or_name)
+          remove_index(table, columns) if index_exists?(table, columns)
         end
       end
 
