@@ -1,30 +1,31 @@
 snapshots["generates the expected postgresql query 1"] = <<-SNAP
 SELECT \"delayed_jobs\".*
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
+    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
     AND (\"delayed_jobs\".\"locked_at\" IS NULL
-    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43'
     OR \"delayed_jobs\".\"locked_by\" = 'worker1'
     AND \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43')
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
   ORDER BY \"delayed_jobs\".\"priority\" ASC, \"delayed_jobs\".\"run_at\" ASC
 SNAP
 
 snapshots["generates the expected postgresql query plan 1"] = <<-SNAP
 Index Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
   Output: id, priority, attempts, handler, last_error, run_at, locked_at, failed_at, locked_by, queue, created_at, updated_at, name
-  Filter: (((delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone) AND ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone))) OR (((delayed_jobs.locked_by)::text = 'worker1'::text) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone)))
+  Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
+  Filter: ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone) OR (((delayed_jobs.locked_by)::text = 'worker1'::text) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone)))
 SNAP
 
 snapshots["generates the expected postgresql query for one queue 1"] = <<-SNAP
 SELECT \"delayed_jobs\".*
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
+    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
     AND (\"delayed_jobs\".\"locked_at\" IS NULL
-    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43'
     OR \"delayed_jobs\".\"locked_by\" = 'worker1'
     AND \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43')
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"queue\" = 'default'
   ORDER BY \"delayed_jobs\".\"priority\" ASC, \"delayed_jobs\".\"run_at\" ASC
 SNAP
@@ -32,19 +33,19 @@ SNAP
 snapshots["generates a postgresql query plan for one queue 1"] = <<-SNAP
 Index Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
   Output: id, priority, attempts, handler, last_error, run_at, locked_at, failed_at, locked_by, queue, created_at, updated_at, name
-  Index Cond: ((delayed_jobs.queue)::text = 'default'::text)
-  Filter: (((delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone) AND ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone))) OR (((delayed_jobs.locked_by)::text = 'worker1'::text) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone)))
+  Index Cond: ((delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone) AND ((delayed_jobs.queue)::text = 'default'::text))
+  Filter: ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone) OR (((delayed_jobs.locked_by)::text = 'worker1'::text) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone)))
 SNAP
 
 snapshots["generates the expected postgresql query for multiple queue 1"] = <<-SNAP
 SELECT \"delayed_jobs\".*
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
+    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
     AND (\"delayed_jobs\".\"locked_at\" IS NULL
-    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43'
     OR \"delayed_jobs\".\"locked_by\" = 'worker1'
     AND \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43')
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"queue\" IN ('default', 'mailers', 'tracking')
   ORDER BY \"delayed_jobs\".\"priority\" ASC, \"delayed_jobs\".\"run_at\" ASC
 SNAP
@@ -52,7 +53,8 @@ SNAP
 snapshots["generates a postgresql query plan for multiple queues 1"] = <<-SNAP
 Index Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
   Output: id, priority, attempts, handler, last_error, run_at, locked_at, failed_at, locked_by, queue, created_at, updated_at, name
-  Filter: (((delayed_jobs.queue)::text = ANY ('{default,mailers,tracking}'::text[])) AND (((delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone) AND ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone))) OR (((delayed_jobs.locked_by)::text = 'worker1'::text) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone))))
+  Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
+  Filter: (((delayed_jobs.queue)::text = ANY ('{default,mailers,tracking}'::text[])) AND ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone) OR (((delayed_jobs.locked_by)::text = 'worker1'::text) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone))))
 SNAP
 
 snapshots["generates a well-scoped postgresql query 1"] = <<-SNAP
@@ -61,23 +63,25 @@ SELECT \"delayed_jobs\".\"locked_at\", \"delayed_jobs\".\"locked_by\"
   WHERE \"delayed_jobs\".\"locked_by\" = 'worker1'
     AND \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43'
     AND \"delayed_jobs\".\"failed_at\" IS NULL
+    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
 SNAP
 
 snapshots["generates an efficient postgresql query plan 1"] = <<-SNAP
 Index Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
   Output: locked_at, locked_by
+  Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
   Filter: ((delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone) AND ((delayed_jobs.locked_by)::text = 'worker1'::text))
 SNAP
 
 snapshots["generates the expected sqlite3 query 1"] = <<-SNAP
 SELECT \"delayed_jobs\".*
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
+    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
     AND (\"delayed_jobs\".\"locked_at\" IS NULL
-    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43'
     OR \"delayed_jobs\".\"locked_by\" = 'worker1'
     AND \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43')
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
   ORDER BY \"delayed_jobs\".\"priority\" ASC, \"delayed_jobs\".\"run_at\" ASC
 SNAP
 
@@ -88,12 +92,12 @@ SNAP
 snapshots["generates the expected sqlite3 query for one queue 1"] = <<-SNAP
 SELECT \"delayed_jobs\".*
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
+    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
     AND (\"delayed_jobs\".\"locked_at\" IS NULL
-    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43'
     OR \"delayed_jobs\".\"locked_by\" = 'worker1'
     AND \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43')
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"queue\" = 'default'
   ORDER BY \"delayed_jobs\".\"priority\" ASC, \"delayed_jobs\".\"run_at\" ASC
 SNAP
@@ -105,12 +109,12 @@ SNAP
 snapshots["generates the expected sqlite3 query for multiple queue 1"] = <<-SNAP
 SELECT \"delayed_jobs\".*
   FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
+    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
     AND (\"delayed_jobs\".\"locked_at\" IS NULL
-    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43'
     OR \"delayed_jobs\".\"locked_by\" = 'worker1'
     AND \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43')
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"queue\" IN ('default', 'mailers', 'tracking')
   ORDER BY \"delayed_jobs\".\"priority\" ASC, \"delayed_jobs\".\"run_at\" ASC
 SNAP
@@ -125,6 +129,7 @@ SELECT \"delayed_jobs\".\"locked_at\", \"delayed_jobs\".\"locked_by\"
   WHERE \"delayed_jobs\".\"locked_by\" = 'worker1'
     AND \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43'
     AND \"delayed_jobs\".\"failed_at\" IS NULL
+    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
 SNAP
 
 snapshots["generates an efficient sqlite3 query plan 1"] = <<-SNAP
@@ -134,54 +139,54 @@ SNAP
 snapshots["generates the expected mysql2 query 1"] = <<-SNAP
 SELECT `delayed_jobs`.*
   FROM `delayed_jobs`
-  WHERE (`delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
+  WHERE `delayed_jobs`.`failed_at` IS NULL
+    AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
     AND (`delayed_jobs`.`locked_at` IS NULL
-    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
+    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43'
     OR `delayed_jobs`.`locked_by` = 'worker1'
     AND `delayed_jobs`.`locked_at` >= '2025-11-10 16:59:43')
-    AND `delayed_jobs`.`failed_at` IS NULL
   ORDER BY `delayed_jobs`.`priority` ASC, `delayed_jobs`.`run_at` ASC
 SNAP
 
 snapshots["generates the expected mysql2 query plan 1"] = <<-SNAP
--> Filter: (((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or ((delayed_jobs.locked_by = 'worker1') and (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
-    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null))  (cost=...)
+-> Filter: ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43') or ((delayed_jobs.locked_by = 'worker1') and (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
+    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43') or (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
 SNAP
 
 snapshots["generates the expected mysql2 query for one queue 1"] = <<-SNAP
 SELECT `delayed_jobs`.*
   FROM `delayed_jobs`
-  WHERE (`delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
+  WHERE `delayed_jobs`.`failed_at` IS NULL
+    AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
     AND (`delayed_jobs`.`locked_at` IS NULL
-    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
+    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43'
     OR `delayed_jobs`.`locked_by` = 'worker1'
     AND `delayed_jobs`.`locked_at` >= '2025-11-10 16:59:43')
-    AND `delayed_jobs`.`failed_at` IS NULL
     AND `delayed_jobs`.`queue` = 'default'
   ORDER BY `delayed_jobs`.`priority` ASC, `delayed_jobs`.`run_at` ASC
 SNAP
 
 snapshots["generates a mysql2 query plan for one queue 1"] = <<-SNAP
--> Filter: (((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or ((delayed_jobs.locked_by = 'worker1') and (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
-    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.queue = 'default') and (((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null))  (cost=...)
+-> Filter: ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43') or ((delayed_jobs.locked_by = 'worker1') and (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
+    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.queue = 'default') and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43') or (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
 SNAP
 
 snapshots["generates the expected mysql2 query for multiple queue 1"] = <<-SNAP
 SELECT `delayed_jobs`.*
   FROM `delayed_jobs`
-  WHERE (`delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
+  WHERE `delayed_jobs`.`failed_at` IS NULL
+    AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
     AND (`delayed_jobs`.`locked_at` IS NULL
-    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
+    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43'
     OR `delayed_jobs`.`locked_by` = 'worker1'
     AND `delayed_jobs`.`locked_at` >= '2025-11-10 16:59:43')
-    AND `delayed_jobs`.`failed_at` IS NULL
     AND `delayed_jobs`.`queue` IN ('default', 'mailers', 'tracking')
   ORDER BY `delayed_jobs`.`priority` ASC, `delayed_jobs`.`run_at` ASC
 SNAP
 
 snapshots["generates a mysql2 query plan for multiple queues 1"] = <<-SNAP
--> Filter: (((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or ((delayed_jobs.locked_by = 'worker1') and (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
-    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((((delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43'))) or (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.queue in ('default','mailers','tracking')))  (cost=...)
+-> Filter: ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43') or ((delayed_jobs.locked_by = 'worker1') and (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')))  (cost=...)
+    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13') and ((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43') or (delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.queue in ('default','mailers','tracking')))  (cost=...)
 SNAP
 
 snapshots["generates a well-scoped mysql2 query 1"] = <<-SNAP
@@ -190,9 +195,10 @@ SELECT `delayed_jobs`.`locked_at`, `delayed_jobs`.`locked_by`
   WHERE `delayed_jobs`.`locked_by` = 'worker1'
     AND `delayed_jobs`.`locked_at` >= '2025-11-10 16:59:43'
     AND `delayed_jobs`.`failed_at` IS NULL
+    AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
 SNAP
 
 snapshots["generates an efficient mysql2 query plan 1"] = <<-SNAP
 -> Filter: (delayed_jobs.locked_by = 'worker1')  (cost=...)
-    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null))  (cost=...)
+    -> Index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL), with index condition: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
 SNAP

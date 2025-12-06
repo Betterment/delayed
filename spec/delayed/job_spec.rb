@@ -197,13 +197,13 @@ describe Delayed::Job do
     end
   end
 
-  describe '.workable_by' do
+  describe '.claimable_by' do
     let(:now) { '2025-11-10 17:20:13 UTC' }
     let(:worker) do
       instance_double(Delayed::Worker, name: "worker1", read_ahead: 1, max_claims: 1, min_priority: nil, max_priority: nil, queues: queues)
     end
     let(:queues) { [] }
-    let(:query) { QueryUnderTest.for(described_class.workable_by(worker)) }
+    let(:query) { QueryUnderTest.for(described_class.claimable_by(worker)) }
 
     around { |example| Timecop.freeze(now) { example.run } }
 

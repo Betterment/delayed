@@ -106,19 +106,19 @@ module Delayed
     end
 
     def workable_count_grouped
-      jobs.workable.count
+      jobs.claimable.count
     end
 
     def working_count_grouped
-      jobs.working.count
+      jobs.claimed.count
     end
 
     def oldest_locked_job_grouped
-      jobs.working.select("#{priority_case_statement} AS priority, queue, MIN(locked_at) AS locked_at")
+      jobs.claimed.select("#{priority_case_statement} AS priority, queue, MIN(locked_at) AS locked_at")
     end
 
     def oldest_workable_job_grouped
-      jobs.workable.select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
+      jobs.claimable.select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
     end
 
     def priority_case_statement
