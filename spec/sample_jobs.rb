@@ -125,3 +125,26 @@ class RescuesStandardErrorJob
     raise "Rescued: #{e.class}"
   end
 end
+
+class ActiveJobAttributesJob < ActiveJobJob
+  class Current < ActiveSupport::CurrentAttributes
+    attribute :user_id
+  end
+
+  def self.results
+    @results ||= []
+  end
+
+  def serialize
+    super.merge("user_id" => Current.user_id)
+  end
+
+  def deserialize(job_data)
+    super
+    Current.user_id = job_data["user_id"]
+  end
+
+  def perform
+    self.class.results << Current.user_id
+  end
+end
