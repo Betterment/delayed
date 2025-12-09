@@ -23,13 +23,9 @@ class SetPostgresFillfactor < ActiveRecord::Migration[6.0]
 
     execute <<~SQL
       ALTER TABLE delayed_jobs
-      SET (
-        autovacuum_vacuum_scale_factor = DEFAULT,
-        fillfactor = DEFAULT
-      );
-      ALTER INDEX idx_delayed_jobs_live SET (
-        fillfactor = DEFAULT
-      );
+        RESET (autovacuum_vacuum_scale_factor, fillfactor);
+      ALTER INDEX idx_delayed_jobs_live
+        RESET (fillfactor);
     SQL
   end
 end
