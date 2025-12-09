@@ -235,9 +235,15 @@ QueryUnderTest = Struct.new(:sql, :connection) do
   end
 
   def formatted
-    sql.squish
-      # basic formatting for easier git diffing
-      .gsub(/ (SELECT|FROM|WHERE|GROUP BY|ORDER BY) /) { "\n  #{Regexp.last_match(1).strip} " }
+    fmt = sql.squish
+
+    if ActiveRecord::VERSION::MAJOR < 7
+      # Rails 6.0->6.1 optimizes for fewer "OR" parenthesis
+      fmt.gsub!(/\(\((.+ OR .+)\)( OR .+)\)/) { "(#{Regexp.last_match(1)}#{Regexp.last_match(2)})" }
+    end
+
+    # basic formatting for easier git diffing
+    fmt.gsub(/ (SELECT|FROM|WHERE|GROUP BY|ORDER BY) /) { "\n  #{Regexp.last_match(1).strip} " }
       .gsub(/ (AND|OR) /) { "\n    #{Regexp.last_match(1).strip} " }
       # normalize and truncate 'AS' names/aliases (changes across Rails versions)
       .gsub(/AS ("|`)?(\w+)("|`)?/) { "AS #{Regexp.last_match(2)[0...63]}" }
