@@ -12,6 +12,7 @@ module Delayed
         set_payload
         set_queue_name
         set_priority
+        handle_dst
         handle_deprecation
         options
       end
@@ -30,6 +31,24 @@ module Delayed
       def set_priority
         options[:priority] ||= options[:payload_object].priority if options[:payload_object].respond_to?(:priority)
         options[:priority] ||= Delayed::Worker.default_priority
+      end
+
+      def scheduled_into_fall_back_hour?
+        options.key?(:run_at) &&
+          !options[:run_at].in_time_zone.dst? &&
+          (options[:run_at] - 1.hour).dst?
+      end
+
+      def handle_dst
+        # The DB column does not retain timezone information. As a result, if we
+        # are running with `:local` timezone, then any future-scheduled jobs
+        # that fall into the "fall back" DST transition need to rounded up to
+        # the later hour or they will cause a "spinloop" of immediate retries.
+        if Job.default_timezone == :local && scheduled_into_fall_back_hour?
+          run_at_was = options[:run_at]
+          options[:run_at] = (run_at_was + 1.hour).beginning_of_hour
+          Delayed.say("Adjusted run_at from #{run_at_was} to #{options[:run_at]} to account for fall back DST transition", :warn)
+        end
       end
 
       def handle_deprecation

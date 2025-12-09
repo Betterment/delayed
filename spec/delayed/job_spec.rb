@@ -4,7 +4,7 @@ describe Delayed::Job do
   let(:worker) { Delayed::Worker.new }
 
   def create_job(opts = {})
-    described_class.create(opts.merge(payload_object: SimpleJob.new))
+    described_class.enqueue(SimpleJob.new, **opts)
   end
 
   before do
@@ -273,6 +273,7 @@ describe Delayed::Job do
 
     after do
       Time.zone = nil
+      self.default_timezone = :utc
     end
 
     it 'does not reserve failed jobs' do
@@ -290,10 +291,75 @@ describe Delayed::Job do
       expect(described_class.reserve(worker)).to eq([job])
     end
 
-    it 'reserves jobs scheduled for the past when time zones are involved' do
-      Time.zone = 'US/Eastern'
-      job = create_job run_at: described_class.db_time_now - 1.minute
-      expect(described_class.reserve(worker)).to eq([job])
+    context 'during DST change' do
+      around do |example|
+        Time.zone = 'US/Eastern'
+        Timecop.freeze(Time.zone.parse('2024-11-03 01:00:00 EDT')) { example.run }
+      end
+
+      it 'does not reserve future-scheduled jobs scheduled for during the "fall back" hour' do
+        allow(Delayed.logger).to receive(:warn)
+        job = create_job run_at: described_class.db_time_now + 1.hour + 1.minute
+        expect(described_class.reserve(worker)).to eq []
+        expect(job.run_at).to eq(Time.zone.parse('2024-11-03 01:01:00 EST'))
+        expect(Delayed.logger).not_to have_received(:warn)
+      end
+
+      it 'does not reserve future-scheduled jobs scheduled for after the "fall back" hour' do
+        job = create_job run_at: described_class.db_time_now + 2.hours + 1.minute
+        expect(described_class.reserve(worker)).to eq []
+        expect(job.run_at).to eq(Time.zone.parse('2024-11-03 02:01:00 EST'))
+      end
+
+      it 'reserves jobs scheduled for the past' do
+        job = create_job run_at: described_class.db_time_now - 1.minute
+        expect(described_class.reserve(worker)).to eq([job])
+      end
+    end
+
+    context 'when using :local non-UTC time for DB timestamps' do
+      before do
+        self.default_timezone = :local
+      end
+
+      it 'does not reserve jobs scheduled for the future' do
+        create_job run_at: 1.minute.from_now
+        expect(described_class.reserve(worker)).to eq []
+      end
+
+      it 'reserves jobs scheduled for the past' do
+        job = create_job run_at: 1.minute.ago
+        expect(described_class.reserve(worker)).to eq([job])
+      end
+
+      context 'during DST change' do
+        around do |example|
+          Time.zone = 'US/Eastern'
+          Timecop.freeze(Time.zone.parse('2024-11-03 01:00:00 EDT')) { example.run }
+        end
+
+        it 'does not reserve future-scheduled jobs scheduled for during the "fall back" hour' do
+          allow(Delayed.logger).to receive(:warn)
+          job = create_job run_at: described_class.db_time_now + 1.hour + 1.minute
+          expect(described_class.reserve(worker)).to eq []
+          # see Delayed::Backend::JobPreparer#handle_dst for default_timezone = `:local` handling:
+          expect(job.run_at).to eq(Time.zone.parse('2024-11-03 02:00:00 EST'))
+          expect(Delayed.logger).to have_received(:warn).with(
+            "Adjusted run_at from 2024-11-03 01:01:00 -0500 to 2024-11-03 02:00:00 -0500 to account for fall back DST transition",
+          )
+        end
+
+        it 'does not reserve future-scheduled jobs scheduled for after the "fall back" hour' do
+          job = create_job run_at: described_class.db_time_now + 2.hours + 1.minute
+          expect(described_class.reserve(worker)).to eq []
+          expect(job.run_at).to eq(Time.zone.parse('2024-11-03 02:01:00 EST'))
+        end
+
+        it 'reserves jobs scheduled for the past' do
+          job = create_job run_at: described_class.db_time_now - 1.minute
+          expect(described_class.reserve(worker)).to eq([job])
+        end
+      end
     end
 
     it 'does not reserve jobs locked by other workers' do
