@@ -14,15 +14,26 @@ module Delayed
     scope :failed, -> { where.not(failed_at: nil) }
 
     # live queue states (future vs pending)
-    scope :future, ->(as_of: db_time_now) { merge(unscoped.live).where(arel_table[:run_at].gt(as_of)) }
-    scope :pending, ->(as_of: db_time_now) { merge(unscoped.live).where(arel_table[:run_at].lteq(as_of)) }
+    scope :future, ->(as_of = db_time_now) { merge(unscoped.live).where(arel_table[:run_at].gt(as_of)) }
+    scope :pending, ->(as_of = db_time_now) { merge(unscoped.live).where(arel_table[:run_at].lteq(as_of)) }
 
     # pending queue states (claimed vs claimable)
-    scope :claimed, -> { where(arel_table[:locked_at].gteq(db_time_now - lock_timeout)).merge(unscoped.pending) }
-    scope :claimed_by, ->(worker) { where(locked_by: worker.name).claimed }
-    scope :claimable, -> { where(locked_at: nil).or(where(arel_table[:locked_at].lt(db_time_now - lock_timeout))).merge(unscoped.pending) }
-    scope :claimable_by, ->(worker) {
-      claimable.or(claimed_by(worker))
+    scope :claimed, ->(as_of = db_time_now) {
+      where(arel_table[:locked_at].gteq(db_time_now - lock_timeout))
+        .merge(unscoped.pending(as_of))
+    }
+    scope :claimed_by, ->(worker, as_of = db_time_now) {
+      where(locked_by: worker.name)
+        .claimed(as_of)
+    }
+    scope :claimable, ->(as_of = db_time_now) {
+      where(locked_at: nil)
+        .or(where(arel_table[:locked_at].lt(db_time_now - lock_timeout)))
+        .merge(unscoped.pending(as_of))
+    }
+    scope :claimable_by, ->(worker, as_of = db_time_now) {
+      claimable(as_of)
+        .or(claimed_by(worker, as_of))
         .min_priority(worker.min_priority)
         .max_priority(worker.max_priority)
         .for_queues(worker.queues)
@@ -49,9 +60,9 @@ module Delayed
       claimed_by(worker).update_all(locked_by: nil, locked_at: nil)
     end
 
-    def self.reserve(worker)
+    def self.reserve(worker, as_of = db_time_now)
       ActiveSupport::Notifications.instrument('delayed.worker.reserve_jobs', worker_tags(worker)) do
-        reserve_with_scope(claimable_by(worker), worker, db_time_now)
+        reserve_with_scope(claimable_by(worker, as_of), worker, as_of)
       end
     end
 
