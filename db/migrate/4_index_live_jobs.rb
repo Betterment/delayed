@@ -17,7 +17,7 @@ class IndexLiveJobs < ActiveRecord::Migration[6.0]
 
     if connection.supports_partial_index?
       # Postgres and SQLite both support partial indexes, allowing us to pre-filter out failed jobs:
-      opts[:where] = 'failed_at IS NULL'
+      opts[:where] = '(failed_at IS NULL)'
     else
       # If partial indexes aren't supported, failed_at will be included in the primary index:
       columns = %i(failed_at) + columns

@@ -25,15 +25,17 @@ else
   ActiveSupport::Deprecation.behavior = :raise
 end
 
-if ENV['DEBUG_LOGS']
-  Delayed.logger = Logger.new($stdout)
-else
-  require 'tempfile'
+Delayed.logger = Logger.new($stdout)
+Delayed.logger.level = ENV['DEBUG_LOGS'] ? Logger::DEBUG : Logger::FATAL
 
-  tf = Tempfile.new('dj.log')
-  Delayed.logger = Logger.new(tf.path)
-  tf.unlink
+def with_log_level(level)
+  logger_level_was = Delayed.logger.level
+  Delayed.logger.level = level
+  yield
+ensure
+  Delayed.logger.level = logger_level_was
 end
+
 ENV['RAILS_ENV'] = 'test'
 
 db_adapter = ENV["ADAPTER"]
@@ -83,20 +85,22 @@ ActiveRecord::Schema.define do
     klass.migrate(:up)
   end
 
-  run_migration(CreateDelayedJobs)
-  run_migration(AddNameToDelayedJobs)
-  run_migration(AddIndexToDelayedJobsName)
-  run_migration(IndexLiveJobs)
-  run_migration(IndexFailedJobs)
-  run_migration(SetPostgresFillfactor)
-  run_migration(RemoveLegacyIndex)
+  with_log_level(Logger::WARN) do
+    run_migration(CreateDelayedJobs)
+    run_migration(AddNameToDelayedJobs)
+    run_migration(AddIndexToDelayedJobsName)
+    run_migration(IndexLiveJobs)
+    run_migration(IndexFailedJobs)
+    run_migration(SetPostgresFillfactor)
+    run_migration(RemoveLegacyIndex)
 
-  # Test that these index migrations can be re-applied idempotently.
-  # (In case identical indexes had been manually applied previously.)
-  AddIndexToDelayedJobsName.migrate(:up)
-  IndexLiveJobs.migrate(:up)
-  IndexFailedJobs.migrate(:up)
-  RemoveLegacyIndex.migrate(:up)
+    # Test that these index migrations can be re-applied idempotently.
+    # (In case identical indexes had been manually applied previously.)
+    AddIndexToDelayedJobsName.migrate(:up)
+    IndexLiveJobs.migrate(:up)
+    IndexFailedJobs.migrate(:up)
+    RemoveLegacyIndex.migrate(:up)
+  end
 
   create_table :stories, primary_key: :story_id, force: true do |table|
     table.string :text

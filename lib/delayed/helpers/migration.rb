@@ -15,13 +15,13 @@ module Delayed
       end
 
       def upsert_index(*args, **opts)
-        dir(:both) { _drop_index_if_exists(*args) }
-        dir(:up) { _add_index(*args, **opts) }
+        dir(:up) { _add_or_replace_index(*args, **opts) }
+        dir(:down) { _drop_index_if_exists(*args, **opts) }
       end
 
       def remove_index_if_exists(*args, **opts)
-        dir(:down) { _add_index(*args, **opts) }
-        dir(:both) { _drop_index_if_exists(*args) }
+        dir(:up) { _drop_index_if_exists(*args, **opts) }
+        dir(:down) { _add_or_replace_index(*args, **opts) }
       end
 
       def with_retry_loop(wait_timeout: 5.minutes, **opts)
@@ -46,15 +46,39 @@ module Delayed
 
       private
 
-      def _add_index(*args, wait_timeout: nil, statement_timeout: nil, lock_timeout: nil, **opts)
-        with_retry_loop(wait_timeout: wait_timeout, statement_timeout: statement_timeout, lock_timeout: lock_timeout) do
-          add_index(*args, **opts)
+      def _add_or_replace_index(table, columns, **opts)
+        index = _lookup_index(table, columns, **opts)
+        if index && !_index_matches?(index, **opts)
+          Delayed.logger.warn("Recreating index #{index.name} (is invalid or does not match desired options)")
+          _drop_index(table, name: index.name, **opts)
         end
+        _add_index(table, columns, **opts) if !index || !_index_matches?(index, **opts)
       end
 
-      def _drop_index_if_exists(table, columns = nil, wait_timeout: nil, statement_timeout: nil, lock_timeout: nil)
-        with_retry_loop(wait_timeout: wait_timeout, statement_timeout: statement_timeout, lock_timeout: lock_timeout) do
-          remove_index(table, columns) if index_exists?(table, columns)
+      def _drop_index_if_exists(table, columns, **opts)
+        index = _lookup_index(table, columns, **opts)
+        _drop_index(table, name: index.name, **opts) if index
+      end
+
+      def _add_index(*args, **opts)
+        index_opts = opts.slice!(:wait_timeout, :statement_timeout, :lock_timeout)
+        with_retry_loop(**opts) { add_index(*args, **index_opts) }
+      end
+
+      def _drop_index(table, name:, **opts)
+        opts.slice!(:wait_timeout, :statement_timeout, :lock_timeout)
+        with_retry_loop(**opts) { remove_index(table, name: name) }
+      end
+
+      def _lookup_index(table, columns, **opts)
+        connection.indexes(table).find { |idx| idx.name == opts[:name] || idx.columns == Array(columns).map(&:to_s) }
+      end
+
+      def _index_matches?(index, **opts)
+        using_default = :btree unless connection.adapter_name == 'SQLite'
+
+        { unique: false, where: nil, using: using_default, include: nil, valid?: true }.all? do |key, default|
+          !index.respond_to?(key) || opts.fetch(key, default) == index.public_send(key)
         end
       end
 
@@ -70,11 +94,11 @@ module Delayed
         when 'PostgreSQL'
           execute("SET statement_timeout TO #{pg_seconds(statement_timeout) || 'DEFAULT'};")
           execute("SET lock_timeout TO #{pg_seconds(lock_timeout) || 'DEFAULT'};")
-        when 'MySQL', 'MariaDB'
+        when "MySQL", "Mysql2"
           execute("SET SESSION wait_timeout = #{statement_timeout&.seconds || 'DEFAULT'};")
           execute("SET SESSION lock_wait_timeout = #{lock_timeout&.seconds || 'DEFAULT'};")
         else
-          Delayed.logger.warn("[delayed] #{connection.adapter_name} does not support setting statement or lock timeouts (skipping).")
+          Delayed.logger.info("[delayed] #{connection.adapter_name} does not support setting statement or lock timeouts (skipping).")
         end
       end
 
