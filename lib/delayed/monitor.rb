@@ -118,11 +118,13 @@ module Delayed
     alias working_count_grouped locked_count_grouped
 
     def oldest_locked_job_grouped
-      jobs.claimed.select("#{priority_case_statement} AS priority, queue, MIN(locked_at) AS locked_at")
+      jobs.claimed
+        .select("#{priority_case_statement} AS priority, queue, MIN(locked_at) AS locked_at")
     end
 
     def oldest_workable_job_grouped
-      @memo[:oldest_workable_job_grouped] ||= jobs.claimable.select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
+      @memo[:oldest_workable_job_grouped] ||= jobs.claimable
+        .select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
     end
 
     def priority_case_statement
