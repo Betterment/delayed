@@ -307,6 +307,12 @@ RSpec.describe Delayed::Monitor do
         it "produces the expected #{current_adapter} query plan for #{metric}" do
           expect(query_for(metric).explain).to match_snapshot
         end
+
+        context 'when using the legacy index', index: :legacy do
+          it "[legacy index] produces the expected #{current_adapter} query plan for #{metric}" do
+            expect(query_for(metric).explain).to match_snapshot
+          end
+        end
       end
     end
   end

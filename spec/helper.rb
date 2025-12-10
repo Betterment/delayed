@@ -176,6 +176,19 @@ RSpec.configure do |config|
     Delayed::Job.delete_all
   end
 
+  config.around(:each, index: :legacy) do |example|
+    IndexFailedJobs.migrate(:down)
+    IndexLiveJobs.migrate(:down)
+    AddIndexToDelayedJobsName.migrate(:down)
+    RemoveLegacyIndex.migrate(:down)
+    example.run
+  ensure
+    RemoveLegacyIndex.migrate(:up)
+    AddIndexToDelayedJobsName.migrate(:up)
+    IndexLiveJobs.migrate(:up)
+    IndexFailedJobs.migrate(:up)
+  end
+
   config.expect_with :rspec do |c|
     c.syntax = :expect
   end
