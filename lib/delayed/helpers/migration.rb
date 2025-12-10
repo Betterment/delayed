@@ -94,11 +94,11 @@ module Delayed
         when 'PostgreSQL'
           execute("SET statement_timeout TO #{pg_seconds(statement_timeout) || 'DEFAULT'};")
           execute("SET lock_timeout TO #{pg_seconds(lock_timeout) || 'DEFAULT'};")
-        when 'MySQL', 'MariaDB'
+        when "MySQL", "Mysql2"
           execute("SET SESSION wait_timeout = #{statement_timeout&.seconds || 'DEFAULT'};")
           execute("SET SESSION lock_wait_timeout = #{lock_timeout&.seconds || 'DEFAULT'};")
         else
-          Delayed.logger.warn("[delayed] #{connection.adapter_name} does not support setting statement or lock timeouts (skipping).")
+          Delayed.logger.info("[delayed] #{connection.adapter_name} does not support setting statement or lock timeouts (skipping).")
         end
       end
 
