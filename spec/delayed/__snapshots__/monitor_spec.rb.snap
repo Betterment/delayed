@@ -49,6 +49,16 @@ GroupAggregate  (cost=...)
         Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
         ->  Seq Scan on public.delayed_jobs  (cost=...)
               Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+              Filter: (delayed_jobs.failed_at IS NOT NULL)
+GroupAggregate  (cost=...)
+  Output: count(*), (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Seq Scan on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+              Filter: (delayed_jobs.failed_at IS NULL)
 SNAP
 
 snapshots["runs the expected postgresql query for future_count 1"] = <<-SNAP
@@ -444,6 +454,8 @@ USE TEMP B-TREE FOR GROUP BY
 SNAP
 
 snapshots["[legacy index] produces the expected sqlite3 query plan for count 1"] = <<-SNAP
+SCAN delayed_jobs
+USE TEMP B-TREE FOR GROUP BY
 SCAN delayed_jobs
 USE TEMP B-TREE FOR GROUP BY
 SNAP
