@@ -24,12 +24,18 @@ module Delayed
         dir(:down) { _add_or_replace_index(*args, **opts) }
       end
 
+      RETRY_EXCEPTIONS = [
+        ActiveRecord::LockWaitTimeout,
+        ActiveRecord::StatementTimeout,
+        (PG::LockNotAvailable if defined?(PG::LockNotAvailable)),
+      ].compact.freeze
+
       def with_retry_loop(wait_timeout: 5.minutes, **opts)
         with_timeouts(**opts) do
           loop do
             yield
             break
-          rescue ActiveRecord::LockWaitTimeout, ActiveRecord::StatementTimeout => e
+          rescue *RETRY_EXCEPTIONS => e
             raise if Delayed::Job.db_time_now - @migration_start > wait_timeout
 
             Delayed.logger.warn("Index creation failed for #{opts[:name]}: #{e.message}. Retrying...")
