@@ -20,9 +20,11 @@ module Delayed
     def initialize
       @jobs = Job.group(priority_case_statement).group(:queue)
       @jobs = @jobs.where(queue: Worker.queues) if Worker.queues.any?
+      @memo = {}
     end
 
     def run!
+      @memo = {}
       ActiveSupport::Notifications.instrument('delayed.monitor.run', default_tags) do
         METRICS.each { |metric| emit_metric!(metric) }
       end
@@ -67,7 +69,11 @@ module Delayed
     end
 
     def count_grouped
-      jobs.count
+      if Job.connection.supports_partial_index?
+        failed_count_grouped.merge(jobs.live.count) { |_, l, f| l + f }
+      else
+        jobs.count
+      end
     end
 
     def future_count_grouped
@@ -75,7 +81,7 @@ module Delayed
     end
 
     def locked_count_grouped
-      jobs.claimed.count
+      @memo[:locked_count_grouped] ||= jobs.claimed.count
     end
 
     def erroring_count_grouped
@@ -83,7 +89,7 @@ module Delayed
     end
 
     def failed_count_grouped
-      jobs.failed.count
+      @memo[:failed_count_grouped] ||= jobs.failed.count
     end
 
     def max_lock_age_grouped
@@ -109,16 +115,16 @@ module Delayed
       jobs.claimable.count
     end
 
-    def working_count_grouped
-      jobs.claimed.count
-    end
+    alias working_count_grouped locked_count_grouped
 
     def oldest_locked_job_grouped
-      jobs.claimed.select("#{priority_case_statement} AS priority, queue, MIN(locked_at) AS locked_at")
+      jobs.claimed
+        .select("#{priority_case_statement} AS priority, queue, MIN(locked_at) AS locked_at")
     end
 
     def oldest_workable_job_grouped
-      jobs.claimable.select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
+      @memo[:oldest_workable_job_grouped] ||= jobs.claimable
+        .select("(#{priority_case_statement}) AS priority, queue, MIN(run_at) AS run_at")
     end
 
     def priority_case_statement
