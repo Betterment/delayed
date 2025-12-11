@@ -239,7 +239,7 @@ describe Delayed::Job do
       end
     end
 
-    context 'when using the legacy index', index: :legacy do
+    context 'when using the legacy index', :with_legacy_table_index do
       it "[legacy index] generates the expected #{current_adapter} query plan" do
         expect(query.explain).to match_snapshot
       end
@@ -277,7 +277,7 @@ describe Delayed::Job do
       expect(query.explain).to match_snapshot
     end
 
-    context 'when using legacy index', index: :legacy do
+    context 'when using legacy index', :with_legacy_table_index do
       it "[legacy index] generates an efficient #{current_adapter} query plan" do
         expect(query.explain).to match_snapshot
       end
