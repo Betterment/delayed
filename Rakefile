@@ -20,6 +20,10 @@ task :adapter do
   ENV['ADAPTER'] = nil
 end
 
+if ENV['RECORD_SNAPSHOTS']
+  `rm -rf spec/**/__snapshots__`
+end
+
 require 'rubocop/rake_task'
 RuboCop::RakeTask.new
 
