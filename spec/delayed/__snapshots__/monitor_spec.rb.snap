@@ -21,6 +21,17 @@ GroupAggregate  (cost=...)
               Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
 SNAP
 
+snapshots["[legacy index] produces the expected postgresql query plan for count 1"] = <<-SNAP
+GroupAggregate  (cost=...)
+  Output: count(*), (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Seq Scan on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+SNAP
+
 snapshots["runs the expected postgresql query for future_count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -45,6 +56,19 @@ GroupAggregate  (cost=...)
         ->  Index Only Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
               Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
               Index Cond: (delayed_jobs.run_at > '2025-11-10 17:20:13'::timestamp without time zone)
+SNAP
+
+snapshots["[legacy index] produces the expected postgresql query plan for future_count 1"] = <<-SNAP
+GroupAggregate  (cost=...)
+  Output: count(*), (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+              Index Cond: (delayed_jobs.run_at > '2025-11-10 17:20:13'::timestamp without time zone)
+              Filter: (delayed_jobs.failed_at IS NULL)
 SNAP
 
 snapshots["runs the expected postgresql query for locked_count 1"] = <<-SNAP
@@ -75,6 +99,19 @@ GroupAggregate  (cost=...)
               Filter: (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone)
 SNAP
 
+snapshots["[legacy index] produces the expected postgresql query plan for locked_count 1"] = <<-SNAP
+GroupAggregate  (cost=...)
+  Output: count(*), (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+              Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
+              Filter: ((delayed_jobs.failed_at IS NULL) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone))
+SNAP
+
 snapshots["runs the expected postgresql query for erroring_count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -101,6 +138,18 @@ GroupAggregate  (cost=...)
               Index Cond: (delayed_jobs.attempts > 0)
 SNAP
 
+snapshots["[legacy index] produces the expected postgresql query plan for erroring_count 1"] = <<-SNAP
+GroupAggregate  (cost=...)
+  Output: count(*), (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Seq Scan on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+              Filter: ((delayed_jobs.failed_at IS NULL) AND (delayed_jobs.attempts > 0))
+SNAP
+
 snapshots["runs the expected postgresql query for failed_count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -123,6 +172,18 @@ GroupAggregate  (cost=...)
         Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
         ->  Index Only Scan using idx_delayed_jobs_failed on public.delayed_jobs  (cost=...)
               Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+SNAP
+
+snapshots["[legacy index] produces the expected postgresql query plan for failed_count 1"] = <<-SNAP
+GroupAggregate  (cost=...)
+  Output: count(*), (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Seq Scan on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+              Filter: (delayed_jobs.failed_at IS NOT NULL)
 SNAP
 
 snapshots["runs the expected postgresql query for max_lock_age 1"] = <<-SNAP
@@ -151,6 +212,19 @@ GroupAggregate  (cost=...)
               Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue, locked_at
               Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
               Filter: (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone)
+SNAP
+
+snapshots["[legacy index] produces the expected postgresql query plan for max_lock_age 1"] = <<-SNAP
+GroupAggregate  (cost=...)
+  Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue, min(locked_at)
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue, locked_at
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue, locked_at
+              Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
+              Filter: ((delayed_jobs.failed_at IS NULL) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone))
 SNAP
 
 snapshots["runs the expected postgresql query for max_age 1"] = <<-SNAP
@@ -182,6 +256,19 @@ GroupAggregate  (cost=...)
               Filter: ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone))
 SNAP
 
+snapshots["[legacy index] produces the expected postgresql query plan for max_age 1"] = <<-SNAP
+GroupAggregate  (cost=...)
+  Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue, min(run_at)
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue, run_at
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue, run_at
+              Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
+              Filter: ((delayed_jobs.failed_at IS NULL) AND ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone)))
+SNAP
+
 snapshots["runs the expected postgresql query for working_count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -208,6 +295,19 @@ GroupAggregate  (cost=...)
               Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
               Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
               Filter: (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone)
+SNAP
+
+snapshots["[legacy index] produces the expected postgresql query plan for working_count 1"] = <<-SNAP
+GroupAggregate  (cost=...)
+  Output: count(*), (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+              Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
+              Filter: ((delayed_jobs.failed_at IS NULL) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone))
 SNAP
 
 snapshots["runs the expected postgresql query for workable_count 1"] = <<-SNAP
@@ -239,6 +339,19 @@ GroupAggregate  (cost=...)
               Filter: ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone))
 SNAP
 
+snapshots["[legacy index] produces the expected postgresql query plan for workable_count 1"] = <<-SNAP
+GroupAggregate  (cost=...)
+  Output: count(*), (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue
+              Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
+              Filter: ((delayed_jobs.failed_at IS NULL) AND ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone)))
+SNAP
+
 snapshots["runs the expected postgresql query for alert_age_percent 1"] = <<-SNAP
 SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -268,6 +381,19 @@ GroupAggregate  (cost=...)
               Filter: ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone))
 SNAP
 
+snapshots["[legacy index] produces the expected postgresql query plan for alert_age_percent 1"] = <<-SNAP
+GroupAggregate  (cost=...)
+  Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue, min(run_at)
+  Group Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+  ->  Sort  (cost=...)
+        Output: (CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END), queue, run_at
+        Sort Key: (CASE WHEN ((delayed_jobs.priority >= 0) AND (delayed_jobs.priority < 10)) THEN 0 WHEN ((delayed_jobs.priority >= 10) AND (delayed_jobs.priority < 20)) THEN 10 WHEN ((delayed_jobs.priority >= 20) AND (delayed_jobs.priority < 30)) THEN 20 WHEN (delayed_jobs.priority >= 30) THEN 30 ELSE NULL::integer END), delayed_jobs.queue
+        ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
+              Output: CASE WHEN ((priority >= 0) AND (priority < 10)) THEN 0 WHEN ((priority >= 10) AND (priority < 20)) THEN 10 WHEN ((priority >= 20) AND (priority < 30)) THEN 20 WHEN (priority >= 30) THEN 30 ELSE NULL::integer END, queue, run_at
+              Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
+              Filter: ((delayed_jobs.failed_at IS NULL) AND ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone)))
+SNAP
+
 snapshots["runs the expected sqlite3 query for count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -281,6 +407,11 @@ SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
 SNAP
 
 snapshots["produces the expected sqlite3 query plan for count 1"] = <<-SNAP
+SCAN delayed_jobs
+USE TEMP B-TREE FOR GROUP BY
+SNAP
+
+snapshots["[legacy index] produces the expected sqlite3 query plan for count 1"] = <<-SNAP
 SCAN delayed_jobs
 USE TEMP B-TREE FOR GROUP BY
 SNAP
@@ -304,6 +435,11 @@ SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
 USE TEMP B-TREE FOR GROUP BY
 SNAP
 
+snapshots["[legacy index] produces the expected sqlite3 query plan for future_count 1"] = <<-SNAP
+SCAN delayed_jobs
+USE TEMP B-TREE FOR GROUP BY
+SNAP
+
 snapshots["runs the expected sqlite3 query for locked_count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -321,6 +457,11 @@ SNAP
 
 snapshots["produces the expected sqlite3 query plan for locked_count 1"] = <<-SNAP
 SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
+USE TEMP B-TREE FOR GROUP BY
+SNAP
+
+snapshots["[legacy index] produces the expected sqlite3 query plan for locked_count 1"] = <<-SNAP
+SCAN delayed_jobs
 USE TEMP B-TREE FOR GROUP BY
 SNAP
 
@@ -343,6 +484,11 @@ SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
 USE TEMP B-TREE FOR GROUP BY
 SNAP
 
+snapshots["[legacy index] produces the expected sqlite3 query plan for erroring_count 1"] = <<-SNAP
+SCAN delayed_jobs
+USE TEMP B-TREE FOR GROUP BY
+SNAP
+
 snapshots["runs the expected sqlite3 query for failed_count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -358,6 +504,11 @@ SNAP
 
 snapshots["produces the expected sqlite3 query plan for failed_count 1"] = <<-SNAP
 SCAN delayed_jobs USING INDEX idx_delayed_jobs_failed
+USE TEMP B-TREE FOR GROUP BY
+SNAP
+
+snapshots["[legacy index] produces the expected sqlite3 query plan for failed_count 1"] = <<-SNAP
+SCAN delayed_jobs
 USE TEMP B-TREE FOR GROUP BY
 SNAP
 
@@ -378,6 +529,11 @@ SNAP
 
 snapshots["produces the expected sqlite3 query plan for max_lock_age 1"] = <<-SNAP
 SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
+USE TEMP B-TREE FOR GROUP BY
+SNAP
+
+snapshots["[legacy index] produces the expected sqlite3 query plan for max_lock_age 1"] = <<-SNAP
+SCAN delayed_jobs
 USE TEMP B-TREE FOR GROUP BY
 SNAP
 
@@ -402,6 +558,11 @@ SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
 USE TEMP B-TREE FOR GROUP BY
 SNAP
 
+snapshots["[legacy index] produces the expected sqlite3 query plan for max_age 1"] = <<-SNAP
+SCAN delayed_jobs
+USE TEMP B-TREE FOR GROUP BY
+SNAP
+
 snapshots["runs the expected sqlite3 query for working_count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -419,6 +580,11 @@ SNAP
 
 snapshots["produces the expected sqlite3 query plan for working_count 1"] = <<-SNAP
 SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
+USE TEMP B-TREE FOR GROUP BY
+SNAP
+
+snapshots["[legacy index] produces the expected sqlite3 query plan for working_count 1"] = <<-SNAP
+SCAN delayed_jobs
 USE TEMP B-TREE FOR GROUP BY
 SNAP
 
@@ -443,6 +609,11 @@ SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
 USE TEMP B-TREE FOR GROUP BY
 SNAP
 
+snapshots["[legacy index] produces the expected sqlite3 query plan for workable_count 1"] = <<-SNAP
+SCAN delayed_jobs
+USE TEMP B-TREE FOR GROUP BY
+SNAP
+
 snapshots["runs the expected sqlite3 query for alert_age_percent 1"] = <<-SNAP
 SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -464,6 +635,11 @@ SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
 USE TEMP B-TREE FOR GROUP BY
 SNAP
 
+snapshots["[legacy index] produces the expected sqlite3 query plan for alert_age_percent 1"] = <<-SNAP
+SCAN delayed_jobs
+USE TEMP B-TREE FOR GROUP BY
+SNAP
+
 snapshots["runs the expected mysql2 query for count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -480,6 +656,12 @@ snapshots["produces the expected mysql2 query plan for count 1"] = <<-SNAP
 -> Table scan on <temporary>
     -> Aggregate using temporary table
         -> Covering index scan on delayed_jobs using idx_delayed_jobs_live  (cost=...)
+SNAP
+
+snapshots["[legacy index] produces the expected mysql2 query plan for count 1"] = <<-SNAP
+-> Table scan on <temporary>
+    -> Aggregate using temporary table
+        -> Table scan on delayed_jobs  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for future_count 1"] = <<-SNAP
@@ -501,6 +683,13 @@ snapshots["produces the expected mysql2 query plan for future_count 1"] = <<-SNA
     -> Aggregate using temporary table
         -> Filter: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at > TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
+SNAP
+
+snapshots["[legacy index] produces the expected mysql2 query plan for future_count 1"] = <<-SNAP
+-> Table scan on <temporary>
+    -> Aggregate using temporary table
+        -> Filter: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at > TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+            -> Table scan on delayed_jobs  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for locked_count 1"] = <<-SNAP
@@ -525,6 +714,13 @@ snapshots["produces the expected mysql2 query plan for locked_count 1"] = <<-SNA
             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 SNAP
 
+snapshots["[legacy index] produces the expected mysql2 query plan for locked_count 1"] = <<-SNAP
+-> Table scan on <temporary>
+    -> Aggregate using temporary table
+        -> Filter: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+            -> Table scan on delayed_jobs  (cost=...)
+SNAP
+
 snapshots["runs the expected mysql2 query for erroring_count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -544,6 +740,13 @@ snapshots["produces the expected mysql2 query plan for erroring_count 1"] = <<-S
     -> Aggregate using temporary table
         -> Filter: ((delayed_jobs.attempts > 0) and (delayed_jobs.failed_at is null))  (cost=...)
             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
+SNAP
+
+snapshots["[legacy index] produces the expected mysql2 query plan for erroring_count 1"] = <<-SNAP
+-> Table scan on <temporary>
+    -> Aggregate using temporary table
+        -> Filter: ((delayed_jobs.attempts > 0) and (delayed_jobs.failed_at is null))  (cost=...)
+            -> Table scan on delayed_jobs  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for failed_count 1"] = <<-SNAP
@@ -566,6 +769,13 @@ snapshots["produces the expected mysql2 query plan for failed_count 1"] = <<-SNA
             -> Covering index range scan on delayed_jobs using idx_delayed_jobs_live over (NULL < failed_at)  (cost=...)
 SNAP
 
+snapshots["[legacy index] produces the expected mysql2 query plan for failed_count 1"] = <<-SNAP
+-> Table scan on <temporary>
+    -> Aggregate using temporary table
+        -> Filter: (delayed_jobs.failed_at is not null)  (cost=...)
+            -> Table scan on delayed_jobs  (cost=...)
+SNAP
+
 snapshots["runs the expected mysql2 query for max_lock_age 1"] = <<-SNAP
 SELECT CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -586,6 +796,13 @@ snapshots["produces the expected mysql2 query plan for max_lock_age 1"] = <<-SNA
     -> Aggregate using temporary table
         -> Filter: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
+SNAP
+
+snapshots["[legacy index] produces the expected mysql2 query plan for max_lock_age 1"] = <<-SNAP
+-> Table scan on <temporary>
+    -> Aggregate using temporary table
+        -> Filter: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+            -> Table scan on delayed_jobs  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for max_age 1"] = <<-SNAP
@@ -611,6 +828,13 @@ snapshots["produces the expected mysql2 query plan for max_age 1"] = <<-SNAP
             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 SNAP
 
+snapshots["[legacy index] produces the expected mysql2 query plan for max_age 1"] = <<-SNAP
+-> Table scan on <temporary>
+    -> Aggregate using temporary table
+        -> Filter: (((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+            -> Table scan on delayed_jobs  (cost=...)
+SNAP
+
 snapshots["runs the expected mysql2 query for working_count 1"] = <<-SNAP
 SELECT COUNT(*) AS count_all, CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -631,6 +855,13 @@ snapshots["produces the expected mysql2 query plan for working_count 1"] = <<-SN
     -> Aggregate using temporary table
         -> Filter: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
+SNAP
+
+snapshots["[legacy index] produces the expected mysql2 query plan for working_count 1"] = <<-SNAP
+-> Table scan on <temporary>
+    -> Aggregate using temporary table
+        -> Filter: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+            -> Table scan on delayed_jobs  (cost=...)
 SNAP
 
 snapshots["runs the expected mysql2 query for workable_count 1"] = <<-SNAP
@@ -656,6 +887,13 @@ snapshots["produces the expected mysql2 query plan for workable_count 1"] = <<-S
             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 SNAP
 
+snapshots["[legacy index] produces the expected mysql2 query plan for workable_count 1"] = <<-SNAP
+-> Table scan on <temporary>
+    -> Aggregate using temporary table
+        -> Filter: (((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+            -> Table scan on delayed_jobs  (cost=...)
+SNAP
+
 snapshots["runs the expected mysql2 query for alert_age_percent 1"] = <<-SNAP
 SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
@@ -677,4 +915,11 @@ snapshots["produces the expected mysql2 query plan for alert_age_percent 1"] = <
     -> Aggregate using temporary table
         -> Filter: (((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
+SNAP
+
+snapshots["[legacy index] produces the expected mysql2 query plan for alert_age_percent 1"] = <<-SNAP
+-> Table scan on <temporary>
+    -> Aggregate using temporary table
+        -> Filter: (((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+            -> Table scan on delayed_jobs  (cost=...)
 SNAP

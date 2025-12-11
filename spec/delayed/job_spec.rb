@@ -238,6 +238,28 @@ describe Delayed::Job do
         expect(query.explain).to match_snapshot
       end
     end
+
+    context 'when using the legacy index', index: :legacy do
+      it "[legacy index] generates the expected #{current_adapter} query plan" do
+        expect(query.explain).to match_snapshot
+      end
+
+      context 'when a single queue is specified' do
+        let(:queues) { %w(default) }
+
+        it "[legacy index] generates a #{current_adapter} query plan for one queue" do
+          expect(query.explain).to match_snapshot
+        end
+      end
+
+      context 'multiple queues are specified' do
+        let(:queues) { %w(default mailers tracking) }
+
+        it "[legacy index] generates a #{current_adapter} query plan for multiple queues" do
+          expect(query.explain).to match_snapshot
+        end
+      end
+    end
   end
 
   describe '.claimed_by' do
@@ -253,6 +275,12 @@ describe Delayed::Job do
 
     it "generates an efficient #{current_adapter} query plan" do
       expect(query.explain).to match_snapshot
+    end
+
+    context 'when using legacy index', index: :legacy do
+      it "[legacy index] generates an efficient #{current_adapter} query plan" do
+        expect(query.explain).to match_snapshot
+      end
     end
   end
 
