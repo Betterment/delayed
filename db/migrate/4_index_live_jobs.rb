@@ -8,7 +8,7 @@ class IndexLiveJobs < ActiveRecord::Migration[6.0]
   disable_ddl_transaction! if concurrent_index_creation_supported?
 
   def change
-    opts = {}
+    opts = { name: 'idx_delayed_jobs_live' }
     columns = %i(priority run_at locked_at queue attempts)
 
     # Postgres supports creating indexes concurrently,
@@ -28,6 +28,6 @@ class IndexLiveJobs < ActiveRecord::Migration[6.0]
     # (On other databases, we can include `locked_at` to allow for more "covering" index lookups)
     columns -= %i(locked_at) if connection.adapter_name == 'PostgreSQL'
 
-    upsert_index :delayed_jobs, columns, wait_timeout: WAIT_TIMEOUT, name: 'idx_delayed_jobs_live', **opts
+    upsert_index :delayed_jobs, columns, wait_timeout: WAIT_TIMEOUT, **opts
   end
 end

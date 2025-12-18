@@ -11,14 +11,13 @@ class IndexFailedJobs < ActiveRecord::Migration[6.0]
     # You can delete this migration if your database does not support partial indexes.
     return unless connection.supports_partial_index?
 
-    # Postgres supports creating indexes concurrently, which avoids locking the table
-    # while the index is building:
-    opts = {}
-    opts[:algorithm] = :concurrently if concurrent_index_creation_supported?
-
     # If partial indexes are supported, then the "live" index does not cover failed jobs.
     # To aid in monitoring, this adds a separate (smaller) index for failed jobs:
-    opts.merge!(name: 'idx_delayed_jobs_failed', where: '(failed_at IS NOT NULL)')
+    opts = { name: 'idx_delayed_jobs_failed', where: '(failed_at IS NOT NULL)' }
+
+    # Postgres supports creating indexes concurrently, which avoids locking the table
+    # while the index is building:
+    opts[:algorithm] = :concurrently if concurrent_index_creation_supported?
 
     upsert_index :delayed_jobs, %i(priority queue), wait_timeout: WAIT_TIMEOUT, **opts
   end
