@@ -344,6 +344,11 @@ describe Delayed::Job do
         job = create_job run_at: dst_start + 1.minute
         expect(described_class.reserve(worker, dst_start + 59.minutes)).to eq([job])
       end
+
+      it 'does not break when run_at is explicitly nil' do
+        job = create_job run_at: nil
+        expect(job.run_at).not_to be_nil
+      end
     end
 
     context 'when using :local non-UTC time for DB timestamps' do
