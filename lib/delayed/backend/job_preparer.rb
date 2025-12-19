@@ -34,7 +34,7 @@ module Delayed
       end
 
       def scheduled_into_fall_back_hour?
-        options.key?(:run_at) &&
+        options[:run_at] &&
           !options[:run_at].in_time_zone.dst? &&
           (options[:run_at] - 1.hour).dst?
       end

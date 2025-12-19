@@ -239,7 +239,7 @@ describe Delayed::Job do
       end
     end
 
-    context 'when using the legacy index', index: :legacy do
+    context 'when using the legacy index', :with_legacy_table_index do
       it "[legacy index] generates the expected #{current_adapter} query plan" do
         expect(query.explain).to match_snapshot
       end
@@ -277,7 +277,7 @@ describe Delayed::Job do
       expect(query.explain).to match_snapshot
     end
 
-    context 'when using legacy index', index: :legacy do
+    context 'when using legacy index', :with_legacy_table_index do
       it "[legacy index] generates an efficient #{current_adapter} query plan" do
         expect(query.explain).to match_snapshot
       end
@@ -343,6 +343,11 @@ describe Delayed::Job do
       it 'reserves jobs scheduled for the past' do
         job = create_job run_at: dst_start + 1.minute
         expect(described_class.reserve(worker, dst_start + 59.minutes)).to eq([job])
+      end
+
+      it 'does not break when run_at is explicitly nil' do
+        job = create_job run_at: nil
+        expect(job.run_at).not_to be_nil
       end
     end
 

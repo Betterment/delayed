@@ -180,7 +180,7 @@ RSpec.configure do |config|
     Delayed::Job.delete_all
   end
 
-  config.around(:each, index: :legacy) do |example|
+  config.around(:each, :with_legacy_table_index) do |example|
     IndexFailedJobs.migrate(:down)
     IndexLiveJobs.migrate(:down)
     AddIndexToDelayedJobsName.migrate(:down)
