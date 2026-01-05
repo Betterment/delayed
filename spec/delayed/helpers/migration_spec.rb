@@ -33,35 +33,50 @@ describe Delayed::Helpers::Migration do
     migration.migration_start = Delayed::Job.db_time_now
   end
 
-  describe '#with_retry_loop timeout tracking' do
+  describe '#upsert_index retry behavior' do
     it 'raises exception when wait_timeout is exceeded based on @migration_start' do
-      # Simulate migration that started 6 minutes ago
       migration.migration_start = Delayed::Job.db_time_now - 6.minutes
 
+      allow(migration).to receive(:add_index).and_raise(ActiveRecord::LockWaitTimeout)
+      allow(migration.connection).to receive(:indexes).and_return([])
+
       expect {
-        migration.with_retry_loop(wait_timeout: 5.minutes) do
-          raise ActiveRecord::LockWaitTimeout
-        end
+        migration.upsert_index(:delayed_jobs, :name, wait_timeout: 5.minutes)
       }.to raise_error(ActiveRecord::LockWaitTimeout)
     end
 
-    it 'continues retrying while within the timeout window' do
-      call_count = 0
+    it 're-checks for invalid index and drops it before retrying after timeout' do
+      add_index_calls = 0
+      remove_index_calls = 0
+      lookup_calls = 0
 
-      # First retry is within timeout, second exceeds it
-      allow(Delayed::Job).to receive(:db_time_now).and_return(
-        migration.migration_start + 4.minutes, # Within timeout
-        migration.migration_start + 6.minutes, # Exceeds timeout
+      invalid_opts = ActiveRecord.version >= Gem::Version.new('7.1.0') ? { valid?: false } : { unique: true }
+      invalid_index = instance_double(
+        ActiveRecord::ConnectionAdapters::IndexDefinition,
+        name: 'test_idx',
+        columns: ['name'],
+        **invalid_opts,
       )
 
-      expect {
-        migration.with_retry_loop(wait_timeout: 5.minutes) do
-          call_count += 1
-          raise ActiveRecord::LockWaitTimeout
-        end
-      }.to raise_error(ActiveRecord::LockWaitTimeout)
+      allow(migration.connection).to receive(:indexes) do
+        lookup_calls += 1
+        lookup_calls == 2 ? [invalid_index] : []
+      end
 
-      expect(call_count).to eq(2)
+      allow(migration).to receive(:add_index) do |*_args|
+        add_index_calls += 1
+        raise ActiveRecord::StatementTimeout, 'timeout' if add_index_calls == 1
+      end
+
+      allow(migration).to receive(:remove_index) do |*_args|
+        remove_index_calls += 1
+      end
+
+      migration.upsert_index(:delayed_jobs, :name, name: 'test_idx', wait_timeout: 5.minutes)
+
+      expect(lookup_calls).to eq(3)
+      expect(remove_index_calls).to eq(1)
+      expect(add_index_calls).to eq(2)
     end
   end
 end

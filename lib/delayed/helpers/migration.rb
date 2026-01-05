@@ -20,13 +20,17 @@ module Delayed
       end
 
       def upsert_index(*args, **opts)
-        dir(:up) { _add_or_replace_index(*args, **opts) }
-        dir(:down) { _drop_index_if_exists(*args, **opts) }
+        with_retry_loop(**opts) do
+          dir(:up) { _add_or_replace_index(*args, **opts) }
+          dir(:down) { _drop_index_if_exists(*args, **opts) }
+        end
       end
 
       def remove_index_if_exists(*args, **opts)
-        dir(:up) { _drop_index_if_exists(*args, **opts) }
-        dir(:down) { _add_or_replace_index(*args, **opts) }
+        with_retry_loop(**opts) do
+          dir(:up) { _drop_index_if_exists(*args, **opts) }
+          dir(:down) { _add_or_replace_index(*args, **opts) }
+        end
       end
 
       RETRY_EXCEPTIONS = [
@@ -48,7 +52,7 @@ module Delayed
         end
       end
 
-      def with_timeouts(statement_timeout: 1.minute, lock_timeout: 5.seconds)
+      def with_timeouts(statement_timeout: 1.minute, lock_timeout: 5.seconds, **_opts)
         dir(:both) { set_timeouts!(statement_timeout: statement_timeout, lock_timeout: lock_timeout) }
         yield
       ensure
@@ -61,24 +65,15 @@ module Delayed
         index = _lookup_index(table, columns, **opts)
         if index && !_index_matches?(index, **opts)
           Delayed.logger.warn("Recreating index #{index.name} (is invalid or does not match desired options)")
-          _drop_index(table, name: index.name, **opts)
+          remove_index(table, name: index.name)
         end
-        _add_index(table, columns, **opts) if !index || !_index_matches?(index, **opts)
+        opts = opts.except(:wait_timeout, :statement_timeout, :lock_timeout)
+        add_index(table, columns, **opts) if !index || !_index_matches?(index, **opts)
       end
 
       def _drop_index_if_exists(table, columns, **opts)
         index = _lookup_index(table, columns, **opts)
-        _drop_index(table, name: index.name, **opts) if index
-      end
-
-      def _add_index(*args, **opts)
-        index_opts = opts.slice!(:wait_timeout, :statement_timeout, :lock_timeout)
-        with_retry_loop(**opts) { add_index(*args, **index_opts) }
-      end
-
-      def _drop_index(table, name:, **opts)
-        opts.slice!(:wait_timeout, :statement_timeout, :lock_timeout)
-        with_retry_loop(**opts) { remove_index(table, name: name) }
+        remove_index(table, name: index.name) if index
       end
 
       def _lookup_index(table, columns, **opts)
