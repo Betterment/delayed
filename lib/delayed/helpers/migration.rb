@@ -8,6 +8,11 @@ module Delayed
         delegate :concurrent_index_creation_supported?, to: :class
       end
 
+      def exec_migration(...)
+        @migration_start = Delayed::Job.db_time_now
+        super
+      end
+
       module ClassMethods
         def concurrent_index_creation_supported?
           connection.index_algorithms.key?(:concurrently)
