@@ -345,7 +345,7 @@ RSpec.describe Delayed::Monitor do
     end
   end
 
-  describe '#query_for' do
+  describe 'SQL' do
     let(:monitor) { described_class.new }
     let(:queries) { [] }
     let(:now) { '2025-11-10 17:20:13 UTC' }
@@ -360,30 +360,28 @@ RSpec.describe Delayed::Monitor do
           value = value.value if value.is_a?(ActiveModel::Attribute)
           sql = sql.sub(/(\?|\$\d)/, ActiveRecord::Base.connection.quote(value))
         end
-        queries << sql
+        queries << QueryUnderTest.for(sql)
+        queries << "---"
       end
     end
 
-    def queries_for(metric)
-      monitor.query_for(metric)
-      queries.map { |q| QueryUnderTest.for(q) }
+    def query_descriptions
+      described_class::METRICS.each do |metric|
+        queries << "-- QUERIES FOR `#{metric}`:"
+        queries << "---------------------------------"
+        monitor.query_for(metric)
+        queries << "-- (no new queries)" unless queries.last == '---'
+      end
+      queries.dup.map { |query| query.try(:full_description) || query }
     end
 
-    described_class::METRICS.each do |metric|
-      context "('#{metric}')" do
-        it "runs the expected #{current_adapter} query for #{metric}" do
-          expect(queries_for(metric).map(&:formatted).join("\n")).to match_snapshot
-        end
+    it "runs the expected #{current_adapter} queries with the expected plans" do
+      expect(query_descriptions.join("\n")).to match_snapshot
+    end
 
-        it "produces the expected #{current_adapter} query plan for #{metric}" do
-          expect(queries_for(metric).map(&:explain).join("\n")).to match_snapshot
-        end
-
-        context 'when using the legacy index', :with_legacy_table_index do
-          it "[legacy index] produces the expected #{current_adapter} query plan for #{metric}" do
-            expect(queries_for(metric).map(&:explain).join("\n")).to match_snapshot
-          end
-        end
+    context 'when using the legacy index', :with_legacy_table_index do
+      it "[legacy index] runs the expected #{current_adapter} queries with the expected plans" do
+        expect(query_descriptions.join("\n")).to match_snapshot
       end
     end
   end

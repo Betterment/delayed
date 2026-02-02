@@ -274,6 +274,10 @@ QueryUnderTest = Struct.new(:sql, :connection) do
     new(query.respond_to?(:to_sql) ? query.to_sql : query.to_s, connection)
   end
 
+  def full_description
+    [formatted, explain].join("\n\n")
+  end
+
   def formatted
     fmt = sql.squish
 
