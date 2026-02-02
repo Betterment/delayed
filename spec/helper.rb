@@ -291,6 +291,8 @@ QueryUnderTest = Struct.new(:sql, :connection) do
       .gsub(/ (AND|OR) /) { "\n    #{Regexp.last_match(1).strip} " }
       # normalize and truncate 'AS' names/aliases (changes across Rails versions)
       .gsub(/AS ("|`)?(\w+)("|`)?/) { "AS #{Regexp.last_match(2)[0...63]}" }
+      # newline and indent when aliased columns are listed
+      .gsub(/AS (\w+),/) { "AS #{Regexp.last_match(1)},\n      " }
       # remove quotes around column names in aggregate functions
       .gsub(/(MIN|MAX|COUNT|SUM)\(("|`)(\w+)("|`)\)/) { "#{Regexp.last_match(1)}(#{Regexp.last_match(3)})" }
   end
