@@ -119,11 +119,7 @@ module Delayed
     end
 
     def count_grouped
-      if Job.connection.supports_partial_index?
-        failed_count_grouped.merge(live_count_grouped) { |_, l, f| l + f }
-      else
-        grouped_query(jobs, count: [:count, '*']).transform_values(&:count)
-      end
+      failed_count_grouped.merge(live_count_grouped) { |_, l, f| l + f }
     end
 
     def live_count_grouped
