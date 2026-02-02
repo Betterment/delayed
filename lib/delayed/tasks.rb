@@ -10,17 +10,37 @@ namespace :delayed do
 
     next unless defined?(Rails.application.config)
 
-    # By default, Rails < 6.1 overrides eager_load to 'false' inside of rake tasks, which is not ideal in production environments.
-    # Additionally, the classic Rails autoloader is not threadsafe, so we do not want any autoloading after we start the worker.
-    # While the zeitwork autoloader technically does not need this workaround, we will still eager load for consistency's sake.
-    # We will use the cache_classes config as a proxy for determining if we should eager load before booting workers.
-    if !Rails.application.config.respond_to?(:rake_eager_load) && Rails.application.config.cache_classes
-      Rails.application.config.eager_load = true
-      Rails::Application::Finisher.initializers
-        .find { |i| i.name == :eager_load! }
-        .bind(Rails.application)
-        .run
-    end
+    # By default, Rails wants to disable eager loading inside of `rake`
+    # commands, even if `eager_load` is set to true. This is done to speed up
+    # the boot time of rake tasks that don't need the entire application loaded.
+    #
+    # The problem is that long-lived processes like `delayed` **do** want to
+    # eager load the application before spawning any threads or forks.
+    # (Especially if in a production environment where we want full load-order
+    # parity with the `rails server` processes!)
+    #
+    # When a Rails app boots, it chooses whether to eager load based on its
+    # `eager_load` config and whether or not it was initiated by a `rake`
+    # command. If it did eager load, we don't want to eager load again, but if
+    # it was initiated by a `rake` command, it sets `eager_load` to false before
+    # the point at which `delayed` starts setting up _its_ rake environment.
+    #
+    # So we cannot rely on that config to know whether or not to eager load --
+    # instead we must make an inference:
+    # - Newer rails versions (~7.0+) have a `config.rake_eager_load` option,
+    # which tells us whether the app has already eager loaded in a `rake`
+    # context.
+    # - If `rake_eager_loading` is not defined or `false`, we will then check
+    # `cache_classes` & explicitly eager load if true.
+
+    eager_loaded = Rails.application.config.respond_to?(:rake_eager_load) && Rails.application.config.rake_eager_load
+    next if eager_loaded || !Rails.application.config.cache_classes
+
+    Rails.application.config.eager_load = true
+    Rails::Application::Finisher.initializers
+      .find { |i| i.name == :eager_load! }
+      .bind(Rails.application)
+      .run
   end
 
   desc 'start a delayed worker'
