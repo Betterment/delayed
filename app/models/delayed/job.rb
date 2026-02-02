@@ -10,26 +10,22 @@ module Delayed
 
     # high-level queue states (live => erroring => failed)
     scope :live, -> { where(failed_at: nil) }
-    scope :erroring, -> { where(arel_table[:attempts].gt(0)).merge(unscoped.live) }
+    scope :erroring, -> { where(erroring_clause).merge(unscoped.live) }
     scope :failed, -> { where.not(failed_at: nil) }
 
     # live queue states (future vs pending)
-    scope :future, ->(as_of = db_time_now) { merge(unscoped.live).where(arel_table[:run_at].gt(as_of)) }
-    scope :pending, ->(as_of = db_time_now) { merge(unscoped.live).where(arel_table[:run_at].lteq(as_of)) }
+    scope :future, ->(as_of = db_time_now) { merge(unscoped.live).where(future_clause(as_of)) }
+    scope :pending, ->(as_of = db_time_now) { merge(unscoped.live).where(pending_clause(as_of)) }
 
     # pending queue states (claimed vs claimable)
     scope :claimed, ->(as_of = db_time_now) {
-      where(arel_table[:locked_at].gteq(db_time_now - lock_timeout))
-        .merge(unscoped.pending(as_of))
+      where(claimed_clause(as_of)).merge(unscoped.pending(as_of))
     }
     scope :claimed_by, ->(worker, as_of = db_time_now) {
-      where(locked_by: worker.name)
-        .claimed(as_of)
+      where(locked_by: worker.name).claimed(as_of)
     }
     scope :claimable, ->(as_of = db_time_now) {
-      where(locked_at: nil)
-        .or(where(arel_table[:locked_at].lt(db_time_now - lock_timeout)))
-        .merge(unscoped.pending(as_of))
+      where(claimable_clause(as_of)).merge(unscoped.pending(as_of))
     }
     scope :claimable_by, ->(worker, as_of = db_time_now) {
       claimable(as_of)
@@ -39,6 +35,26 @@ module Delayed
         .for_queues(worker.queues)
         .by_priority
     }
+
+    def self.erroring_clause
+      arel_table[:attempts].gt(0)
+    end
+
+    def self.future_clause(as_of = db_time_now)
+      arel_table[:run_at].gt(as_of)
+    end
+
+    def self.pending_clause(as_of = db_time_now)
+      arel_table[:run_at].lteq(as_of)
+    end
+
+    def self.claimed_clause(as_of = db_time_now)
+      arel_table[:locked_at].gteq(as_of - lock_timeout)
+    end
+
+    def self.claimable_clause(as_of = db_time_now)
+      arel_table[:locked_at].eq(nil).or arel_table[:locked_at].lt(as_of - lock_timeout)
+    end
 
     before_save :set_default_run_at, :set_name
 

@@ -95,21 +95,29 @@ module Delayed
       }
     end
 
-    def grouped_count(scope)
-      Delayed::Job.from(scope.select('priority, queue, COUNT(*) AS count'))
-        .group(priority_case_statement, :queue).sum(:count)
+    def grouped_count(scope, **kwargs)
+      selects = kwargs.map { |k, v| "#{v} AS #{k}" }.join(', ')
+      counts = kwargs.keys.map { |k| "SUM(#{k}) AS #{k}" }.join(', ')
+
+      Delayed::Job.from(scope.select("priority, queue, #{selects}")
+        .group(:priority, :queue))
+        .group(priority_case_statement, :queue).select(
+          counts,
+          "#{priority_case_statement} AS priority",
+          'queue AS queue',
+        ).group_by { |j| [j.priority.to_i, j.queue] }
+        .transform_values(&:first)
     end
 
     def grouped_min(scope, column)
       Delayed::Job.from(scope.select("priority, queue, MIN(#{column}) AS #{column}"))
         .group(priority_case_statement, :queue)
-        .select(<<~SQL.squish)
-          (#{priority_case_statement}) AS priority,
-          queue,
-          MIN(#{column}) AS #{column},
-          #{self.class.sql_now_in_utc} AS db_now_utc
-        SQL
-        .group_by { |j| [j.priority.to_i, j.queue] }
+        .select(
+          "MIN(#{column}) AS #{column}",
+          "#{priority_case_statement} AS priority",
+          'queue AS queue',
+          "#{self.class.sql_now_in_utc} AS db_now_utc",
+        ).group_by { |j| [j.priority.to_i, j.queue] }
         .transform_values(&:first)
     end
 
@@ -117,28 +125,28 @@ module Delayed
       if Job.connection.supports_partial_index?
         failed_count_grouped.merge(live_count_grouped) { |_, l, f| l + f }
       else
-        grouped_count(jobs)
+        grouped_count(jobs, count: 'COUNT(*)').transform_values(&:count)
       end
     end
 
     def live_count_grouped
-      grouped_count(jobs.live)
+      live_counts.transform_values(&:count)
     end
 
     def future_count_grouped
-      grouped_count(jobs.future)
-    end
-
-    def locked_count_grouped
-      @memo[:locked_count_grouped] ||= grouped_count(jobs.claimed)
+      live_counts.transform_values(&:future_count)
     end
 
     def erroring_count_grouped
-      grouped_count(jobs.erroring)
+      live_counts.transform_values(&:erroring_count)
+    end
+
+    def locked_count_grouped
+      @memo[:locked_count_grouped] ||= pending_counts.transform_values(&:claimed_count)
     end
 
     def failed_count_grouped
-      @memo[:failed_count_grouped] ||= grouped_count(jobs.failed)
+      @memo[:failed_count_grouped] ||= grouped_count(jobs.failed, count: 'COUNT(*)').transform_values(&:count)
     end
 
     def max_lock_age_grouped
@@ -158,7 +166,7 @@ module Delayed
     end
 
     def workable_count_grouped
-      grouped_count(jobs.claimable)
+      pending_counts.transform_values(&:claimable_count)
     end
 
     alias working_count_grouped locked_count_grouped
@@ -179,12 +187,33 @@ module Delayed
       @memo[:oldest_run_at_query] ||= grouped_min(jobs.claimable, :run_at)
     end
 
+    def live_counts
+      @memo[:live_counts] ||= grouped_count(
+        jobs.live,
+        count: 'COUNT(*)',
+        future_count: "SUM(#{case_when(Job.future_clause.to_sql)})",
+        erroring_count: "SUM(#{case_when(Job.erroring_clause.to_sql)})",
+      )
+    end
+
+    def pending_counts
+      @memo[:pending_counts] ||= grouped_count(
+        jobs.pending,
+        claimed_count: "SUM(#{case_when(Job.claimed_clause.to_sql)})",
+        claimable_count: "SUM(#{case_when(Job.claimable_clause.to_sql)})",
+      )
+    end
+
     def db_now(record)
       self.class.parse_utc_time(record.db_now_utc)
     end
 
     def time_ago(now, value)
       [now - (value || now), 0].max
+    end
+
+    def case_when(condition)
+      "CASE WHEN #{condition} THEN 1 ELSE 0 END"
     end
 
     def priority_case_statement

@@ -1,9 +1,9 @@
 snapshots["runs the expected postgresql queries with the expected plans 1"] = <<-SNAP
 -- QUERIES FOR `count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
+SELECT SUM(count) AS count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
   FROM (SELECT priority, queue, COUNT(*) AS count
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"failed_at\" IS NOT NULL
@@ -24,131 +24,83 @@ GroupAggregate  (cost=...)
                     ->  Index Only Scan using idx_delayed_jobs_failed on public.delayed_jobs  (cost=...)
                           Output: delayed_jobs.priority, delayed_jobs.queue
 ---
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(count) AS count,
+       SUM(future_count) AS future_count,
+       SUM(erroring_count) AS erroring_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, COUNT(*) AS count,
+       SUM(CASE WHEN \"delayed_jobs\".\"run_at\" > '2025-11-10 17:20:13' THEN 1 ELSE 0 END) AS future_count,
+       SUM(CASE WHEN \"delayed_jobs\".\"attempts\" > 0 THEN 1 ELSE 0 END) AS erroring_count
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"failed_at\" IS NULL
   GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: sum(subquery.count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
+  Output: sum(subquery.count), sum(subquery.future_count), sum(subquery.erroring_count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
-        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count
+        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count, subquery.future_count, subquery.erroring_count
         Sort Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
         ->  Subquery Scan on subquery  (cost=...)
-              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count
+              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count, subquery.future_count, subquery.erroring_count
               ->  GroupAggregate  (cost=...)
-                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
+                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*), sum(CASE WHEN (delayed_jobs.run_at > '2025-11-10 17:20:13'::timestamp without time zone) THEN 1 ELSE 0 END), sum(CASE WHEN (delayed_jobs.attempts > 0) THEN 1 ELSE 0 END)
                     Group Key: delayed_jobs.priority, delayed_jobs.queue
                     ->  Sort  (cost=...)
-                          Output: delayed_jobs.priority, delayed_jobs.queue
+                          Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.run_at, delayed_jobs.attempts
                           Sort Key: delayed_jobs.priority, delayed_jobs.queue
                           ->  Index Only Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
-                                Output: delayed_jobs.priority, delayed_jobs.queue
+                                Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.run_at, delayed_jobs.attempts
 ---
 -- QUERIES FOR `future_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
-    AND \"delayed_jobs\".\"run_at\" > '2025-11-10 17:20:13'
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-GroupAggregate  (cost=...)
-  Output: sum(subquery.count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  ->  Sort  (cost=...)
-        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count
-        Sort Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-        ->  Subquery Scan on subquery  (cost=...)
-              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count
-              ->  GroupAggregate  (cost=...)
-                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
-                    Group Key: delayed_jobs.priority, delayed_jobs.queue
-                    ->  Sort  (cost=...)
-                          Output: delayed_jobs.priority, delayed_jobs.queue
-                          Sort Key: delayed_jobs.priority, delayed_jobs.queue
-                          ->  Index Only Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
-                                Output: delayed_jobs.priority, delayed_jobs.queue
-                                Index Cond: (delayed_jobs.run_at > '2025-11-10 17:20:13'::timestamp without time zone)
----
+-- (no new queries)
 -- QUERIES FOR `locked_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(claimed_count) AS claimed_count,
+       SUM(claimable_count) AS claimable_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, SUM(CASE WHEN \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43' THEN 1 ELSE 0 END) AS claimed_count,
+       SUM(CASE WHEN (\"delayed_jobs\".\"locked_at\" IS NULL
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43') THEN 1 ELSE 0 END) AS claimable_count
   FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43'
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
   GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: sum(subquery.count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
+  Output: sum(subquery.claimed_count), sum(subquery.claimable_count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
-        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count
+        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.claimed_count, subquery.claimable_count
         Sort Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
         ->  Subquery Scan on subquery  (cost=...)
-              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count
+              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.claimed_count, subquery.claimable_count
               ->  GroupAggregate  (cost=...)
-                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
+                    Output: delayed_jobs.priority, delayed_jobs.queue, sum(CASE WHEN (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone) THEN 1 ELSE 0 END), sum(CASE WHEN ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone)) THEN 1 ELSE 0 END)
                     Group Key: delayed_jobs.priority, delayed_jobs.queue
                     ->  Sort  (cost=...)
-                          Output: delayed_jobs.priority, delayed_jobs.queue
+                          Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.locked_at
                           Sort Key: delayed_jobs.priority, delayed_jobs.queue
                           ->  Index Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
-                                Output: delayed_jobs.priority, delayed_jobs.queue
+                                Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.locked_at
                                 Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
-                                Filter: (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone)
 ---
 -- QUERIES FOR `erroring_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"attempts\" > 0
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-GroupAggregate  (cost=...)
-  Output: sum(subquery.count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  ->  Sort  (cost=...)
-        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count
-        Sort Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-        ->  Subquery Scan on subquery  (cost=...)
-              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count
-              ->  GroupAggregate  (cost=...)
-                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
-                    Group Key: delayed_jobs.priority, delayed_jobs.queue
-                    ->  Sort  (cost=...)
-                          Output: delayed_jobs.priority, delayed_jobs.queue
-                          Sort Key: delayed_jobs.priority, delayed_jobs.queue
-                          ->  Index Only Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
-                                Output: delayed_jobs.priority, delayed_jobs.queue
-                                Index Cond: (delayed_jobs.attempts > 0)
----
+-- (no new queries)
 -- QUERIES FOR `failed_count`:
 ---------------------------------
 -- (no new queries)
 -- QUERIES FOR `max_lock_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(locked_at) AS locked_at,
+SELECT MIN(locked_at) AS locked_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        TIMEZONE('UTC', STATEMENT_TIMESTAMP()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM \"delayed_jobs\"
@@ -159,7 +111,7 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.locked_at), timezone('UTC'::text, statement_timestamp())
+  Output: min(subquery.locked_at), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, timezone('UTC'::text, statement_timestamp())
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.locked_at
@@ -179,8 +131,9 @@ GroupAggregate  (cost=...)
 ---
 -- QUERIES FOR `max_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(run_at) AS run_at,
+SELECT MIN(run_at) AS run_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        TIMEZONE('UTC', STATEMENT_TIMESTAMP()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
@@ -192,7 +145,7 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.run_at), timezone('UTC'::text, statement_timestamp())
+  Output: min(subquery.run_at), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, timezone('UTC'::text, statement_timestamp())
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.run_at
@@ -215,37 +168,7 @@ GroupAggregate  (cost=...)
 -- (no new queries)
 -- QUERIES FOR `workable_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
-    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
-    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-GroupAggregate  (cost=...)
-  Output: sum(subquery.count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  ->  Sort  (cost=...)
-        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count
-        Sort Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-        ->  Subquery Scan on subquery  (cost=...)
-              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count
-              ->  GroupAggregate  (cost=...)
-                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
-                    Group Key: delayed_jobs.priority, delayed_jobs.queue
-                    ->  Sort  (cost=...)
-                          Output: delayed_jobs.priority, delayed_jobs.queue
-                          Sort Key: delayed_jobs.priority, delayed_jobs.queue
-                          ->  Index Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
-                                Output: delayed_jobs.priority, delayed_jobs.queue
-                                Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
-                                Filter: ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone))
----
+-- (no new queries)
 -- QUERIES FOR `alert_age_percent`:
 ---------------------------------
 -- (no new queries)
@@ -254,9 +177,9 @@ SNAP
 snapshots["[legacy index] runs the expected postgresql queries with the expected plans 1"] = <<-SNAP
 -- QUERIES FOR `count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
+SELECT SUM(count) AS count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
   FROM (SELECT priority, queue, COUNT(*) AS count
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"failed_at\" IS NOT NULL
@@ -281,133 +204,85 @@ GroupAggregate  (cost=...)
                                 Output: delayed_jobs.priority, delayed_jobs.queue
                                 Filter: (delayed_jobs.failed_at IS NOT NULL)
 ---
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(count) AS count,
+       SUM(future_count) AS future_count,
+       SUM(erroring_count) AS erroring_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, COUNT(*) AS count,
+       SUM(CASE WHEN \"delayed_jobs\".\"run_at\" > '2025-11-10 17:20:13' THEN 1 ELSE 0 END) AS future_count,
+       SUM(CASE WHEN \"delayed_jobs\".\"attempts\" > 0 THEN 1 ELSE 0 END) AS erroring_count
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"failed_at\" IS NULL
   GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: sum(subquery.count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
+  Output: sum(subquery.count), sum(subquery.future_count), sum(subquery.erroring_count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
-        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count
+        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count, subquery.future_count, subquery.erroring_count
         Sort Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
         ->  Subquery Scan on subquery  (cost=...)
-              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count
+              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count, subquery.future_count, subquery.erroring_count
               ->  GroupAggregate  (cost=...)
-                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
+                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*), sum(CASE WHEN (delayed_jobs.run_at > '2025-11-10 17:20:13'::timestamp without time zone) THEN 1 ELSE 0 END), sum(CASE WHEN (delayed_jobs.attempts > 0) THEN 1 ELSE 0 END)
                     Group Key: delayed_jobs.priority, delayed_jobs.queue
                     ->  Sort  (cost=...)
-                          Output: delayed_jobs.priority, delayed_jobs.queue
+                          Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.run_at, delayed_jobs.attempts
                           Sort Key: delayed_jobs.priority, delayed_jobs.queue
                           ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
-                                Output: delayed_jobs.priority, delayed_jobs.queue
+                                Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.run_at, delayed_jobs.attempts
                                 Filter: (delayed_jobs.failed_at IS NULL)
 ---
 -- QUERIES FOR `future_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
-    AND \"delayed_jobs\".\"run_at\" > '2025-11-10 17:20:13'
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-GroupAggregate  (cost=...)
-  Output: sum(subquery.count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  ->  Sort  (cost=...)
-        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count
-        Sort Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-        ->  Subquery Scan on subquery  (cost=...)
-              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count
-              ->  GroupAggregate  (cost=...)
-                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
-                    Group Key: delayed_jobs.priority, delayed_jobs.queue
-                    ->  Sort  (cost=...)
-                          Output: delayed_jobs.priority, delayed_jobs.queue
-                          Sort Key: delayed_jobs.priority, delayed_jobs.queue
-                          ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
-                                Output: delayed_jobs.priority, delayed_jobs.queue
-                                Index Cond: (delayed_jobs.run_at > '2025-11-10 17:20:13'::timestamp without time zone)
-                                Filter: (delayed_jobs.failed_at IS NULL)
----
+-- (no new queries)
 -- QUERIES FOR `locked_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(claimed_count) AS claimed_count,
+       SUM(claimable_count) AS claimable_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, SUM(CASE WHEN \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43' THEN 1 ELSE 0 END) AS claimed_count,
+       SUM(CASE WHEN (\"delayed_jobs\".\"locked_at\" IS NULL
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43') THEN 1 ELSE 0 END) AS claimable_count
   FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43'
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
   GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: sum(subquery.count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
+  Output: sum(subquery.claimed_count), sum(subquery.claimable_count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
-        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count
+        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.claimed_count, subquery.claimable_count
         Sort Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
         ->  Subquery Scan on subquery  (cost=...)
-              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count
+              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.claimed_count, subquery.claimable_count
               ->  GroupAggregate  (cost=...)
-                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
+                    Output: delayed_jobs.priority, delayed_jobs.queue, sum(CASE WHEN (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone) THEN 1 ELSE 0 END), sum(CASE WHEN ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone)) THEN 1 ELSE 0 END)
                     Group Key: delayed_jobs.priority, delayed_jobs.queue
                     ->  Sort  (cost=...)
-                          Output: delayed_jobs.priority, delayed_jobs.queue
+                          Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.locked_at
                           Sort Key: delayed_jobs.priority, delayed_jobs.queue
                           ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
-                                Output: delayed_jobs.priority, delayed_jobs.queue
+                                Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.locked_at
                                 Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
-                                Filter: ((delayed_jobs.failed_at IS NULL) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone))
+                                Filter: (delayed_jobs.failed_at IS NULL)
 ---
 -- QUERIES FOR `erroring_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"attempts\" > 0
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-GroupAggregate  (cost=...)
-  Output: sum(subquery.count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  ->  Sort  (cost=...)
-        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count
-        Sort Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-        ->  Subquery Scan on subquery  (cost=...)
-              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count
-              ->  GroupAggregate  (cost=...)
-                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
-                    Group Key: delayed_jobs.priority, delayed_jobs.queue
-                    ->  Sort  (cost=...)
-                          Output: delayed_jobs.priority, delayed_jobs.queue
-                          Sort Key: delayed_jobs.priority, delayed_jobs.queue
-                          ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
-                                Output: delayed_jobs.priority, delayed_jobs.queue
-                                Filter: ((delayed_jobs.failed_at IS NULL) AND (delayed_jobs.attempts > 0))
----
+-- (no new queries)
 -- QUERIES FOR `failed_count`:
 ---------------------------------
 -- (no new queries)
 -- QUERIES FOR `max_lock_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(locked_at) AS locked_at,
+SELECT MIN(locked_at) AS locked_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        TIMEZONE('UTC', STATEMENT_TIMESTAMP()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM \"delayed_jobs\"
@@ -418,7 +293,7 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.locked_at), timezone('UTC'::text, statement_timestamp())
+  Output: min(subquery.locked_at), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, timezone('UTC'::text, statement_timestamp())
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.locked_at
@@ -438,8 +313,9 @@ GroupAggregate  (cost=...)
 ---
 -- QUERIES FOR `max_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(run_at) AS run_at,
+SELECT MIN(run_at) AS run_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        TIMEZONE('UTC', STATEMENT_TIMESTAMP()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
@@ -451,7 +327,7 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.run_at), timezone('UTC'::text, statement_timestamp())
+  Output: min(subquery.run_at), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, timezone('UTC'::text, statement_timestamp())
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.run_at
@@ -474,37 +350,7 @@ GroupAggregate  (cost=...)
 -- (no new queries)
 -- QUERIES FOR `workable_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
-    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
-    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-GroupAggregate  (cost=...)
-  Output: sum(subquery.count), (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-  ->  Sort  (cost=...)
-        Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.count
-        Sort Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
-        ->  Subquery Scan on subquery  (cost=...)
-              Output: CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END, subquery.queue, subquery.count
-              ->  GroupAggregate  (cost=...)
-                    Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
-                    Group Key: delayed_jobs.priority, delayed_jobs.queue
-                    ->  Sort  (cost=...)
-                          Output: delayed_jobs.priority, delayed_jobs.queue
-                          Sort Key: delayed_jobs.priority, delayed_jobs.queue
-                          ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
-                                Output: delayed_jobs.priority, delayed_jobs.queue
-                                Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
-                                Filter: ((delayed_jobs.failed_at IS NULL) AND ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone)))
----
+-- (no new queries)
 -- QUERIES FOR `alert_age_percent`:
 ---------------------------------
 -- (no new queries)
@@ -513,9 +359,9 @@ SNAP
 snapshots["runs the expected sqlite3 queries with the expected plans 1"] = <<-SNAP
 -- QUERIES FOR `count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
+SELECT SUM(count) AS count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
   FROM (SELECT priority, queue, COUNT(*) AS count
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"failed_at\" IS NOT NULL
@@ -527,10 +373,14 @@ SCAN delayed_jobs USING INDEX idx_delayed_jobs_failed
 SCAN subquery
 USE TEMP B-TREE FOR GROUP BY
 ---
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(count) AS count,
+       SUM(future_count) AS future_count,
+       SUM(erroring_count) AS erroring_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, COUNT(*) AS count,
+       SUM(CASE WHEN \"delayed_jobs\".\"run_at\" > '2025-11-10 17:20:13' THEN 1 ELSE 0 END) AS future_count,
+       SUM(CASE WHEN \"delayed_jobs\".\"attempts\" > 0 THEN 1 ELSE 0 END) AS erroring_count
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"failed_at\" IS NULL
   GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
@@ -544,31 +394,18 @@ USE TEMP B-TREE FOR GROUP BY
 ---
 -- QUERIES FOR `future_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
-    AND \"delayed_jobs\".\"run_at\" > '2025-11-10 17:20:13'
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-CO-ROUTINE subquery
-SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
-USE TEMP B-TREE FOR GROUP BY
-SCAN subquery
-USE TEMP B-TREE FOR GROUP BY
----
+-- (no new queries)
 -- QUERIES FOR `locked_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(claimed_count) AS claimed_count,
+       SUM(claimable_count) AS claimable_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, SUM(CASE WHEN \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43' THEN 1 ELSE 0 END) AS claimed_count,
+       SUM(CASE WHEN (\"delayed_jobs\".\"locked_at\" IS NULL
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43') THEN 1 ELSE 0 END) AS claimable_count
   FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43'
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
   GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
@@ -581,29 +418,15 @@ USE TEMP B-TREE FOR GROUP BY
 ---
 -- QUERIES FOR `erroring_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"attempts\" > 0
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-CO-ROUTINE subquery
-SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
-USE TEMP B-TREE FOR GROUP BY
-SCAN subquery
-USE TEMP B-TREE FOR GROUP BY
----
+-- (no new queries)
 -- QUERIES FOR `failed_count`:
 ---------------------------------
 -- (no new queries)
 -- QUERIES FOR `max_lock_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(locked_at) AS locked_at,
+SELECT MIN(locked_at) AS locked_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        CURRENT_TIMESTAMP AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM \"delayed_jobs\"
@@ -621,8 +444,9 @@ USE TEMP B-TREE FOR GROUP BY
 ---
 -- QUERIES FOR `max_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(run_at) AS run_at,
+SELECT MIN(run_at) AS run_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        CURRENT_TIMESTAMP AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
@@ -644,24 +468,7 @@ USE TEMP B-TREE FOR GROUP BY
 -- (no new queries)
 -- QUERIES FOR `workable_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
-    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
-    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-CO-ROUTINE subquery
-SCAN delayed_jobs USING INDEX idx_delayed_jobs_live
-USE TEMP B-TREE FOR GROUP BY
-SCAN subquery
-USE TEMP B-TREE FOR GROUP BY
----
+-- (no new queries)
 -- QUERIES FOR `alert_age_percent`:
 ---------------------------------
 -- (no new queries)
@@ -670,9 +477,9 @@ SNAP
 snapshots["[legacy index] runs the expected sqlite3 queries with the expected plans 1"] = <<-SNAP
 -- QUERIES FOR `count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
+SELECT SUM(count) AS count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
   FROM (SELECT priority, queue, COUNT(*) AS count
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"failed_at\" IS NOT NULL
@@ -685,10 +492,14 @@ USE TEMP B-TREE FOR GROUP BY
 SCAN subquery
 USE TEMP B-TREE FOR GROUP BY
 ---
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(count) AS count,
+       SUM(future_count) AS future_count,
+       SUM(erroring_count) AS erroring_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, COUNT(*) AS count,
+       SUM(CASE WHEN \"delayed_jobs\".\"run_at\" > '2025-11-10 17:20:13' THEN 1 ELSE 0 END) AS future_count,
+       SUM(CASE WHEN \"delayed_jobs\".\"attempts\" > 0 THEN 1 ELSE 0 END) AS erroring_count
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"failed_at\" IS NULL
   GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
@@ -702,31 +513,18 @@ USE TEMP B-TREE FOR GROUP BY
 ---
 -- QUERIES FOR `future_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
-    AND \"delayed_jobs\".\"run_at\" > '2025-11-10 17:20:13'
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-CO-ROUTINE subquery
-SCAN delayed_jobs USING INDEX delayed_jobs_priority
-USE TEMP B-TREE FOR GROUP BY
-SCAN subquery
-USE TEMP B-TREE FOR GROUP BY
----
+-- (no new queries)
 -- QUERIES FOR `locked_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(claimed_count) AS claimed_count,
+       SUM(claimable_count) AS claimable_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, SUM(CASE WHEN \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43' THEN 1 ELSE 0 END) AS claimed_count,
+       SUM(CASE WHEN (\"delayed_jobs\".\"locked_at\" IS NULL
+    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43') THEN 1 ELSE 0 END) AS claimable_count
   FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43'
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
+  WHERE \"delayed_jobs\".\"failed_at\" IS NULL
     AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
   GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
@@ -739,29 +537,15 @@ USE TEMP B-TREE FOR GROUP BY
 ---
 -- QUERIES FOR `erroring_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE \"delayed_jobs\".\"attempts\" > 0
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-CO-ROUTINE subquery
-SCAN delayed_jobs USING INDEX delayed_jobs_priority
-USE TEMP B-TREE FOR GROUP BY
-SCAN subquery
-USE TEMP B-TREE FOR GROUP BY
----
+-- (no new queries)
 -- QUERIES FOR `failed_count`:
 ---------------------------------
 -- (no new queries)
 -- QUERIES FOR `max_lock_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(locked_at) AS locked_at,
+SELECT MIN(locked_at) AS locked_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        CURRENT_TIMESTAMP AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM \"delayed_jobs\"
@@ -779,8 +563,9 @@ USE TEMP B-TREE FOR GROUP BY
 ---
 -- QUERIES FOR `max_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(run_at) AS run_at,
+SELECT MIN(run_at) AS run_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        CURRENT_TIMESTAMP AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
@@ -802,24 +587,7 @@ USE TEMP B-TREE FOR GROUP BY
 -- (no new queries)
 -- QUERIES FOR `workable_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       \"queue\" AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM \"delayed_jobs\"
-  WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
-    OR \"delayed_jobs\".\"locked_at\" < '2025-11-10 16:59:43')
-    AND \"delayed_jobs\".\"failed_at\" IS NULL
-    AND \"delayed_jobs\".\"run_at\" <= '2025-11-10 17:20:13'
-  GROUP BY \"delayed_jobs\".\"priority\", \"delayed_jobs\".\"queue\") subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
-
-CO-ROUTINE subquery
-SCAN delayed_jobs USING INDEX delayed_jobs_priority
-USE TEMP B-TREE FOR GROUP BY
-SCAN subquery
-USE TEMP B-TREE FOR GROUP BY
----
+-- (no new queries)
 -- QUERIES FOR `alert_age_percent`:
 ---------------------------------
 -- (no new queries)
@@ -828,9 +596,9 @@ SNAP
 snapshots["runs the expected mysql2 queries with the expected plans 1"] = <<-SNAP
 -- QUERIES FOR `count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
+SELECT SUM(count) AS count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
   FROM (SELECT priority, queue, COUNT(*) AS count
   FROM `delayed_jobs`
   GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
@@ -846,13 +614,16 @@ SELECT SUM(count) AS sum_count,
 ---
 -- QUERIES FOR `future_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(count) AS count,
+       SUM(future_count) AS future_count,
+       SUM(erroring_count) AS erroring_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, COUNT(*) AS count,
+       SUM(CASE WHEN `delayed_jobs`.`run_at` > '2025-11-10 17:20:13' THEN 1 ELSE 0 END) AS future_count,
+       SUM(CASE WHEN `delayed_jobs`.`attempts` > 0 THEN 1 ELSE 0 END) AS erroring_count
   FROM `delayed_jobs`
   WHERE `delayed_jobs`.`failed_at` IS NULL
-    AND `delayed_jobs`.`run_at` > '2025-11-10 17:20:13'
   GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
 
@@ -862,18 +633,20 @@ SELECT SUM(count) AS sum_count,
             -> Materialize  (cost=...)
                 -> Table scan on <temporary>
                     -> Aggregate using temporary table
-                        -> Filter: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at > TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+                        -> Filter: (delayed_jobs.failed_at is null)  (cost=...)
                             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 ---
 -- QUERIES FOR `locked_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(claimed_count) AS claimed_count,
+       SUM(claimable_count) AS claimable_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, SUM(CASE WHEN `delayed_jobs`.`locked_at` >= '2025-11-10 16:59:43' THEN 1 ELSE 0 END) AS claimed_count,
+       SUM(CASE WHEN (`delayed_jobs`.`locked_at` IS NULL
+    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43') THEN 1 ELSE 0 END) AS claimable_count
   FROM `delayed_jobs`
-  WHERE `delayed_jobs`.`locked_at` >= '2025-11-10 16:59:43'
-    AND `delayed_jobs`.`failed_at` IS NULL
+  WHERE `delayed_jobs`.`failed_at` IS NULL
     AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
   GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
@@ -884,35 +657,17 @@ SELECT SUM(count) AS sum_count,
             -> Materialize  (cost=...)
                 -> Table scan on <temporary>
                     -> Aggregate using temporary table
-                        -> Filter: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+                        -> Filter: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
                             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 ---
 -- QUERIES FOR `erroring_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM `delayed_jobs`
-  WHERE `delayed_jobs`.`attempts` > 0
-    AND `delayed_jobs`.`failed_at` IS NULL
-  GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
-
--> Table scan on <temporary>
-    -> Aggregate using temporary table
-        -> Table scan on subquery  (cost=...)
-            -> Materialize  (cost=...)
-                -> Table scan on <temporary>
-                    -> Aggregate using temporary table
-                        -> Filter: ((delayed_jobs.attempts > 0) and (delayed_jobs.failed_at is null))  (cost=...)
-                            -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
----
+-- (no new queries)
 -- QUERIES FOR `failed_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
+SELECT SUM(count) AS count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
   FROM (SELECT priority, queue, COUNT(*) AS count
   FROM `delayed_jobs`
   WHERE `delayed_jobs`.`failed_at` IS NOT NULL
@@ -930,8 +685,9 @@ SELECT SUM(count) AS sum_count,
 ---
 -- QUERIES FOR `max_lock_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(locked_at) AS locked_at,
+SELECT MIN(locked_at) AS locked_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        UTC_TIMESTAMP() AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM `delayed_jobs`
@@ -952,8 +708,9 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
 ---
 -- QUERIES FOR `max_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(run_at) AS run_at,
+SELECT MIN(run_at) AS run_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        UTC_TIMESTAMP() AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM `delayed_jobs`
@@ -978,27 +735,7 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
 -- (no new queries)
 -- QUERIES FOR `workable_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM `delayed_jobs`
-  WHERE (`delayed_jobs`.`locked_at` IS NULL
-    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
-    AND `delayed_jobs`.`failed_at` IS NULL
-    AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
-  GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
-
--> Table scan on <temporary>
-    -> Aggregate using temporary table
-        -> Table scan on subquery  (cost=...)
-            -> Materialize  (cost=...)
-                -> Table scan on <temporary>
-                    -> Aggregate using temporary table
-                        -> Filter: (((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
-                            -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
----
+-- (no new queries)
 -- QUERIES FOR `alert_age_percent`:
 ---------------------------------
 -- (no new queries)
@@ -1007,9 +744,9 @@ SNAP
 snapshots["[legacy index] runs the expected mysql2 queries with the expected plans 1"] = <<-SNAP
 -- QUERIES FOR `count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
+SELECT SUM(count) AS count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
   FROM (SELECT priority, queue, COUNT(*) AS count
   FROM `delayed_jobs`
   GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
@@ -1025,13 +762,16 @@ SELECT SUM(count) AS sum_count,
 ---
 -- QUERIES FOR `future_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(count) AS count,
+       SUM(future_count) AS future_count,
+       SUM(erroring_count) AS erroring_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, COUNT(*) AS count,
+       SUM(CASE WHEN `delayed_jobs`.`run_at` > '2025-11-10 17:20:13' THEN 1 ELSE 0 END) AS future_count,
+       SUM(CASE WHEN `delayed_jobs`.`attempts` > 0 THEN 1 ELSE 0 END) AS erroring_count
   FROM `delayed_jobs`
   WHERE `delayed_jobs`.`failed_at` IS NULL
-    AND `delayed_jobs`.`run_at` > '2025-11-10 17:20:13'
   GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
 
@@ -1041,18 +781,20 @@ SELECT SUM(count) AS sum_count,
             -> Materialize  (cost=...)
                 -> Table scan on <temporary>
                     -> Aggregate using temporary table
-                        -> Filter: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at > TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+                        -> Filter: (delayed_jobs.failed_at is null)  (cost=...)
                             -> Table scan on delayed_jobs  (cost=...)
 ---
 -- QUERIES FOR `locked_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
+SELECT SUM(claimed_count) AS claimed_count,
+       SUM(claimable_count) AS claimable_count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
+  FROM (SELECT priority, queue, SUM(CASE WHEN `delayed_jobs`.`locked_at` >= '2025-11-10 16:59:43' THEN 1 ELSE 0 END) AS claimed_count,
+       SUM(CASE WHEN (`delayed_jobs`.`locked_at` IS NULL
+    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43') THEN 1 ELSE 0 END) AS claimable_count
   FROM `delayed_jobs`
-  WHERE `delayed_jobs`.`locked_at` >= '2025-11-10 16:59:43'
-    AND `delayed_jobs`.`failed_at` IS NULL
+  WHERE `delayed_jobs`.`failed_at` IS NULL
     AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
   GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
@@ -1063,35 +805,17 @@ SELECT SUM(count) AS sum_count,
             -> Materialize  (cost=...)
                 -> Table scan on <temporary>
                     -> Aggregate using temporary table
-                        -> Filter: ((delayed_jobs.locked_at >= TIMESTAMP'2025-11-10 16:59:43') and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
+                        -> Filter: ((delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
                             -> Table scan on delayed_jobs  (cost=...)
 ---
 -- QUERIES FOR `erroring_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM `delayed_jobs`
-  WHERE `delayed_jobs`.`attempts` > 0
-    AND `delayed_jobs`.`failed_at` IS NULL
-  GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
-
--> Table scan on <temporary>
-    -> Aggregate using temporary table
-        -> Table scan on subquery  (cost=...)
-            -> Materialize  (cost=...)
-                -> Table scan on <temporary>
-                    -> Aggregate using temporary table
-                        -> Filter: ((delayed_jobs.attempts > 0) and (delayed_jobs.failed_at is null))  (cost=...)
-                            -> Table scan on delayed_jobs  (cost=...)
----
+-- (no new queries)
 -- QUERIES FOR `failed_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
+SELECT SUM(count) AS count,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue
   FROM (SELECT priority, queue, COUNT(*) AS count
   FROM `delayed_jobs`
   WHERE `delayed_jobs`.`failed_at` IS NOT NULL
@@ -1109,8 +833,9 @@ SELECT SUM(count) AS sum_count,
 ---
 -- QUERIES FOR `max_lock_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(locked_at) AS locked_at,
+SELECT MIN(locked_at) AS locked_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        UTC_TIMESTAMP() AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM `delayed_jobs`
@@ -1131,8 +856,9 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
 ---
 -- QUERIES FOR `max_age`:
 ---------------------------------
-SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
-       queue, MIN(run_at) AS run_at,
+SELECT MIN(run_at) AS run_at,
+       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
+       queue AS queue,
        UTC_TIMESTAMP() AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM `delayed_jobs`
@@ -1157,27 +883,7 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
 -- (no new queries)
 -- QUERIES FOR `workable_count`:
 ---------------------------------
-SELECT SUM(count) AS sum_count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_10_then_0_when_priority_20_then_10_when_prio,
-       `queue` AS queue
-  FROM (SELECT priority, queue, COUNT(*) AS count
-  FROM `delayed_jobs`
-  WHERE (`delayed_jobs`.`locked_at` IS NULL
-    OR `delayed_jobs`.`locked_at` < '2025-11-10 16:59:43')
-    AND `delayed_jobs`.`failed_at` IS NULL
-    AND `delayed_jobs`.`run_at` <= '2025-11-10 17:20:13'
-  GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
-
--> Table scan on <temporary>
-    -> Aggregate using temporary table
-        -> Table scan on subquery  (cost=...)
-            -> Materialize  (cost=...)
-                -> Table scan on <temporary>
-                    -> Aggregate using temporary table
-                        -> Filter: (((delayed_jobs.locked_at is null) or (delayed_jobs.locked_at < TIMESTAMP'2025-11-10 16:59:43')) and (delayed_jobs.failed_at is null) and (delayed_jobs.run_at <= TIMESTAMP'2025-11-10 17:20:13'))  (cost=...)
-                            -> Table scan on delayed_jobs  (cost=...)
----
+-- (no new queries)
 -- QUERIES FOR `alert_age_percent`:
 ---------------------------------
 -- (no new queries)
