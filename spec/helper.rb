@@ -311,7 +311,7 @@ QueryUnderTest = Struct.new(:sql, :connection) do
   end
 
   def mysql2_explain
-    seed_rows! # MySQL needs a bit of data to reach for indexes
+    seed_rows! if Delayed::Job.none? # MySQL needs a bit of data to reach for indexes
     connection.execute("ANALYZE TABLE #{Delayed::Job.table_name}")
     connection.execute("SET SESSION max_seeks_for_key = 1")
     connection.execute("EXPLAIN FORMAT=TREE #{sql}").to_a.map(&:first).join("\n")
@@ -325,7 +325,7 @@ QueryUnderTest = Struct.new(:sql, :connection) do
 
   def seed_rows!
     now = Delayed::Job.db_time_now
-    10.times do
+    100.times do
       [true, false].repeated_combination(5).each_with_index do |(erroring, failed, locked, future), i|
         Delayed::Job.create!(
           run_at: now + (future ? i.minutes : -i.minutes),
