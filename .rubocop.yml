@@ -22,6 +22,10 @@ Rails/EnvironmentVariableAccess:
 RSpec/IndexedLet:
   Enabled: false
 
+Layout/LineLength:
+  Exclude:
+    - 'spec/**/*'
+
 Rails/SquishedSQLHeredocs:
   Exclude:
     - 'spec/**/*'

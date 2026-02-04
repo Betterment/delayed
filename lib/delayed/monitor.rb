@@ -35,6 +35,33 @@ module Delayed
       send(:"#{metric}_grouped")
     end
 
+    def self.sql_now_in_utc
+      case ActiveRecord::Base.connection.adapter_name
+      when 'PostgreSQL'
+        "TIMEZONE('UTC', NOW())"
+      when 'MySQL', 'Mysql2'
+        "UTC_TIMESTAMP()"
+      else
+        "CURRENT_TIMESTAMP"
+      end
+    end
+
+    def self.parse_utc_time(string)
+      # Depending on Rails version & DB adapter, this will be either a String or a DateTime.
+      # If it's a DateTime, and if connection is running with the `:local` time zone config,
+      # then by default Rails incorrectly assumes it's in local time instead of UTC.
+      # We use `strftime` to strip the encoded TZ info and re-parse it as UTC.
+      #
+      # Example:
+      # - "2026-02-05 10:01:23"        -> DB-returned string
+      # - "2026-02-05 10:01:23 -0600"  -> Rails-parsed DateTime with incorrect TZ
+      # - "2026-02-05 10:01:23"        -> `strftime` output
+      # - "2026-02-05 04:01:23 -0600"  -> Re-parsed as UTC and converted to local time
+      string = string.strftime('%Y-%m-%d %H:%M:%S') if string.respond_to?(:strftime)
+
+      ActiveSupport::TimeZone.new("UTC").parse(string)
+    end
+
     private
 
     attr_reader :jobs
@@ -75,7 +102,15 @@ module Delayed
 
     def grouped_min(scope, column)
       Delayed::Job.from(scope.select("priority, queue, MIN(#{column}) AS #{column}"))
-        .group(priority_case_statement, :queue).minimum(column)
+        .group(priority_case_statement, :queue)
+        .select(<<~SQL.squish)
+          (#{priority_case_statement}) AS priority,
+          queue,
+          MIN(#{column}) AS #{column},
+          #{self.class.sql_now_in_utc} AS db_now_utc
+        SQL
+        .group_by { |j| [j.priority.to_i, j.queue] }
+        .transform_values(&:first)
     end
 
     def count_grouped
@@ -107,16 +142,16 @@ module Delayed
     end
 
     def max_lock_age_grouped
-      oldest_locked_job_grouped.transform_values { |locked_at| Job.db_time_now - locked_at }
+      oldest_locked_at_query.transform_values { |j| db_now(j) - j.locked_at }
     end
 
     def max_age_grouped
-      oldest_workable_job_grouped.transform_values { |run_at| Job.db_time_now - run_at }
+      oldest_run_at_query.transform_values { |j| db_now(j) - j.run_at }
     end
 
     def alert_age_percent_grouped
-      oldest_workable_job_grouped.each_with_object({}) do |((priority, queue), run_at), metrics|
-        max_age = Job.db_time_now - run_at
+      oldest_run_at_query.each_with_object({}) do |((priority, queue), j), metrics|
+        max_age = db_now(j) - j.run_at
         alert_age = Priority.new(priority).alert_age
         metrics[[priority, queue]] = [max_age / alert_age * 100, 100].min if alert_age
       end
@@ -129,11 +164,23 @@ module Delayed
     alias working_count_grouped locked_count_grouped
 
     def oldest_locked_job_grouped
-      grouped_min(jobs.claimed, :locked_at)
+      oldest_locked_at_query.transform_values(&:locked_at)
     end
 
     def oldest_workable_job_grouped
-      @memo[:oldest_workable_job_grouped] ||= grouped_min(jobs.claimable, :run_at)
+      oldest_run_at_query.transform_values(&:run_at)
+    end
+
+    def oldest_locked_at_query
+      @memo[:oldest_locked_at_query] ||= grouped_min(jobs.claimed, :locked_at)
+    end
+
+    def oldest_run_at_query
+      @memo[:oldest_run_at_query] ||= grouped_min(jobs.claimable, :run_at)
+    end
+
+    def db_now(record)
+      self.class.parse_utc_time(record.db_now_utc)
     end
 
     def priority_case_statement

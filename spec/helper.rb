@@ -38,13 +38,12 @@ end
 
 ENV['RAILS_ENV'] = 'test'
 
-db_adapter = ENV["ADAPTER"]
-gemfile = ENV["BUNDLE_GEMFILE"]
-db_adapter ||= gemfile && gemfile[%r{gemfiles/(.*?)/}] && $1 # rubocop:disable Style/PerlBackrefs
-db_adapter ||= "sqlite3"
+def current_adapter
+  ENV.fetch('ADAPTER', 'sqlite3')
+end
 
 config = YAML.load(ERB.new(File.read("spec/database.yml")).result)
-ActiveRecord::Base.establish_connection config[db_adapter]
+ActiveRecord::Base.establish_connection config[current_adapter]
 ActiveRecord::Base.logger = Delayed.logger
 ActiveJob::Base.logger = Delayed.logger
 ActiveRecord::Migration.verbose = false
@@ -58,7 +57,7 @@ end
 # MySQL 5.7 no longer supports null default values for the primary key
 # Override the default primary key type in Rails <= 4.0
 # https://stackoverflow.com/a/34555109
-if db_adapter == "mysql2"
+if current_adapter == "mysql2"
   types = if defined?(ActiveRecord::ConnectionAdapters::AbstractMysqlAdapter)
             # ActiveRecord 3.2+
             ActiveRecord::ConnectionAdapters::AbstractMysqlAdapter::NATIVE_DATABASE_TYPES
@@ -208,6 +207,14 @@ else
   ActiveSupport::Dependencies.autoload_paths << File.dirname(__FILE__)
 end
 
+def default_timezone=(zone)
+  if ActiveRecord::VERSION::MAJOR >= 7
+    ActiveRecord.default_timezone = zone
+  else
+    ActiveRecord::Base.default_timezone = zone
+  end
+end
+
 RSpec::Matchers.define :emit_notification do |expected_event_name|
   attr_reader :actual, :expected
 
@@ -217,10 +224,15 @@ RSpec::Matchers.define :emit_notification do |expected_event_name|
 
   chain :with_payload, :expected_payload
   chain :with_value, :expected_value
+  chain(:approximately) { @approximately = true }
   diffable
 
   match do |block|
-    @expected = { event_name: expected_event_name, payload: expected_payload, value: expected_value }
+    if @approximately && current_adapter != 'postgresql'
+      @expected_value = a_value_within([2, @expected_value.abs * 0.05].max).of(@expected_value)
+    end
+
+    @expected = { event_name: expected_event_name, payload: expected_payload, value: @expected_value }
     @actuals = []
     callback = ->(name, _started, _finished, _unique_id, payload) do
       @actuals << { event_name: name, payload: payload.except(:value), value: payload[:value] }
@@ -247,10 +259,6 @@ RSpec::Matchers.define :emit_notification do |expected_event_name|
         #{(@actual.presence || @actuals).map(&:inspect).join("\n  ")}
     MSG
   end
-end
-
-def current_adapter
-  ENV.fetch('ADAPTER', 'sqlite3')
 end
 
 def current_database
