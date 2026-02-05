@@ -1006,12 +1006,6 @@ describe Delayed::Job do
     end
   end
 
-  if ActiveRecord::VERSION::MAJOR >= 7
-    delegate :default_timezone=, to: ActiveRecord
-  else
-    delegate :default_timezone=, to: ActiveRecord::Base
-  end
-
   context "db_time_now" do
     after do
       Time.zone = nil

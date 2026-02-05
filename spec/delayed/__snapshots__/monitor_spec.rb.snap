@@ -318,10 +318,10 @@ GroupAggregate  (cost=...)
 SNAP
 
 snapshots["runs the expected postgresql query for max_lock_age 1"] = <<-SNAP
-SELECT MIN(locked_at) AS minimum_locked_at, CASE WHEN priority >= 0
+SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
-    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"queue\" AS queue
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(locked_at) AS locked_at, TIMEZONE('UTC', NOW()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43'
@@ -336,7 +336,7 @@ SNAP
 
 snapshots["produces the expected postgresql query plan for max_lock_age 1"] = <<-SNAP
 GroupAggregate  (cost=...)
-  Output: min(subquery.locked_at), (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
+  Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.locked_at), timezone('UTC'::text, now())
   Group Key: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.locked_at
@@ -357,7 +357,7 @@ SNAP
 
 snapshots["[legacy index] produces the expected postgresql query plan for max_lock_age 1"] = <<-SNAP
 GroupAggregate  (cost=...)
-  Output: min(subquery.locked_at), (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
+  Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.locked_at), timezone('UTC'::text, now())
   Group Key: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.locked_at
@@ -377,10 +377,10 @@ GroupAggregate  (cost=...)
 SNAP
 
 snapshots["runs the expected postgresql query for max_age 1"] = <<-SNAP
-SELECT MIN(run_at) AS minimum_run_at, CASE WHEN priority >= 0
+SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
-    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"queue\" AS queue
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at, TIMEZONE('UTC', NOW()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
   WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
@@ -396,7 +396,7 @@ SNAP
 
 snapshots["produces the expected postgresql query plan for max_age 1"] = <<-SNAP
 GroupAggregate  (cost=...)
-  Output: min(subquery.run_at), (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
+  Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.run_at), timezone('UTC'::text, now())
   Group Key: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.run_at
@@ -417,7 +417,7 @@ SNAP
 
 snapshots["[legacy index] produces the expected postgresql query plan for max_age 1"] = <<-SNAP
 GroupAggregate  (cost=...)
-  Output: min(subquery.run_at), (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
+  Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.run_at), timezone('UTC'::text, now())
   Group Key: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.run_at
@@ -556,10 +556,10 @@ GroupAggregate  (cost=...)
 SNAP
 
 snapshots["runs the expected postgresql query for alert_age_percent 1"] = <<-SNAP
-SELECT MIN(run_at) AS minimum_run_at, CASE WHEN priority >= 0
+SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
-    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"queue\" AS queue
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at, TIMEZONE('UTC', NOW()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
   WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
@@ -575,7 +575,7 @@ SNAP
 
 snapshots["produces the expected postgresql query plan for alert_age_percent 1"] = <<-SNAP
 GroupAggregate  (cost=...)
-  Output: min(subquery.run_at), (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
+  Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.run_at), timezone('UTC'::text, now())
   Group Key: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.run_at
@@ -596,7 +596,7 @@ SNAP
 
 snapshots["[legacy index] produces the expected postgresql query plan for alert_age_percent 1"] = <<-SNAP
 GroupAggregate  (cost=...)
-  Output: min(subquery.run_at), (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
+  Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.run_at), timezone('UTC'::text, now())
   Group Key: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN ((subquery.priority >= 0) AND (subquery.priority < 10)) THEN 0 WHEN ((subquery.priority >= 10) AND (subquery.priority < 20)) THEN 10 WHEN ((subquery.priority >= 20) AND (subquery.priority < 30)) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.run_at
@@ -795,10 +795,10 @@ USE TEMP B-TREE FOR GROUP BY
 SNAP
 
 snapshots["runs the expected sqlite3 query for max_lock_age 1"] = <<-SNAP
-SELECT MIN(locked_at) AS minimum_locked_at, CASE WHEN priority >= 0
+SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
-    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"queue\" AS queue
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(locked_at) AS locked_at, CURRENT_TIMESTAMP AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43'
@@ -828,10 +828,10 @@ USE TEMP B-TREE FOR GROUP BY
 SNAP
 
 snapshots["runs the expected sqlite3 query for max_age 1"] = <<-SNAP
-SELECT MIN(run_at) AS minimum_run_at, CASE WHEN priority >= 0
+SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
-    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"queue\" AS queue
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at, CURRENT_TIMESTAMP AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
   WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
@@ -929,10 +929,10 @@ USE TEMP B-TREE FOR GROUP BY
 SNAP
 
 snapshots["runs the expected sqlite3 query for alert_age_percent 1"] = <<-SNAP
-SELECT MIN(run_at) AS minimum_run_at, CASE WHEN priority >= 0
+SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
-    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, \"queue\" AS queue
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at, CURRENT_TIMESTAMP AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
   WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
@@ -1149,10 +1149,10 @@ snapshots["[legacy index] produces the expected mysql2 query plan for failed_cou
 SNAP
 
 snapshots["runs the expected mysql2 query for max_lock_age 1"] = <<-SNAP
-SELECT MIN(locked_at) AS minimum_locked_at, CASE WHEN priority >= 0
+SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
-    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, `queue` AS queue
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(locked_at) AS locked_at, UTC_TIMESTAMP() AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM `delayed_jobs`
   WHERE `delayed_jobs`.`locked_at` >= '2025-11-10 16:59:43'
@@ -1188,10 +1188,10 @@ snapshots["[legacy index] produces the expected mysql2 query plan for max_lock_a
 SNAP
 
 snapshots["runs the expected mysql2 query for max_age 1"] = <<-SNAP
-SELECT MIN(run_at) AS minimum_run_at, CASE WHEN priority >= 0
+SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
-    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, `queue` AS queue
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at, UTC_TIMESTAMP() AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM `delayed_jobs`
   WHERE (`delayed_jobs`.`locked_at` IS NULL
@@ -1307,10 +1307,10 @@ snapshots["[legacy index] produces the expected mysql2 query plan for workable_c
 SNAP
 
 snapshots["runs the expected mysql2 query for alert_age_percent 1"] = <<-SNAP
-SELECT MIN(run_at) AS minimum_run_at, CASE WHEN priority >= 0
+SELECT (CASE WHEN priority >= 0
     AND priority < 10 THEN 0 WHEN priority >= 10
     AND priority < 20 THEN 10 WHEN priority >= 20
-    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS case_when_priority_0_and_priority_10_then_0_when_priority_10_an, `queue` AS queue
+    AND priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority, queue, MIN(run_at) AS run_at, UTC_TIMESTAMP() AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM `delayed_jobs`
   WHERE (`delayed_jobs`.`locked_at` IS NULL
