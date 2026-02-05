@@ -149,7 +149,7 @@ GroupAggregate  (cost=...)
 ---------------------------------
 SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
        queue, MIN(locked_at) AS locked_at,
-       TIMEZONE('UTC', NOW()) AS db_now_utc
+       TIMEZONE('UTC', STATEMENT_TIMESTAMP()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43'
@@ -159,7 +159,7 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.locked_at), timezone('UTC'::text, now())
+  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.locked_at), timezone('UTC'::text, statement_timestamp())
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.locked_at
@@ -181,7 +181,7 @@ GroupAggregate  (cost=...)
 ---------------------------------
 SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
        queue, MIN(run_at) AS run_at,
-       TIMEZONE('UTC', NOW()) AS db_now_utc
+       TIMEZONE('UTC', STATEMENT_TIMESTAMP()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
   WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
@@ -192,7 +192,7 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.run_at), timezone('UTC'::text, now())
+  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.run_at), timezone('UTC'::text, statement_timestamp())
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.run_at
@@ -408,7 +408,7 @@ GroupAggregate  (cost=...)
 ---------------------------------
 SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
        queue, MIN(locked_at) AS locked_at,
-       TIMEZONE('UTC', NOW()) AS db_now_utc
+       TIMEZONE('UTC', STATEMENT_TIMESTAMP()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(locked_at) AS locked_at
   FROM \"delayed_jobs\"
   WHERE \"delayed_jobs\".\"locked_at\" >= '2025-11-10 16:59:43'
@@ -418,7 +418,7 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.locked_at), timezone('UTC'::text, now())
+  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.locked_at), timezone('UTC'::text, statement_timestamp())
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.locked_at
@@ -440,7 +440,7 @@ GroupAggregate  (cost=...)
 ---------------------------------
 SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END) AS priority,
        queue, MIN(run_at) AS run_at,
-       TIMEZONE('UTC', NOW()) AS db_now_utc
+       TIMEZONE('UTC', STATEMENT_TIMESTAMP()) AS db_now_utc
   FROM (SELECT priority, queue, MIN(run_at) AS run_at
   FROM \"delayed_jobs\"
   WHERE (\"delayed_jobs\".\"locked_at\" IS NULL
@@ -451,7 +451,7 @@ SELECT (CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority 
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, \"queue\"
 
 GroupAggregate  (cost=...)
-  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.run_at), timezone('UTC'::text, now())
+  Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, min(subquery.run_at), timezone('UTC'::text, statement_timestamp())
   Group Key: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue
   ->  Sort  (cost=...)
         Output: (CASE WHEN (subquery.priority < 10) THEN 0 WHEN (subquery.priority < 20) THEN 10 WHEN (subquery.priority < 30) THEN 20 WHEN (subquery.priority >= 30) THEN 30 ELSE NULL::integer END), subquery.queue, subquery.run_at

@@ -38,7 +38,7 @@ module Delayed
     def self.sql_now_in_utc
       case ActiveRecord::Base.connection.adapter_name
       when 'PostgreSQL'
-        "TIMEZONE('UTC', NOW())"
+        "TIMEZONE('UTC', STATEMENT_TIMESTAMP())"
       when 'MySQL', 'Mysql2'
         "UTC_TIMESTAMP()"
       else
@@ -142,16 +142,16 @@ module Delayed
     end
 
     def max_lock_age_grouped
-      oldest_locked_at_query.transform_values { |j| db_now(j) - j.locked_at }
+      oldest_locked_at_query.transform_values { |j| time_ago(db_now(j), j.locked_at) }
     end
 
     def max_age_grouped
-      oldest_run_at_query.transform_values { |j| db_now(j) - j.run_at }
+      oldest_run_at_query.transform_values { |j| time_ago(db_now(j), j.run_at) }
     end
 
     def alert_age_percent_grouped
       oldest_run_at_query.each_with_object({}) do |((priority, queue), j), metrics|
-        max_age = db_now(j) - j.run_at
+        max_age = time_ago(db_now(j), j.run_at)
         alert_age = Priority.new(priority).alert_age
         metrics[[priority, queue]] = [max_age / alert_age * 100, 100].min if alert_age
       end
@@ -181,6 +181,10 @@ module Delayed
 
     def db_now(record)
       self.class.parse_utc_time(record.db_now_utc)
+    end
+
+    def time_ago(now, value)
+      [now - (value || now), 0].max
     end
 
     def priority_case_statement
