@@ -36,30 +36,11 @@ module Delayed
     end
 
     def self.sql_now_in_utc
-      case ActiveRecord::Base.connection.adapter_name
-      when 'PostgreSQL'
-        "TIMEZONE('UTC', NOW())"
-      when 'MySQL', 'Mysql2'
-        "UTC_TIMESTAMP()"
-      else
-        "CURRENT_TIMESTAMP"
-      end
+      Helpers::DbTime.sql_now_in_utc
     end
 
     def self.parse_utc_time(string)
-      # Depending on Rails version & DB adapter, this will be either a String or a DateTime.
-      # If it's a DateTime, and if connection is running with the `:local` time zone config,
-      # then by default Rails incorrectly assumes it's in local time instead of UTC.
-      # We use `strftime` to strip the encoded TZ info and re-parse it as UTC.
-      #
-      # Example:
-      # - "2026-02-05 10:01:23"        -> DB-returned string
-      # - "2026-02-05 10:01:23 -0600"  -> Rails-parsed DateTime with incorrect TZ
-      # - "2026-02-05 10:01:23"        -> `strftime` output
-      # - "2026-02-05 04:01:23 -0600"  -> Re-parsed as UTC and converted to local time
-      string = string.strftime('%Y-%m-%d %H:%M:%S') if string.respond_to?(:strftime)
-
-      ActiveSupport::TimeZone.new("UTC").parse(string)
+      Helpers::DbTime.parse_utc_time(string)
     end
 
     private

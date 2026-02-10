@@ -26,9 +26,7 @@ RSpec.describe Delayed::Monitor do
       # On PostgreSQL, running examples in a transaction allows CURRENT_TIMESTAMP to remain stable.
       # We can in turn use this to set Timecop to the same time as the DB for deterministic time math.
       Delayed::Job.transaction do
-        now = described_class.parse_utc_time(
-          Delayed::Job.connection.select_value("SELECT #{described_class.sql_now_in_utc}"),
-        )
+        now = Delayed::Helpers::DbTime.now
         Timecop.freeze(now) { example.run }
       end
     ensure

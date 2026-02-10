@@ -56,7 +56,7 @@ module Delayed
         return unless Delayed::Worker.deny_stale_enqueues
         return unless options[:run_at]
 
-        threshold = Job.db_time_now - Job.lock_timeout
+        threshold = Helpers::DbTime.now - Job.lock_timeout
         return unless options[:run_at] < threshold
 
         raise StaleEnqueueError,
