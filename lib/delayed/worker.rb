@@ -22,6 +22,8 @@ module Delayed
     cattr_accessor :read_ahead, instance_writer: false, default: 5
     cattr_accessor :destroy_failed_jobs, instance_writer: false, default: false
 
+    cattr_accessor :deny_stale_enqueues, instance_writer: false, default: false
+
     cattr_accessor :min_priority, :max_priority, instance_writer: false
 
     # TODO: Remove this and rely on ActiveJob.queue_name when no queue is specified
