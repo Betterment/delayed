@@ -51,7 +51,7 @@ module Delayed
       def self.compute_offset
         app_time = Job.db_time_now
         db_time = parse_utc_time(
-          Job.connection.select_value("SELECT #{sql_now_in_utc}")
+          Job.connection.select_value("SELECT #{sql_now_in_utc}"),
         )
         db_time - app_time
       end
