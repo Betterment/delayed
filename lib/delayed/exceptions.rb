@@ -14,4 +14,6 @@ module Delayed
   class FatalBackendError < RuntimeError; end
 
   class DeserializationError < StandardError; end
+
+  class StaleEnqueueError < StandardError; end
 end

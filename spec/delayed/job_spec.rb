@@ -13,6 +13,7 @@ describe Delayed::Job do
     Delayed::Worker.max_claims = 1 # disable multithreading because SimpleJob is not threadsafe
     Delayed::Worker.default_priority = 99
     Delayed::Worker.delay_jobs = true
+    Delayed::Worker.deny_stale_enqueues = false
     Delayed::Worker.default_queue_name = 'default_tracking'
     SimpleJob.runs = 0
     described_class.delete_all
@@ -131,6 +132,42 @@ describe Delayed::Job do
 
       it 'returns a job, not the result of invocation' do
         expect(described_class.enqueue(SimpleJob.new)).to be_instance_of(described_class)
+      end
+    end
+
+    context 'with deny_stale_enqueues = true' do
+      before { Delayed::Worker.deny_stale_enqueues = true }
+
+      it 'raises StaleEnqueueError when run_at is beyond lock_timeout in the past' do
+        stale_time = described_class.db_time_now - described_class.lock_timeout - 1.minute
+        expect {
+          described_class.enqueue SimpleJob.new, run_at: stale_time
+        }.to raise_error(Delayed::StaleEnqueueError, /Cannot enqueue a job in the distant past/)
+      end
+
+      it 'allows run_at within lock_timeout of now' do
+        recent_past = described_class.db_time_now - described_class.lock_timeout + 1.minute
+        job = described_class.enqueue SimpleJob.new, run_at: recent_past
+        expect(job).to be_persisted
+      end
+
+      it 'allows run_at in the future' do
+        future = described_class.db_time_now + 5.minutes
+        job = described_class.enqueue SimpleJob.new, run_at: future
+        expect(job).to be_persisted
+      end
+
+      it 'allows enqueue without run_at' do
+        job = described_class.enqueue SimpleJob.new
+        expect(job).to be_persisted
+      end
+    end
+
+    context 'with deny_stale_enqueues = false (default)' do
+      it 'allows run_at far in the past' do
+        stale_time = described_class.db_time_now - 1.day
+        job = described_class.enqueue SimpleJob.new, run_at: stale_time
+        expect(job).to be_persisted
       end
     end
   end

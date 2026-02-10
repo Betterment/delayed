@@ -13,6 +13,7 @@ module Delayed
         set_queue_name
         set_priority
         handle_dst
+        reject_stale_run_at
         handle_deprecation
         options
       end
@@ -49,6 +50,18 @@ module Delayed
           options[:run_at] = (run_at_was + 1.hour).beginning_of_hour
           Delayed.say("Adjusted run_at from #{run_at_was} to #{options[:run_at]} to account for fall back DST transition", :warn)
         end
+      end
+
+      def reject_stale_run_at
+        return unless Delayed::Worker.deny_stale_enqueues
+        return unless options[:run_at]
+
+        threshold = Job.db_time_now - Job.lock_timeout
+        return unless options[:run_at] < threshold
+
+        raise StaleEnqueueError,
+              "Cannot enqueue a job in the distant past (run_at: #{options[:run_at].iso8601}," \
+              " threshold: #{threshold.iso8601}). This is usually a bug."
       end
 
       def handle_deprecation
