@@ -228,10 +228,7 @@ RSpec::Matchers.define :emit_notification do |expected_event_name|
   diffable
 
   match do |block|
-    if @approximately && current_adapter != 'postgresql'
-      @expected_value = a_value_within([2, @expected_value.abs * 0.05].max).of(@expected_value)
-    end
-
+    @expected_value = a_value_within([2, @expected_value.abs * 0.05].max).of(@expected_value) if @approximately
     @expected = { event_name: expected_event_name, payload: expected_payload, value: @expected_value }
     @actuals = []
     callback = ->(name, _started, _finished, _unique_id, payload) do
