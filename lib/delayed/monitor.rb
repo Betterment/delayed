@@ -187,11 +187,11 @@ module Delayed
       [
         'CASE',
         Priority.ranges.values.map do |range|
-          [
-            "WHEN priority >= #{range.first.to_i}",
-            ("AND priority < #{range.last.to_i}" unless range.last.infinite?),
-            "THEN #{range.first.to_i}",
-          ].compact
+          if range.last.infinite?
+            "WHEN priority >= #{range.first.to_i} THEN #{range.first.to_i}"
+          else
+            "WHEN priority < #{range.last.to_i} THEN #{range.first.to_i}"
+          end
         end,
         'END',
       ].flatten.join(' ')
