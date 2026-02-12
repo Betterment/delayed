@@ -433,6 +433,7 @@ SELECT SUM(count) AS count,
        queue AS queue
   FROM (SELECT `delayed_jobs`.`priority`, `delayed_jobs`.`queue`, COUNT(*) AS count
   FROM `delayed_jobs`
+  WHERE `delayed_jobs`.`failed_at` IS NOT NULL
   GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
 
@@ -442,10 +443,9 @@ SELECT SUM(count) AS count,
             -> Materialize  (cost=...)
                 -> Table scan on <temporary>
                     -> Aggregate using temporary table
-                        -> Covering index scan on delayed_jobs using idx_delayed_jobs_live  (cost=...)
+                        -> Filter: (delayed_jobs.failed_at is not null)  (cost=...)
+                            -> Covering index range scan on delayed_jobs using idx_delayed_jobs_live over (NULL < failed_at)  (cost=...)
 ---
--- QUERIES FOR `future_count`:
----------------------------------
 SELECT SUM(count) AS count,
        SUM(future_count) AS future_count,
        SUM(erroring_count) AS erroring_count,
@@ -471,6 +471,9 @@ SELECT SUM(count) AS count,
                         -> Filter: (delayed_jobs.failed_at is null)  (cost=...)
                             -> Covering index lookup on delayed_jobs using idx_delayed_jobs_live (failed_at = NULL)  (cost=...)
 ---
+-- QUERIES FOR `future_count`:
+---------------------------------
+-- (no new queries)
 -- QUERIES FOR `locked_count`:
 ---------------------------------
 SELECT SUM(claimed_count) AS claimed_count,
@@ -503,24 +506,7 @@ SELECT SUM(claimed_count) AS claimed_count,
 -- (no new queries)
 -- QUERIES FOR `failed_count`:
 ---------------------------------
-SELECT SUM(count) AS count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
-       queue AS queue
-  FROM (SELECT `delayed_jobs`.`priority`, `delayed_jobs`.`queue`, COUNT(*) AS count
-  FROM `delayed_jobs`
-  WHERE `delayed_jobs`.`failed_at` IS NOT NULL
-  GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
-
--> Table scan on <temporary>
-    -> Aggregate using temporary table
-        -> Table scan on subquery  (cost=...)
-            -> Materialize  (cost=...)
-                -> Table scan on <temporary>
-                    -> Aggregate using temporary table
-                        -> Filter: (delayed_jobs.failed_at is not null)  (cost=...)
-                            -> Covering index range scan on delayed_jobs using idx_delayed_jobs_live over (NULL < failed_at)  (cost=...)
----
+-- (no new queries)
 -- QUERIES FOR `max_lock_age`:
 ---------------------------------
 -- (no new queries)
@@ -546,6 +532,7 @@ SELECT SUM(count) AS count,
        queue AS queue
   FROM (SELECT `delayed_jobs`.`priority`, `delayed_jobs`.`queue`, COUNT(*) AS count
   FROM `delayed_jobs`
+  WHERE `delayed_jobs`.`failed_at` IS NOT NULL
   GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
   GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
 
@@ -555,10 +542,9 @@ SELECT SUM(count) AS count,
             -> Materialize  (cost=...)
                 -> Table scan on <temporary>
                     -> Aggregate using temporary table
-                        -> Table scan on delayed_jobs  (cost=...)
+                        -> Filter: (delayed_jobs.failed_at is not null)  (cost=...)
+                            -> Table scan on delayed_jobs  (cost=...)
 ---
--- QUERIES FOR `future_count`:
----------------------------------
 SELECT SUM(count) AS count,
        SUM(future_count) AS future_count,
        SUM(erroring_count) AS erroring_count,
@@ -584,6 +570,9 @@ SELECT SUM(count) AS count,
                         -> Filter: (delayed_jobs.failed_at is null)  (cost=...)
                             -> Table scan on delayed_jobs  (cost=...)
 ---
+-- QUERIES FOR `future_count`:
+---------------------------------
+-- (no new queries)
 -- QUERIES FOR `locked_count`:
 ---------------------------------
 SELECT SUM(claimed_count) AS claimed_count,
@@ -616,24 +605,7 @@ SELECT SUM(claimed_count) AS claimed_count,
 -- (no new queries)
 -- QUERIES FOR `failed_count`:
 ---------------------------------
-SELECT SUM(count) AS count,
-       CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END AS priority,
-       queue AS queue
-  FROM (SELECT `delayed_jobs`.`priority`, `delayed_jobs`.`queue`, COUNT(*) AS count
-  FROM `delayed_jobs`
-  WHERE `delayed_jobs`.`failed_at` IS NOT NULL
-  GROUP BY `delayed_jobs`.`priority`, `delayed_jobs`.`queue`) subquery
-  GROUP BY CASE WHEN priority < 10 THEN 0 WHEN priority < 20 THEN 10 WHEN priority < 30 THEN 20 WHEN priority >= 30 THEN 30 END, `queue`
-
--> Table scan on <temporary>
-    -> Aggregate using temporary table
-        -> Table scan on subquery  (cost=...)
-            -> Materialize  (cost=...)
-                -> Table scan on <temporary>
-                    -> Aggregate using temporary table
-                        -> Filter: (delayed_jobs.failed_at is not null)  (cost=...)
-                            -> Table scan on delayed_jobs  (cost=...)
----
+-- (no new queries)
 -- QUERIES FOR `max_lock_age`:
 ---------------------------------
 -- (no new queries)
