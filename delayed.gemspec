@@ -26,7 +26,7 @@ Gem::Specification.new do |spec|
 
   spec.version        = Delayed::VERSION
   spec.metadata       = {
-    'changelog_uri' => 'https://github.com/betterment/delayed/blob/main/CHANGELOG.md',
+    'changelog_uri' => 'https://github.com/betterment/delayed/releases',
     'bug_tracker_uri' => 'https://github.com/betterment/delayed/issues',
     'source_code_uri' => 'https://github.com/betterment/delayed',
     'rubygems_mfa_required' => 'true',
