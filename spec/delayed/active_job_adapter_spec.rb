@@ -58,6 +58,22 @@ RSpec.describe Delayed::ActiveJobAdapter do
     end
   end
 
+  it 'bubbles out an error if the job fails to serialize' do
+    JobClass.class_eval do
+      def serialize(*)
+        raise "uh oh, serialize failed!"
+      end
+    end
+
+    expect { JobClass.perform_later }.to raise_error(RuntimeError, "uh oh, serialize failed!")
+  end
+
+  it 'bubbles out an error if Delayed::Job.enqueue fails' do
+    allow(Delayed::Job).to receive(:enqueue).and_raise("uh oh, enqueue failed!")
+
+    expect { JobClass.perform_later }.to raise_error(RuntimeError, "uh oh, enqueue failed!")
+  end
+
   it 'deserializes even if the underlying job class is not defined' do
     JobClass.perform_later
 
