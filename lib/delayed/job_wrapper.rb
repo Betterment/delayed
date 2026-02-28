@@ -39,9 +39,7 @@ module Delayed
     end
 
     def perform
-      ActiveJob::Callbacks.run_callbacks(:execute) do
-        job.perform_now
-      end
+      ActiveJob::Base.execute(job_data)
     end
 
     def encode_with(coder)
