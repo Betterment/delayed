@@ -52,6 +52,10 @@ module Delayed
       prepared = Delayed::Backend::JobPreparer.new(JobWrapper.new(job), opts).prepare
       dj = Delayed::Job.new(prepared)
 
+      Delayed.lifecycle.run_callbacks(:enqueue, dj) do
+        dj.hook(:enqueue)
+      end
+
       # Replicate `before_save` hooks since insert_all bypasses callbacks.
       dj.run_at ||= now
       dj.send(:set_name)

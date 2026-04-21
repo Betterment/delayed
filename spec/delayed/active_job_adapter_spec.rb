@@ -495,6 +495,20 @@ RSpec.describe Delayed::ActiveJobAdapter do
       expect(Delayed::Job.last.name).to eq('JobClass')
     end
 
+    it "fires Delayed's :enqueue lifecycle callback for each job" do
+      observed = []
+      lifecycle_was = Delayed.lifecycle
+      Delayed.instance_variable_set(:@lifecycle, Delayed::Lifecycle.new)
+      Delayed.lifecycle.before(:enqueue) { |job| observed << job }
+
+      adapter.enqueue_all([JobClass.new, JobClass.new, JobClass.new])
+
+      expect(observed.size).to eq(3)
+      expect(observed).to all(be_a(Delayed::Job))
+    ensure
+      Delayed.instance_variable_set(:@lifecycle, lifecycle_was)
+    end
+
     it 'does not fire ActiveJob before/around/after_enqueue callbacks' do
       fires = []
       JobClass.before_enqueue { fires << :before }
