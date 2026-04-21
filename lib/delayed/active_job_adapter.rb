@@ -1,6 +1,7 @@
 module Delayed
   class ActiveJobAdapter
     class UnsafeEnqueueError < RuntimeError; end
+    class EnqueueAllNotSupportedError < RuntimeError; end
 
     def enqueue_after_transaction_commit?
       false
@@ -14,23 +15,17 @@ module Delayed
       _enqueue(job, run_at: Time.at(timestamp)) # rubocop:disable Rails/TimeZone
     end
 
-    # `perform_all_later` / `enqueue_all` is an ActiveJob 7.1+ feature.
-    # Earlier ActiveJob versions lack both the caller (`perform_all_later`)
-    # and the per-job `successfully_enqueued=` setter, so we gate only the
-    # public method — the private helpers are unconditional and just unused
-    # on <7.1.
     if ActiveJob.gem_version >= Gem::Version.new('7.1')
       def enqueue_all(jobs)
         return 0 if jobs.empty?
+
+        raise EnqueueAllNotSupportedError unless enqueue_all_supported?
 
         jobs.each do |job|
           if enqueue_after_transaction_commit_enabled?(job)
             raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
           end
         end
-
-        # Fall back to the per-job path when we can't take the bulk shortcut.
-        return enqueue_all_one_by_one(jobs) unless bulk_enqueue_supported?
 
         rows = jobs.map { |job| build_insert_row(job) }
         result = Delayed::Job.insert_all(rows, record_timestamps: true) # rubocop:disable Rails/SkipsModelValidations
@@ -47,12 +42,9 @@ module Delayed
 
     private
 
-    # Bulk enqueue needs to return the new IDs so we can populate
-    # `provider_job_id` on each input job. That requires both:
-    #   - delay_jobs = true (otherwise each job runs inline via `save`/`invoke_job`)
-    #   - an adapter that supports INSERT ... RETURNING (MySQL does not)
-    def bulk_enqueue_supported?
-      Delayed::Worker.delay_jobs == true && Delayed::Job.connection.supports_insert_returning?
+    def enqueue_all_supported?
+      Delayed::Worker.delay_jobs == true &&
+        Delayed::Job.connection.supports_insert_returning?
     end
 
     def build_insert_row(job)
@@ -74,20 +66,6 @@ module Delayed
 
     def coerce_scheduled_at(value)
       value.is_a?(Numeric) ? Time.at(value) : value # rubocop:disable Rails/TimeZone
-    end
-
-    def enqueue_all_one_by_one(jobs)
-      # Wrap in a transaction so a mid-loop failure (e.g. StaleEnqueueError on
-      # job N) rolls back jobs 0..N-1, matching the bulk path's all-or-nothing
-      # semantics.
-      Delayed::Job.transaction do
-        jobs.count do |job|
-          opts = job.scheduled_at ? { run_at: coerce_scheduled_at(job.scheduled_at) } : {}
-          _enqueue(job, opts)
-          job.successfully_enqueued = true
-          true
-        end
-      end
     end
 
     def _enqueue(job, opts = {})
