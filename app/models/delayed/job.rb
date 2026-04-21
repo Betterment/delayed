@@ -56,7 +56,7 @@ module Delayed
       arel_table[:locked_at].eq(nil).or arel_table[:locked_at].lt(as_of - lock_timeout)
     end
 
-    before_save :set_default_run_at, :set_name
+    before_save :before_save_hooks
 
     REENQUEUE_BUFFER = 30.seconds
 
@@ -280,6 +280,11 @@ module Delayed
 
     def attempts_alert?
       alert_attempts&.<= attempts
+    end
+
+    def before_save_hooks
+      set_default_run_at
+      set_name
     end
 
     private
