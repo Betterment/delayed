@@ -77,11 +77,16 @@ module Delayed
     end
 
     def enqueue_all_one_by_one(jobs)
-      jobs.count do |job|
-        opts = job.scheduled_at ? { run_at: coerce_scheduled_at(job.scheduled_at) } : {}
-        _enqueue(job, opts)
-        job.successfully_enqueued = true
-        true
+      # Wrap in a transaction so a mid-loop failure (e.g. StaleEnqueueError on
+      # job N) rolls back jobs 0..N-1, matching the bulk path's all-or-nothing
+      # semantics.
+      Delayed::Job.transaction do
+        jobs.count do |job|
+          opts = job.scheduled_at ? { run_at: coerce_scheduled_at(job.scheduled_at) } : {}
+          _enqueue(job, opts)
+          job.successfully_enqueued = true
+          true
+        end
       end
     end
 

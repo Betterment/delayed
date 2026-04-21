@@ -404,6 +404,8 @@ RSpec.describe Delayed::ActiveJobAdapter do
       let(:adapter) { ActiveJob::Base.queue_adapter }
 
       it 'inserts multiple jobs in a single INSERT' do
+        skip 'requires INSERT ... RETURNING support' unless Delayed::Job.connection.supports_insert_returning?
+
         jobs = Array.new(3) { JobClass.new }
 
         expect { adapter.enqueue_all(jobs) }
@@ -589,6 +591,8 @@ RSpec.describe Delayed::ActiveJobAdapter do
 
     describe 'ActiveJob.perform_all_later' do
       it 'bulk-enqueues all jobs with a single INSERT' do
+        skip 'requires INSERT ... RETURNING support' unless Delayed::Job.connection.supports_insert_returning?
+
         expect { ActiveJob.perform_all_later([JobClass.new, JobClass.new, JobClass.new]) }
           .to emit_notification('sql.active_record').with_payload(hash_including(sql: a_string_matching(/\AINSERT INTO/i)))
         expect(Delayed::Job.count).to eq(3)
