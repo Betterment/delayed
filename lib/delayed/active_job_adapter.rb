@@ -14,28 +14,35 @@ module Delayed
       _enqueue(job, run_at: Time.at(timestamp)) # rubocop:disable Rails/TimeZone
     end
 
-    def enqueue_all(jobs)
-      return 0 if jobs.empty?
+    # `perform_all_later` / `enqueue_all` is an ActiveJob 7.1+ feature.
+    # Earlier ActiveJob versions lack both the caller (`perform_all_later`)
+    # and the per-job `successfully_enqueued=` setter, so we gate only the
+    # public method — the private helpers are unconditional and just unused
+    # on <7.1.
+    if ActiveJob.gem_version >= Gem::Version.new('7.1')
+      def enqueue_all(jobs)
+        return 0 if jobs.empty?
 
-      jobs.each do |job|
-        if enqueue_after_transaction_commit_enabled?(job)
-          raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
+        jobs.each do |job|
+          if enqueue_after_transaction_commit_enabled?(job)
+            raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
+          end
         end
+
+        # Fall back to the per-job path when we can't take the bulk shortcut.
+        return enqueue_all_one_by_one(jobs) unless bulk_enqueue_supported?
+
+        rows = jobs.map { |job| build_insert_row(job) }
+        result = Delayed::Job.insert_all(rows, record_timestamps: true) # rubocop:disable Rails/SkipsModelValidations
+        ids = result.rows.map(&:first)
+
+        jobs.zip(ids) do |job, id|
+          job.provider_job_id = id
+          job.successfully_enqueued = true
+        end
+
+        ids.size
       end
-
-      # Fall back to the per-job path when we can't take the bulk shortcut.
-      return enqueue_all_one_by_one(jobs) unless bulk_enqueue_supported?
-
-      rows = jobs.map { |job| build_insert_row(job) }
-      result = Delayed::Job.insert_all(rows, record_timestamps: true) # rubocop:disable Rails/SkipsModelValidations
-      ids = result.rows.map(&:first)
-
-      jobs.zip(ids) do |job, id|
-        job.provider_job_id = id
-        job.successfully_enqueued = true
-      end
-
-      ids.size
     end
 
     private

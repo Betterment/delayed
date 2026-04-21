@@ -398,194 +398,195 @@ RSpec.describe Delayed::ActiveJobAdapter do
     end
   end
 
-  describe '.enqueue_all' do
-    let(:adapter) { ActiveJob::Base.queue_adapter }
+  # `enqueue_all` / `perform_all_later` is an ActiveJob 7.1+ feature.
+  if ActiveJob.gem_version.release >= Gem::Version.new('7.1') # rubocop:disable Metrics/BlockLength
+    describe '.enqueue_all' do
+      let(:adapter) { ActiveJob::Base.queue_adapter }
 
-    it 'inserts multiple jobs in a single INSERT' do
-      jobs = Array.new(3) { JobClass.new }
+      it 'inserts multiple jobs in a single INSERT' do
+        jobs = Array.new(3) { JobClass.new }
 
-      expect { adapter.enqueue_all(jobs) }
-        .to emit_notification('sql.active_record').with_payload(hash_including(sql: a_string_matching(/\AINSERT INTO/i)))
-      expect(Delayed::Job.count).to eq(3)
-    end
-
-    it 'returns the count of successfully enqueued jobs' do
-      jobs = Array.new(3) { JobClass.new }
-      expect(adapter.enqueue_all(jobs)).to eq(3)
-    end
-
-    it 'returns 0 when given no jobs' do
-      expect(adapter.enqueue_all([])).to eq(0)
-    end
-
-    it 'sets provider_job_id on each input job' do
-      jobs = Array.new(3) { JobClass.new }
-      adapter.enqueue_all(jobs)
-      expect(jobs.map(&:provider_job_id)).to match_array(Delayed::Job.pluck(:id))
-    end
-
-    it 'sets successfully_enqueued on each input job' do
-      jobs = Array.new(2) { JobClass.new }
-      adapter.enqueue_all(jobs)
-      expect(jobs).to all(be_successfully_enqueued)
-    end
-
-    it 'honors per-job scheduled_at via .set(wait_until:)' do
-      job = JobClass.new.set(wait_until: arbitrary_time)
-      adapter.enqueue_all([JobClass.new, job])
-      expect(Delayed::Job.find(job.provider_job_id).run_at).to eq(arbitrary_time)
-    end
-
-    it 'honors per-job scheduled_at via .set(wait:)' do
-      Timecop.freeze(arbitrary_time) do
-        job = JobClass.new.set(wait: 1.day)
-        adapter.enqueue_all([job])
-        expect(Delayed::Job.find(job.provider_job_id).run_at).to eq(arbitrary_time + 1.day)
+        expect { adapter.enqueue_all(jobs) }
+          .to emit_notification('sql.active_record').with_payload(hash_including(sql: a_string_matching(/\AINSERT INTO/i)))
+        expect(Delayed::Job.count).to eq(3)
       end
-    end
 
-    it 'applies db_time_now to run_at when no scheduled_at is set' do
-      Timecop.freeze(arbitrary_time) do
-        jobs = [JobClass.new]
+      it 'returns the count of successfully enqueued jobs' do
+        jobs = Array.new(3) { JobClass.new }
+        expect(adapter.enqueue_all(jobs)).to eq(3)
+      end
+
+      it 'returns 0 when given no jobs' do
+        expect(adapter.enqueue_all([])).to eq(0)
+      end
+
+      it 'sets provider_job_id on each input job' do
+        jobs = Array.new(3) { JobClass.new }
         adapter.enqueue_all(jobs)
-        expect(Delayed::Job.find(jobs.first.provider_job_id).run_at).to eq(arbitrary_time)
-      end
-    end
-
-    it 'honors per-job queue and priority overrides' do
-      a = JobClass.new.tap do |j|
-        j.queue_name = 'q-a'
-        j.priority = 3
-      end
-      b = JobClass.new.tap do |j|
-        j.queue_name = 'q-b'
-        j.priority = 7
+        expect(jobs.map(&:provider_job_id)).to match_array(Delayed::Job.pluck(:id))
       end
 
-      adapter.enqueue_all([a, b])
-
-      expect(Delayed::Job.find(a.provider_job_id)).to have_attributes(queue: 'q-a', priority: 3)
-      expect(Delayed::Job.find(b.provider_job_id)).to have_attributes(queue: 'q-b', priority: 7)
-    end
-
-    it 'supports a mix of job classes in one call' do
-      other_class = Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
-        def perform; end
+      it 'sets successfully_enqueued on each input job' do
+        jobs = Array.new(2) { JobClass.new }
+        adapter.enqueue_all(jobs)
+        expect(jobs).to all(be_successfully_enqueued)
       end
-      stub_const('OtherJobClass', other_class)
 
-      adapter.enqueue_all([JobClass.new, OtherJobClass.new])
-
-      names = Delayed::Job.order(:id).pluck(:name)
-      expect(names).to eq(%w(JobClass OtherJobClass))
-    end
-
-    it 'sets the name column from display_name' do
-      adapter.enqueue_all([JobClass.new])
-      expect(Delayed::Job.last.name).to eq('JobClass')
-    end
-
-    it "fires Delayed's :enqueue lifecycle callback for each job" do
-      observed = []
-      lifecycle_was = Delayed.lifecycle
-      Delayed.instance_variable_set(:@lifecycle, Delayed::Lifecycle.new)
-      Delayed.lifecycle.before(:enqueue) { |job| observed << job }
-
-      adapter.enqueue_all([JobClass.new, JobClass.new, JobClass.new])
-
-      expect(observed.size).to eq(3)
-      expect(observed).to all(be_a(Delayed::Job))
-    ensure
-      Delayed.instance_variable_set(:@lifecycle, lifecycle_was)
-    end
-
-    it 'does not fire ActiveJob before/around/after_enqueue callbacks' do
-      fires = []
-      JobClass.before_enqueue { fires << :before }
-      JobClass.around_enqueue do |_j, block|
-        fires << :around_before
-        block.call
-        fires << :around_after
+      it 'honors per-job scheduled_at via .set(wait_until:)' do
+        job = JobClass.new.set(wait_until: arbitrary_time)
+        adapter.enqueue_all([JobClass.new, job])
+        expect(Delayed::Job.find(job.provider_job_id).run_at).to eq(arbitrary_time)
       end
-      JobClass.after_enqueue { fires << :after }
 
-      adapter.enqueue_all([JobClass.new, JobClass.new])
+      it 'honors per-job scheduled_at via .set(wait:)' do
+        Timecop.freeze(arbitrary_time) do
+          job = JobClass.new.set(wait: 1.day)
+          adapter.enqueue_all([job])
+          expect(Delayed::Job.find(job.provider_job_id).run_at).to eq(arbitrary_time + 1.day)
+        end
+      end
 
-      expect(fires).to be_empty
-    end
+      it 'applies db_time_now to run_at when no scheduled_at is set' do
+        Timecop.freeze(arbitrary_time) do
+          jobs = [JobClass.new]
+          adapter.enqueue_all(jobs)
+          expect(Delayed::Job.find(jobs.first.provider_job_id).run_at).to eq(arbitrary_time)
+        end
+      end
 
-    if ActiveJob.gem_version.release >= Gem::Version.new('7.2')
-      context 'when a job sets enqueue_after_transaction_commit to :always' do
-        before do
-          JobClass.include ActiveJob::EnqueueAfterTransactionCommit
-          JobClass.enqueue_after_transaction_commit = :always
+      it 'honors per-job queue and priority overrides' do
+        a = JobClass.new.tap do |j|
+          j.queue_name = 'q-a'
+          j.priority = 3
+        end
+        b = JobClass.new.tap do |j|
+          j.queue_name = 'q-b'
+          j.priority = 7
         end
 
-        it 'raises UnsafeEnqueueError and inserts nothing' do
-          ActiveJob.deprecator.silence do
-            expect { adapter.enqueue_all([JobClass.new]) }.to raise_error(Delayed::ActiveJobAdapter::UnsafeEnqueueError)
+        adapter.enqueue_all([a, b])
+
+        expect(Delayed::Job.find(a.provider_job_id)).to have_attributes(queue: 'q-a', priority: 3)
+        expect(Delayed::Job.find(b.provider_job_id)).to have_attributes(queue: 'q-b', priority: 7)
+      end
+
+      it 'supports a mix of job classes in one call' do
+        other_class = Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
+          def perform; end
+        end
+        stub_const('OtherJobClass', other_class)
+
+        adapter.enqueue_all([JobClass.new, OtherJobClass.new])
+
+        names = Delayed::Job.order(:id).pluck(:name)
+        expect(names).to eq(%w(JobClass OtherJobClass))
+      end
+
+      it 'sets the name column from display_name' do
+        adapter.enqueue_all([JobClass.new])
+        expect(Delayed::Job.last.name).to eq('JobClass')
+      end
+
+      it "fires Delayed's :enqueue lifecycle callback for each job" do
+        observed = []
+        lifecycle_was = Delayed.lifecycle
+        Delayed.instance_variable_set(:@lifecycle, Delayed::Lifecycle.new)
+        Delayed.lifecycle.before(:enqueue) { |job| observed << job }
+
+        adapter.enqueue_all([JobClass.new, JobClass.new, JobClass.new])
+
+        expect(observed.size).to eq(3)
+        expect(observed).to all(be_a(Delayed::Job))
+      ensure
+        Delayed.instance_variable_set(:@lifecycle, lifecycle_was)
+      end
+
+      it 'does not fire ActiveJob before/around/after_enqueue callbacks' do
+        fires = []
+        JobClass.before_enqueue { fires << :before }
+        JobClass.around_enqueue do |_j, block|
+          fires << :around_before
+          block.call
+          fires << :around_after
+        end
+        JobClass.after_enqueue { fires << :after }
+
+        adapter.enqueue_all([JobClass.new, JobClass.new])
+
+        expect(fires).to be_empty
+      end
+
+      if ActiveJob.gem_version.release >= Gem::Version.new('7.2')
+        context 'when a job sets enqueue_after_transaction_commit to :always' do
+          before do
+            JobClass.include ActiveJob::EnqueueAfterTransactionCommit
+            JobClass.enqueue_after_transaction_commit = :always
           end
+
+          it 'raises UnsafeEnqueueError and inserts nothing' do
+            ActiveJob.deprecator.silence do
+              expect { adapter.enqueue_all([JobClass.new]) }.to raise_error(Delayed::ActiveJobAdapter::UnsafeEnqueueError)
+            end
+            expect(Delayed::Job.count).to eq(0)
+          end
+        end
+      end
+
+      context 'when a job has a stale run_at and deny_stale_enqueues is enabled' do
+        around do |example|
+          was = Delayed::Worker.deny_stale_enqueues
+          Delayed::Worker.deny_stale_enqueues = true
+          example.run
+        ensure
+          Delayed::Worker.deny_stale_enqueues = was
+        end
+
+        it 'raises StaleEnqueueError and inserts nothing' do
+          job = JobClass.new.set(wait_until: Time.now.utc - 1.day)
+          expect { adapter.enqueue_all([JobClass.new, job]) }.to raise_error(Delayed::StaleEnqueueError)
           expect(Delayed::Job.count).to eq(0)
         end
       end
-    end
 
-    context 'when a job has a stale run_at and deny_stale_enqueues is enabled' do
-      around do |example|
-        was = Delayed::Worker.deny_stale_enqueues
-        Delayed::Worker.deny_stale_enqueues = true
-        example.run
-      ensure
-        Delayed::Worker.deny_stale_enqueues = was
-      end
-
-      it 'raises StaleEnqueueError and inserts nothing' do
-        job = JobClass.new.set(wait_until: Time.now.utc - 1.day)
-        expect { adapter.enqueue_all([JobClass.new, job]) }.to raise_error(Delayed::StaleEnqueueError)
-        expect(Delayed::Job.count).to eq(0)
-      end
-    end
-
-    context 'when Delayed::Worker.delay_jobs is false' do
-      around do |example|
-        was = Delayed::Worker.delay_jobs
-        Delayed::Worker.delay_jobs = false
-        example.run
-      ensure
-        Delayed::Worker.delay_jobs = was
-      end
-
-      it 'invokes each job inline and inserts nothing' do
-        job_class = Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
-          cattr_accessor(:runs) { 0 }
-          def perform = self.class.runs += 1
+      context 'when Delayed::Worker.delay_jobs is false' do
+        around do |example|
+          was = Delayed::Worker.delay_jobs
+          Delayed::Worker.delay_jobs = false
+          example.run
+        ensure
+          Delayed::Worker.delay_jobs = was
         end
-        stub_const('InlineJobClass', job_class)
 
-        adapter.enqueue_all(Array.new(3) { InlineJobClass.new })
+        it 'invokes each job inline and inserts nothing' do
+          job_class = Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
+            cattr_accessor(:runs) { 0 }
+            def perform = self.class.runs += 1
+          end
+          stub_const('InlineJobClass', job_class)
 
-        expect(InlineJobClass.runs).to eq(3)
-        expect(Delayed::Job.count).to eq(0)
+          adapter.enqueue_all(Array.new(3) { InlineJobClass.new })
+
+          expect(InlineJobClass.runs).to eq(3)
+          expect(Delayed::Job.count).to eq(0)
+        end
+      end
+
+      context 'when the database adapter does not support INSERT RETURNING (e.g. MySQL)' do
+        before do
+          allow(adapter).to receive(:bulk_enqueue_supported?).and_return(false)
+        end
+
+        it 'falls back to per-job enqueue and still populates provider_job_id' do
+          jobs = Array.new(3) { JobClass.new }
+
+          expect(adapter.enqueue_all(jobs)).to eq(3)
+          expect(jobs).to all(be_successfully_enqueued)
+          expect(jobs.map(&:provider_job_id)).to match_array(Delayed::Job.pluck(:id))
+          expect(Delayed::Job.count).to eq(3)
+        end
       end
     end
 
-    context 'when the database adapter does not support INSERT RETURNING (e.g. MySQL)' do
-      before do
-        allow(adapter).to receive(:bulk_enqueue_supported?).and_return(false)
-      end
-
-      it 'falls back to per-job enqueue and still populates provider_job_id' do
-        jobs = Array.new(3) { JobClass.new }
-
-        expect(adapter.enqueue_all(jobs)).to eq(3)
-        expect(jobs).to all(be_successfully_enqueued)
-        expect(jobs.map(&:provider_job_id)).to match_array(Delayed::Job.pluck(:id))
-        expect(Delayed::Job.count).to eq(3)
-      end
-    end
-  end
-
-  if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
     describe 'ActiveJob.perform_all_later' do
       it 'bulk-enqueues all jobs with a single INSERT' do
         expect { ActiveJob.perform_all_later([JobClass.new, JobClass.new, JobClass.new]) }
