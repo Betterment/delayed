@@ -23,13 +23,11 @@ module Delayed
         end
       end
 
-      # When jobs are configured to run inline (`delay_jobs = false`, or a Proc
-      # that may return false), bulk-insert doesn't apply. Fall back to the
-      # per-job path so each job goes through invoke_job / save as usual.
-      return enqueue_all_one_by_one(jobs) unless Delayed::Worker.delay_jobs == true
+      # Fall back to the per-job path when we can't take the bulk shortcut.
+      return enqueue_all_one_by_one(jobs) unless bulk_enqueue_supported?
 
       rows = jobs.map { |job| build_insert_row(job) }
-      result = Delayed::Job.insert_all(rows, record_timestamps: true, returning: %w(id)) # rubocop:disable Rails/SkipsModelValidations
+      result = Delayed::Job.insert_all(rows, record_timestamps: true) # rubocop:disable Rails/SkipsModelValidations
       ids = result.rows.map(&:first)
 
       jobs.zip(ids) do |job, id|
@@ -41,6 +39,14 @@ module Delayed
     end
 
     private
+
+    # Bulk enqueue needs to return the new IDs so we can populate
+    # `provider_job_id` on each input job. That requires both:
+    #   - delay_jobs = true (otherwise each job runs inline via `save`/`invoke_job`)
+    #   - an adapter that supports INSERT ... RETURNING (MySQL does not)
+    def bulk_enqueue_supported?
+      Delayed::Worker.delay_jobs == true && Delayed::Job.connection.supports_insert_returning?
+    end
 
     def build_insert_row(job)
       opts = { queue: job.queue_name, priority: job.priority }.compact

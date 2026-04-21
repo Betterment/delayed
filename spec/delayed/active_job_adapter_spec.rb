@@ -568,6 +568,21 @@ RSpec.describe Delayed::ActiveJobAdapter do
         expect(Delayed::Job.count).to eq(0)
       end
     end
+
+    context 'when the database adapter does not support INSERT RETURNING (e.g. MySQL)' do
+      before do
+        allow(adapter).to receive(:bulk_enqueue_supported?).and_return(false)
+      end
+
+      it 'falls back to per-job enqueue and still populates provider_job_id' do
+        jobs = Array.new(3) { JobClass.new }
+
+        expect(adapter.enqueue_all(jobs)).to eq(3)
+        expect(jobs).to all(be_successfully_enqueued)
+        expect(jobs.map(&:provider_job_id)).to match_array(Delayed::Job.pluck(:id))
+        expect(Delayed::Job.count).to eq(3)
+      end
+    end
   end
 
   if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
