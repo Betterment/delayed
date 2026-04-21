@@ -401,21 +401,11 @@ RSpec.describe Delayed::ActiveJobAdapter do
   describe '.enqueue_all' do
     let(:adapter) { ActiveJob::Base.queue_adapter }
 
-    def count_inserts(&block)
-      count = 0
-      callback = ->(_name, _start, _finish, _id, payload) do
-        count += 1 if payload[:sql] =~ /\AINSERT INTO/i && payload[:name] != 'SCHEMA'
-      end
-      ActiveSupport::Notifications.subscribed(callback, 'sql.active_record', &block)
-      count
-    end
-
     it 'inserts multiple jobs in a single INSERT' do
       jobs = Array.new(3) { JobClass.new }
 
-      inserts = count_inserts { adapter.enqueue_all(jobs) }
-
-      expect(inserts).to eq(1)
+      expect { adapter.enqueue_all(jobs) }
+        .to emit_notification('sql.active_record').with_payload(hash_including(sql: a_string_matching(/\AINSERT INTO/i)))
       expect(Delayed::Job.count).to eq(3)
     end
 
@@ -583,15 +573,8 @@ RSpec.describe Delayed::ActiveJobAdapter do
   if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
     describe 'ActiveJob.perform_all_later' do
       it 'bulk-enqueues all jobs with a single INSERT' do
-        inserts = 0
-        callback = ->(_n, _s, _f, _i, payload) do
-          inserts += 1 if payload[:sql] =~ /\AINSERT INTO/i && payload[:name] != 'SCHEMA'
-        end
-        ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') do
-          ActiveJob.perform_all_later([JobClass.new, JobClass.new, JobClass.new])
-        end
-
-        expect(inserts).to eq(1)
+        expect { ActiveJob.perform_all_later([JobClass.new, JobClass.new, JobClass.new]) }
+          .to emit_notification('sql.active_record').with_payload(hash_including(sql: a_string_matching(/\AINSERT INTO/i)))
         expect(Delayed::Job.count).to eq(3)
       end
 
