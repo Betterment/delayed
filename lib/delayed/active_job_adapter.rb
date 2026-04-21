@@ -14,7 +14,65 @@ module Delayed
       _enqueue(job, run_at: Time.at(timestamp)) # rubocop:disable Rails/TimeZone
     end
 
+    def enqueue_all(jobs)
+      return 0 if jobs.empty?
+
+      jobs.each do |job|
+        if enqueue_after_transaction_commit_enabled?(job)
+          raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
+        end
+      end
+
+      # When jobs are configured to run inline (`delay_jobs = false`, or a Proc
+      # that may return false), bulk-insert doesn't apply. Fall back to the
+      # per-job path so each job goes through invoke_job / save as usual.
+      return enqueue_all_one_by_one(jobs) unless Delayed::Worker.delay_jobs == true
+
+      now = Delayed::Job.db_time_now
+      rows = jobs.map { |job| build_insert_row(job, now) }
+
+      result = Delayed::Job.insert_all(rows, returning: %w(id)) # rubocop:disable Rails/SkipsModelValidations
+      ids = result.rows.map(&:first)
+
+      jobs.zip(ids) do |job, id|
+        job.provider_job_id = id
+        job.successfully_enqueued = true
+      end
+
+      ids.size
+    end
+
     private
+
+    def build_insert_row(job, now)
+      opts = { queue: job.queue_name, priority: job.priority }.compact
+      opts.merge!(job.provider_attributes || {})
+      opts[:run_at] = coerce_scheduled_at(job.scheduled_at) if job.scheduled_at
+
+      prepared = Delayed::Backend::JobPreparer.new(JobWrapper.new(job), opts).prepare
+      dj = Delayed::Job.new(prepared)
+
+      # Replicate `before_save` hooks since insert_all bypasses callbacks.
+      dj.run_at ||= now
+      dj.send(:set_name)
+      dj.created_at = now
+      dj.updated_at = now
+
+      dj.attributes.compact
+    end
+
+    def coerce_scheduled_at(value)
+      value.is_a?(Numeric) ? Time.at(value) : value # rubocop:disable Rails/TimeZone
+    end
+
+    def enqueue_all_one_by_one(jobs)
+      jobs.count do |job|
+        opts = job.scheduled_at ? { run_at: coerce_scheduled_at(job.scheduled_at) } : {}
+        _enqueue(job, opts)
+        job.successfully_enqueued = true
+        true
+      end
+    end
 
     def _enqueue(job, opts = {})
       if enqueue_after_transaction_commit_enabled?(job)
