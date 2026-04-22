@@ -12,6 +12,8 @@ module Delayed
         set_payload
         set_queue_name
         set_priority
+        set_run_at
+        set_name
         handle_dst
         reject_stale_run_at
         handle_deprecation
@@ -32,6 +34,26 @@ module Delayed
       def set_priority
         options[:priority] ||= options[:payload_object].priority if options[:payload_object].respond_to?(:priority)
         options[:priority] ||= Delayed::Worker.default_priority
+      end
+
+      def set_run_at
+        options[:run_at] ||= Job.db_time_now
+      end
+
+      def set_name
+        # [feat:NameColumn] drop the column-existence check once the `name` column is required everywhere.
+        return unless Job.column_names.include?('name')
+        return if options[:name]
+
+        payload = options[:payload_object]
+        options[:name] =
+          if payload.respond_to?(:job_data)
+            payload.job_data['job_class']
+          elsif payload.respond_to?(:display_name)
+            payload.display_name
+          else
+            payload.class.name
+          end
       end
 
       def scheduled_into_fall_back_hour?

@@ -92,6 +92,7 @@ ActiveRecord::Schema.define do
     run_migration(IndexFailedJobs)
     run_migration(SetPostgresFillfactor)
     run_migration(RemoveLegacyIndex)
+    run_migration(RequireRunAtAndName)
 
     # Test that these index migrations can be re-applied idempotently.
     # (In case identical indexes had been manually applied previously.)
@@ -334,6 +335,7 @@ QueryUnderTest = Struct.new(:sql, :connection) do
           run_at: now + (future ? i.minutes : -i.minutes),
           queue: "queue_#{i}",
           handler: "--- !ruby/object:SimpleJob\n",
+          name: 'SimpleJob',
           attempts: erroring ? i : 0,
           failed_at: failed ? now - i.minutes : nil,
           locked_at: locked ? now - i.seconds : nil,

@@ -20,12 +20,12 @@ describe Delayed::Job do
   end
 
   it 'sets run_at automatically if not set' do
-    expect(described_class.create(payload_object: ErrorJob.new).run_at).not_to be_nil
+    expect(described_class.enqueue(payload_object: ErrorJob.new).run_at).not_to be_nil
   end
 
   it 'does not set run_at automatically if already set' do
     later = described_class.db_time_now + 5.minutes
-    job = described_class.create(payload_object: ErrorJob.new, run_at: later)
+    job = described_class.enqueue(payload_object: ErrorJob.new, run_at: later)
     expect(job.run_at).to be_within(1).of(later)
   end
 
@@ -462,26 +462,23 @@ describe Delayed::Job do
   describe '#name' do
     context 'when name column is populated' do
       it 'is the class name of the job that was enqueued' do
-        job = described_class.new(payload_object: ErrorJob.new)
+        job = described_class.enqueue(payload_object: ErrorJob.new)
         expect(job.name).to eq('ErrorJob')
-        job.save!
         expect(job.reload.name).to eq('ErrorJob')
         expect(described_class.group(:name).count).to eq('ErrorJob' => 1)
       end
 
       it 'is the class name of the performable job if it is an ActiveJob' do
         job_wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
-        job = described_class.new(payload_object: job_wrapper)
+        job = described_class.enqueue(payload_object: job_wrapper)
         expect(job.name).to eq('ActiveJobJob')
-        job.save!
         expect(job.reload.name).to eq('ActiveJobJob')
         expect(described_class.group(:name).count).to eq('ActiveJobJob' => 1)
       end
 
       it 'is the returned display_name if display_name is defined on the job object' do
-        job = described_class.new(payload_object: NamedJob.new)
+        job = described_class.enqueue(payload_object: NamedJob.new)
         expect(job.name).to eq('named_job')
-        job.save!
         expect(job.reload.name).to eq('named_job')
         expect(described_class.group(:name).count).to eq('named_job' => 1)
       end
@@ -493,34 +490,9 @@ describe Delayed::Job do
       end
 
       it 'is the custom name value when set explicitly' do
-        job = described_class.new(payload_object: ErrorJob.new)
-        job.name = 'Custom Name'
-        job.save!
+        job = described_class.enqueue(payload_object: ErrorJob.new, name: 'Custom Name')
         expect(job.reload.name).to eq('Custom Name')
         expect(described_class.group(:name).count).to eq('Custom Name' => 1)
-      end
-    end
-
-    context 'when name column is NULL' do
-      it 'is the class name of the job that was enqueued' do
-        job = described_class.create(payload_object: ErrorJob.new)
-        job.update_column(:name, nil) # rubocop:disable Rails/SkipsModelValidations
-        expect(job.reload.name).to eq('ErrorJob')
-      end
-
-      it 'is the class name of the performable job if it is an ActiveJob' do
-        job_wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
-        job = described_class.create(payload_object: job_wrapper)
-        job.update_column(:name, nil) # rubocop:disable Rails/SkipsModelValidations
-        expect(job.reload.name).to eq('ActiveJobJob')
-      end
-
-      it 'parses from handler on deserialization error' do
-        job = Story.create(text: '...').delay.text
-        job.payload_object.object.destroy
-        job.save!
-        job.update_column(:name, nil) # rubocop:disable Rails/SkipsModelValidations
-        expect(job.reload.name).to eq('Delayed::PerformableMethod')
       end
     end
 
@@ -542,24 +514,21 @@ describe Delayed::Job do
       end
 
       it 'is the class name of the job that was enqueued' do
-        job = described_class.new(payload_object: ErrorJob.new)
+        job = described_class.enqueue(payload_object: ErrorJob.new)
         expect(job.name).to eq('ErrorJob')
-        job.save!
         expect(job.reload.name).to eq('ErrorJob')
       end
 
       it 'is the class name of the performable job if it is an ActiveJob' do
         job_wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
-        job = described_class.new(payload_object: job_wrapper)
+        job = described_class.enqueue(payload_object: job_wrapper)
         expect(job.name).to eq('ActiveJobJob')
-        job.save!
         expect(job.reload.name).to eq('ActiveJobJob')
       end
 
       it 'is the returned display_name if display_name is defined on the job object' do
-        job = described_class.new(payload_object: NamedJob.new)
+        job = described_class.enqueue(payload_object: NamedJob.new)
         expect(job.name).to eq('named_job')
-        job.save!
         expect(job.reload.name).to eq('named_job')
       end
 
@@ -835,7 +804,7 @@ describe Delayed::Job do
     describe 'running a job' do
       it 'fails after Worker.max_run_time' do
         Delayed::Worker.max_run_time = 1.second
-        job = described_class.create payload_object: LongRunningJob.new
+        job = described_class.enqueue payload_object: LongRunningJob.new
         worker.perform(job)
         expect(job.error).not_to be_nil
         expect(job.reload.last_error).to match(/expired/)
@@ -845,7 +814,7 @@ describe Delayed::Job do
 
       context 'when the job raises a deserialization error' do
         it 'marks the job as failed' do
-          job = described_class.create! payload_object: LongRunningJob.new
+          job = described_class.enqueue payload_object: LongRunningJob.new
           job.update_columns(handler: '--- !ruby/object:JobThatDoesNotExist {}') # rubocop:disable Rails/SkipsModelValidations
           expect_any_instance_of(described_class).to receive(:destroy_failed_jobs?).and_return(false)
           worker.work_off
@@ -900,13 +869,13 @@ describe Delayed::Job do
 
     context 'reschedule' do
       before do
-        @job = described_class.create payload_object: SimpleJob.new
+        @job = described_class.enqueue payload_object: SimpleJob.new
       end
 
       shared_examples_for 'any failure more than Worker.max_attempts times' do
         context "when the job's payload has a #failure hook" do
           before do
-            @job = described_class.create payload_object: OnPermanentFailureJob.new
+            @job = described_class.enqueue payload_object: OnPermanentFailureJob.new
             expect(@job.payload_object).to respond_to(:failure)
           end
 

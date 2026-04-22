@@ -165,10 +165,6 @@ module Delayed
 
       protected
 
-      def set_default_run_at
-        self.run_at ||= self.class.db_time_now
-      end
-
       # Call during reload operation to clear out internal state
       def reset
         @payload_object = nil

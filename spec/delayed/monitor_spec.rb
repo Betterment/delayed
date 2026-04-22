@@ -123,6 +123,7 @@ RSpec.describe Delayed::Monitor do
           run_at: now,
           queue: 'default',
           handler: "--- !ruby/object:SimpleJob\n",
+          name: 'SimpleJob',
           attempts: 0,
         }
       end
