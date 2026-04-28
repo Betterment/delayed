@@ -41,8 +41,6 @@ module Delayed
       end
 
       def set_name
-        # [feat:NameColumn] drop the column-existence check once the `name` column is required everywhere.
-        return unless Job.column_names.include?('name')
         return if options[:name]
 
         payload = options[:payload_object]
