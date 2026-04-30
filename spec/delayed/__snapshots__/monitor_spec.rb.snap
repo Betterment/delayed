@@ -51,9 +51,10 @@ GroupAggregate  (cost=...)
               ->  GroupAggregate  (cost=...)
                     Output: delayed_jobs.priority, delayed_jobs.queue, count(*), sum(CASE WHEN (delayed_jobs.run_at > '2025-11-10 17:20:13'::timestamp without time zone) THEN 1 ELSE 0 END), sum(CASE WHEN (delayed_jobs.attempts > 0) THEN 1 ELSE 0 END), min(CASE WHEN (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone) THEN delayed_jobs.run_at ELSE NULL::timestamp without time zone END)
                     Group Key: delayed_jobs.priority, delayed_jobs.queue
-                    ->  Sort  (cost=...)
+                    ->  Incremental Sort  (cost=...)
                           Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.run_at, delayed_jobs.attempts
                           Sort Key: delayed_jobs.priority, delayed_jobs.queue
+                          Presorted Key: delayed_jobs.priority
                           ->  Index Only Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
                                 Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.run_at, delayed_jobs.attempts
 ---
@@ -142,9 +143,10 @@ GroupAggregate  (cost=...)
               ->  GroupAggregate  (cost=...)
                     Output: delayed_jobs.priority, delayed_jobs.queue, count(*)
                     Group Key: delayed_jobs.priority, delayed_jobs.queue
-                    ->  Sort  (cost=...)
+                    ->  Incremental Sort  (cost=...)
                           Output: delayed_jobs.priority, delayed_jobs.queue
                           Sort Key: delayed_jobs.priority, delayed_jobs.queue
+                          Presorted Key: delayed_jobs.priority
                           ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
                                 Output: delayed_jobs.priority, delayed_jobs.queue
                                 Filter: (delayed_jobs.failed_at IS NOT NULL)
@@ -176,9 +178,10 @@ GroupAggregate  (cost=...)
               ->  GroupAggregate  (cost=...)
                     Output: delayed_jobs.priority, delayed_jobs.queue, count(*), sum(CASE WHEN (delayed_jobs.run_at > '2025-11-10 17:20:13'::timestamp without time zone) THEN 1 ELSE 0 END), sum(CASE WHEN (delayed_jobs.attempts > 0) THEN 1 ELSE 0 END), min(CASE WHEN (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone) THEN delayed_jobs.run_at ELSE NULL::timestamp without time zone END)
                     Group Key: delayed_jobs.priority, delayed_jobs.queue
-                    ->  Sort  (cost=...)
+                    ->  Incremental Sort  (cost=...)
                           Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.run_at, delayed_jobs.attempts
                           Sort Key: delayed_jobs.priority, delayed_jobs.queue
+                          Presorted Key: delayed_jobs.priority
                           ->  Index Scan using delayed_jobs_priority on public.delayed_jobs  (cost=...)
                                 Output: delayed_jobs.priority, delayed_jobs.queue, delayed_jobs.run_at, delayed_jobs.attempts
                                 Filter: (delayed_jobs.failed_at IS NULL)
