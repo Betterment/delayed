@@ -92,7 +92,9 @@ ActiveRecord::Schema.define do
     run_migration(IndexFailedJobs)
     run_migration(SetPostgresFillfactor)
     run_migration(RemoveLegacyIndex)
-    run_migration(RequireRunAtAndName)
+    run_migration(BackfillNullRunAtAndName)
+    run_migration(AddRunAtAndNameNotNullCheck)
+    run_migration(ValidateRunAtAndNameNotNull)
 
     # Test that these index migrations can be re-applied idempotently.
     # (In case identical indexes had been manually applied previously.)
