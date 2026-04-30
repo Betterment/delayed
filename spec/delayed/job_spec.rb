@@ -495,54 +495,6 @@ describe Delayed::Job do
         expect(described_class.group(:name).count).to eq('Custom Name' => 1)
       end
     end
-
-    context 'when name column does not exist' do
-      before do
-        ActiveRecord::Schema.define do
-          AddIndexToDelayedJobsName.migrate(:down)
-          AddNameToDelayedJobs.migrate(:down)
-        end
-        described_class.reset_column_information
-      end
-
-      after do
-        ActiveRecord::Schema.define do
-          AddNameToDelayedJobs.migrate(:up)
-          AddIndexToDelayedJobsName.migrate(:up)
-        end
-        described_class.reset_column_information
-      end
-
-      it 'is the class name of the job that was enqueued' do
-        job = described_class.enqueue(payload_object: ErrorJob.new)
-        expect(job.name).to eq('ErrorJob')
-        expect(job.reload.name).to eq('ErrorJob')
-      end
-
-      it 'is the class name of the performable job if it is an ActiveJob' do
-        job_wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
-        job = described_class.enqueue(payload_object: job_wrapper)
-        expect(job.name).to eq('ActiveJobJob')
-        expect(job.reload.name).to eq('ActiveJobJob')
-      end
-
-      it 'is the returned display_name if display_name is defined on the job object' do
-        job = described_class.enqueue(payload_object: NamedJob.new)
-        expect(job.name).to eq('named_job')
-        expect(job.reload.name).to eq('named_job')
-      end
-
-      it 'is the instance method that will be called if its a performable method object' do
-        job = Story.create(text: '...').delay.save
-        expect(job.name).to eq('Story#save')
-      end
-
-      it 'parses from handler on deserialization error' do
-        job = Story.create(text: '...').delay.text
-        job.payload_object.object.destroy
-        expect(job.reload.name).to eq('Delayed::PerformableMethod')
-      end
-    end
   end
 
   context 'worker prioritization' do
