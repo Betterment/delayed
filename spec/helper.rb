@@ -92,6 +92,8 @@ ActiveRecord::Schema.define do
     run_migration(IndexFailedJobs)
     run_migration(SetPostgresFillfactor)
     run_migration(RemoveLegacyIndex)
+    run_migration(AddRunAtAndNameNotNullCheck)
+    run_migration(ValidateRunAtAndNameNotNull)
 
     # Test that these index migrations can be re-applied idempotently.
     # (In case identical indexes had been manually applied previously.)
@@ -305,10 +307,12 @@ QueryUnderTest = Struct.new(:sql, :connection) do
   def postgresql_explain
     connection.execute("SET seq_page_cost = 100")
     connection.execute("SET enable_hashagg = off")
+    connection.execute("SET enable_incremental_sort = off")
     connection.execute("SET plan_cache_mode TO force_generic_plan")
     connection.execute("EXPLAIN (VERBOSE) #{sql}").values.flatten.join("\n")
   ensure
     connection.execute("RESET plan_cache_mode")
+    connection.execute("RESET enable_incremental_sort")
     connection.execute("RESET enable_hashagg")
     connection.execute("RESET seq_page_cost")
   end
@@ -334,6 +338,7 @@ QueryUnderTest = Struct.new(:sql, :connection) do
           run_at: now + (future ? i.minutes : -i.minutes),
           queue: "queue_#{i}",
           handler: "--- !ruby/object:SimpleJob\n",
+          name: 'SimpleJob',
           attempts: erroring ? i : 0,
           failed_at: failed ? now - i.minutes : nil,
           locked_at: locked ? now - i.seconds : nil,
