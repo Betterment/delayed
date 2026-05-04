@@ -92,7 +92,6 @@ ActiveRecord::Schema.define do
     run_migration(IndexFailedJobs)
     run_migration(SetPostgresFillfactor)
     run_migration(RemoveLegacyIndex)
-    run_migration(BackfillNullRunAtAndName)
     run_migration(AddRunAtAndNameNotNullCheck)
     run_migration(ValidateRunAtAndNameNotNull)
 

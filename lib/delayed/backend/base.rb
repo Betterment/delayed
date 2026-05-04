@@ -41,6 +41,10 @@ module Delayed
           warn '[DEPRECATION] `Delayed::Job.work_off` is deprecated. Use `Delayed::Worker.new.work_off instead.'
           Delayed::Worker.new.work_off(num)
         end
+
+        def name_assignable?
+          column_names.include?('name')
+        end
       end
 
       attr_reader :error
@@ -56,6 +60,14 @@ module Delayed
       alias failed failed?
 
       ParseObjectFromYaml = %r{!ruby/\w+:([^\s]+)} # rubocop:disable Naming/ConstantName
+
+      def name
+        if self.class.name_assignable?
+          super
+        else
+          display_name # [feat:NameColumn] remove fallback once the "name" column is required.
+        end
+      end
 
       def priority
         Priority.new(super)
@@ -141,6 +153,18 @@ module Delayed
       def fail!
         self.failed_at = self.class.db_time_now
         save!
+      end
+
+      private
+
+      def display_name # rubocop:disable Metrics/AbcSize, Metrics/PerceivedComplexity
+        @display_name ||= payload_object.job_data['job_class'] if payload_object.respond_to?(:job_data)
+        @display_name ||= payload_object.display_name if payload_object.respond_to?(:display_name)
+        @display_name ||= payload_object.class.name
+      rescue DeserializationError # [feat:NameColumn] remove this `rescue` once the "name" column is required.
+        raise if !persisted? && name_assignable?
+
+        ParseObjectFromYaml.match(handler)[1]
       end
 
       protected

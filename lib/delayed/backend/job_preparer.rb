@@ -41,7 +41,7 @@ module Delayed
       end
 
       def set_name
-        return if options[:name]
+        return if options[:name] || !Job.name_assignable?
 
         payload = options[:payload_object]
         options[:name] =
