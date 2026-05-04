@@ -41,6 +41,10 @@ module Delayed
           warn '[DEPRECATION] `Delayed::Job.work_off` is deprecated. Use `Delayed::Worker.new.work_off instead.'
           Delayed::Worker.new.work_off(num)
         end
+
+        def name_assignable?
+          column_names.include?('name')
+        end
       end
 
       attr_reader :error
@@ -58,7 +62,7 @@ module Delayed
       ParseObjectFromYaml = %r{!ruby/\w+:([^\s]+)} # rubocop:disable Naming/ConstantName
 
       def name
-        if self.class.column_names.include?('name')
+        if self.class.name_assignable?
           super || display_name
         else
           display_name # [feat:NameColumn] remove fallback once the "name" column is required.
@@ -158,16 +162,12 @@ module Delayed
         @display_name ||= payload_object.display_name if payload_object.respond_to?(:display_name)
         @display_name ||= payload_object.class.name
       rescue DeserializationError # [feat:NameColumn] remove this `rescue` once the "name" column is required.
-        raise if !persisted? && self.class.column_names.include?('name')
+        raise if !persisted? && self.class.name_assignable?
 
         ParseObjectFromYaml.match(handler)[1]
       end
 
       protected
-
-      def set_default_run_at
-        self.run_at ||= self.class.db_time_now
-      end
 
       # Call during reload operation to clear out internal state
       def reset

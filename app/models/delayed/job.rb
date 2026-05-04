@@ -56,8 +56,6 @@ module Delayed
       arel_table[:locked_at].eq(nil).or arel_table[:locked_at].lt(as_of - lock_timeout)
     end
 
-    before_save :before_save_hooks
-
     REENQUEUE_BUFFER = 30.seconds
 
     def self.set_delayed_job_table_name
@@ -280,18 +278,6 @@ module Delayed
 
     def attempts_alert?
       alert_attempts&.<= attempts
-    end
-
-    def before_save_hooks
-      set_default_run_at
-      set_name
-    end
-
-    private
-
-    def set_name
-      # [feat:NameColumn] remove 'if' statement and use `||=` once the 'name' column is required.
-      self.name = display_name if respond_to?(:name=) && attributes.fetch('name').nil?
     end
   end
 end
