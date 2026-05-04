@@ -59,8 +59,6 @@ module Delayed
         dj.hook(:enqueue)
       end
 
-      # Replicate `before_save` hooks since insert_all bypasses callbacks.
-      dj.before_save_hooks
       dj.attributes.compact
     end
 
