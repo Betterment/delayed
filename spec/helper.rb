@@ -307,10 +307,12 @@ QueryUnderTest = Struct.new(:sql, :connection) do
   def postgresql_explain
     connection.execute("SET seq_page_cost = 100")
     connection.execute("SET enable_hashagg = off")
+    connection.execute("SET enable_incremental_sort = off")
     connection.execute("SET plan_cache_mode TO force_generic_plan")
     connection.execute("EXPLAIN (VERBOSE) #{sql}").values.flatten.join("\n")
   ensure
     connection.execute("RESET plan_cache_mode")
+    connection.execute("RESET enable_incremental_sort")
     connection.execute("RESET enable_hashagg")
     connection.execute("RESET seq_page_cost")
   end
