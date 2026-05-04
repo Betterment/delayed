@@ -63,7 +63,7 @@ module Delayed
 
       def name
         if self.class.name_assignable?
-          super
+          super || display_name
         else
           display_name # [feat:NameColumn] remove fallback once the "name" column is required.
         end

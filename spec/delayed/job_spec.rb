@@ -496,6 +496,44 @@ describe Delayed::Job do
       end
     end
 
+    context 'when name column is NULL' do
+      before do
+        ActiveRecord::Schema.define do
+          ValidateRunAtAndNameNotNull.migrate(:down)
+          AddRunAtAndNameNotNullCheck.migrate(:down)
+        end
+        described_class.reset_column_information
+      end
+
+      after do
+        described_class.delete_all
+        ActiveRecord::Schema.define do
+          AddRunAtAndNameNotNullCheck.migrate(:up)
+          ValidateRunAtAndNameNotNull.migrate(:up)
+        end
+        described_class.reset_column_information
+      end
+
+      it 'is the class name of the job that was enqueued' do
+        job = described_class.enqueue(payload_object: ErrorJob.new)
+        expect(job.reload.name).to eq('ErrorJob')
+      end
+
+      it 'is the class name of the performable job if it is an ActiveJob' do
+        job_wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
+        job = described_class.enqueue(payload_object: job_wrapper)
+        expect(job.reload.name).to eq('ActiveJobJob')
+      end
+
+      it 'parses from handler on deserialization error' do
+        job = Story.create(text: '...').delay.text
+        job.payload_object.object.destroy
+        job.save!
+        job.update_column(:name, nil) # rubocop:disable Rails/SkipsModelValidations
+        expect(job.reload.name).to eq('Delayed::PerformableMethod')
+      end
+    end
+
     context 'when name column does not exist' do
       before do
         ActiveRecord::Schema.define do
