@@ -1,50 +1,53 @@
 module Delayed
   class ActiveJobAdapter
     class UnsafeEnqueueError < RuntimeError; end
-    class EnqueueAllNotSupportedError < RuntimeError; end
 
     def enqueue_after_transaction_commit?
       false
     end
 
     def enqueue(job)
-      _enqueue(job)
+      enqueue_all([job])
+      job
     end
 
     def enqueue_at(job, timestamp)
-      _enqueue(job, run_at: Time.at(timestamp)) # rubocop:disable Rails/TimeZone
+      job.scheduled_at = Time.at(timestamp) # rubocop:disable Rails/TimeZone
+      enqueue_all([job])
+      job
     end
 
-    if ActiveJob.gem_version >= Gem::Version.new('7.1')
-      def enqueue_all(jobs)
-        return 0 if jobs.empty?
+    def enqueue_all(jobs)
+      return 0 if jobs.empty?
 
-        raise EnqueueAllNotSupportedError unless enqueue_all_supported?
+      assert_safe_to_enqueue!(jobs)
 
-        jobs.each do |job|
-          if enqueue_after_transaction_commit_enabled?(job)
-            raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
-          end
-        end
+      rows = jobs.map { |job| build_insert_row(job) }
+      result = Delayed::Job.insert_all(rows, record_timestamps: true) # rubocop:disable Rails/SkipsModelValidations
 
-        rows = jobs.map { |job| build_insert_row(job) }
-        result = Delayed::Job.insert_all(rows, record_timestamps: true) # rubocop:disable Rails/SkipsModelValidations
-        ids = result.rows.map(&:first)
-
-        jobs.zip(ids) do |job, id|
-          job.provider_job_id = id
-          job.successfully_enqueued = true
-        end
-
-        ids.size
-      end
+      assign_provider_job_ids(jobs, result) if Delayed::Job.connection.supports_insert_returning?
+      mark_successfully_enqueued(jobs)
+      jobs.size
     end
 
     private
 
-    def enqueue_all_supported?
-      Delayed::Worker.delay_jobs == true &&
-        Delayed::Job.connection.supports_insert_returning?
+    def assert_safe_to_enqueue!(jobs)
+      if jobs.any? { |job| enqueue_after_transaction_commit_enabled?(job) }
+        raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
+      end
+      unless Delayed::Worker.delay_jobs == true
+        raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with delay_jobs false"
+      end
+    end
+
+    def assign_provider_job_ids(jobs, result)
+      ids = result.rows.map(&:first)
+      jobs.zip(ids) { |job, id| job.provider_job_id = id }
+    end
+
+    def mark_successfully_enqueued(jobs)
+      jobs.each { |job| job.successfully_enqueued = true if job.respond_to?(:successfully_enqueued=) }
     end
 
     def build_insert_row(job)
@@ -53,30 +56,11 @@ module Delayed
       opts[:run_at] = coerce_scheduled_at(job.scheduled_at) if job.scheduled_at
 
       prepared = Delayed::Backend::JobPreparer.new(JobWrapper.new(job), opts).prepare
-      dj = Delayed::Job.new(prepared)
-
-      Delayed.lifecycle.run_callbacks(:enqueue, dj) do
-        dj.hook(:enqueue)
-      end
-
-      dj.attributes.compact
+      Delayed::Job.new(prepared).attributes.compact
     end
 
     def coerce_scheduled_at(value)
       value.is_a?(Numeric) ? Time.at(value) : value # rubocop:disable Rails/TimeZone
-    end
-
-    def _enqueue(job, opts = {})
-      if enqueue_after_transaction_commit_enabled?(job)
-        raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
-      end
-
-      opts.merge!({ queue: job.queue_name, priority: job.priority }.compact)
-        .merge!(job.provider_attributes || {})
-
-      Delayed::Job.enqueue(JobWrapper.new(job), opts).tap do |dj|
-        job.provider_job_id = dj.id
-      end
     end
 
     def enqueue_after_transaction_commit_enabled?(job)
