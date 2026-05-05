@@ -23,8 +23,9 @@ module Delayed
       assert_safe_to_enqueue!(jobs)
 
       Delayed.lifecycle.run_callbacks(:enqueue, jobs) do
-        rows = jobs.map { |job| build_insert_row(job) }
-        result = Delayed::Job.insert_all(rows, record_timestamps: true) # rubocop:disable Rails/SkipsModelValidations
+        now = Delayed::Job.db_time_now
+        rows = jobs.map { |job| build_insert_row(job, now) }
+        result = Delayed::Job.insert_all(rows) # rubocop:disable Rails/SkipsModelValidations
         assign_provider_job_ids(jobs, result) if Delayed::Job.connection.supports_insert_returning?
       end
 
@@ -52,13 +53,13 @@ module Delayed
       jobs.each { |job| job.successfully_enqueued = true if job.respond_to?(:successfully_enqueued=) }
     end
 
-    def build_insert_row(job)
+    def build_insert_row(job, now)
       opts = { queue: job.queue_name, priority: job.priority }.compact
       opts.merge!(job.provider_attributes || {})
       opts[:run_at] = coerce_scheduled_at(job.scheduled_at) if job.scheduled_at
 
       prepared = Delayed::Backend::JobPreparer.new(JobWrapper.new(job), opts).prepare
-      Delayed::Job.new(prepared).attributes.compact
+      Delayed::Job.new(prepared).attributes.compact.merge('created_at' => now, 'updated_at' => now)
     end
 
     def coerce_scheduled_at(value)
