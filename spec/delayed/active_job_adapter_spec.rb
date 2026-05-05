@@ -485,22 +485,13 @@ RSpec.describe Delayed::ActiveJobAdapter do
       end
     end
 
-    it 'honors per-job scheduled_at via .set(wait_until:)' do
+    it 'honors per-job scheduled_at' do
       skip 'requires INSERT ... RETURNING support' unless Delayed::Job.connection.supports_insert_returning?
 
-      job = JobClass.new.set(wait_until: arbitrary_time)
+      job = JobClass.new
+      job.scheduled_at = arbitrary_time
       adapter.enqueue_all([JobClass.new, job])
       expect(Delayed::Job.find(job.provider_job_id).run_at).to eq(arbitrary_time)
-    end
-
-    it 'honors per-job scheduled_at via .set(wait:)' do
-      skip 'requires INSERT ... RETURNING support' unless Delayed::Job.connection.supports_insert_returning?
-
-      Timecop.freeze(arbitrary_time) do
-        job = JobClass.new.set(wait: 1.day)
-        adapter.enqueue_all([job])
-        expect(Delayed::Job.find(job.provider_job_id).run_at).to eq(arbitrary_time + 1.day)
-      end
     end
 
     it 'applies db_time_now to run_at when no scheduled_at is set' do
@@ -615,7 +606,8 @@ RSpec.describe Delayed::ActiveJobAdapter do
       end
 
       it 'raises StaleEnqueueError and inserts nothing' do
-        job = JobClass.new.set(wait_until: Time.now.utc - 1.day)
+        job = JobClass.new
+        job.scheduled_at = Time.now.utc - 1.day
         expect { adapter.enqueue_all([JobClass.new, job]) }.to raise_error(Delayed::StaleEnqueueError)
         expect(Delayed::Job.count).to eq(0)
       end
