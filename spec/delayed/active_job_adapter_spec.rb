@@ -535,17 +535,26 @@ RSpec.describe Delayed::ActiveJobAdapter do
       Delayed.instance_variable_set(:@lifecycle, lifecycle_was)
     end
 
-    it 'populates provider_job_id before after(:enqueue) callbacks fire' do
+    it 'populates provider_job_id and successfully_enqueued before after(:enqueue) callbacks fire' do
       skip 'requires INSERT ... RETURNING support' unless Delayed::Job.connection.supports_insert_returning?
 
       ids_seen = nil
+      enqueued_seen = nil
       lifecycle_was = Delayed.lifecycle
       Delayed.instance_variable_set(:@lifecycle, Delayed::Lifecycle.new)
-      Delayed.lifecycle.after(:enqueue) { |jobs| ids_seen = jobs.map(&:provider_job_id) }
+      Delayed.lifecycle.after(:enqueue) do |jobs|
+        ids_seen = jobs.map(&:provider_job_id)
+        if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
+          enqueued_seen = jobs.map(&:successfully_enqueued?)
+        end
+      end
 
       adapter.enqueue_all([JobClass.new, JobClass.new])
 
       expect(ids_seen).to all(be_a(Integer))
+      if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
+        expect(enqueued_seen).to all(be(true))
+      end
     ensure
       Delayed.instance_variable_set(:@lifecycle, lifecycle_was)
     end

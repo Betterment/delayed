@@ -27,9 +27,9 @@ module Delayed
         rows = jobs.map { |job| build_insert_row(job, now) }
         result = Delayed::Job.insert_all(rows) # rubocop:disable Rails/SkipsModelValidations
         assign_provider_job_ids(jobs, result) if Delayed::Job.connection.supports_insert_returning?
+        mark_successfully_enqueued(jobs)
       end
 
-      mark_successfully_enqueued(jobs)
       jobs.size
     end
 
