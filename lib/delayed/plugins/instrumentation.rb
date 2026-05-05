@@ -2,9 +2,9 @@ module Delayed
   module Plugins
     class Instrumentation < Plugin
       callbacks do |lifecycle|
-        lifecycle.around(:enqueue) do |job, *args, &block|
-          ActiveSupport::Notifications.instrument('delayed.job.enqueue', active_support_notifications_tags(job)) do
-            block.call(job, *args)
+        lifecycle.around(:enqueue) do |jobs, &block|
+          ActiveSupport::Notifications.instrument('delayed.job.enqueue', bulk_enqueue_tags(jobs)) do
+            block.call(jobs)
           end
         end
 
@@ -32,6 +32,16 @@ module Delayed
           database: job.class.database_name,
           database_adapter: job.class.database_adapter_name,
           job: job,
+        }
+      end
+
+      def self.bulk_enqueue_tags(jobs)
+        {
+          count: jobs.size,
+          table: Delayed::Job.table_name,
+          database: Delayed::Job.database_name,
+          database_adapter: Delayed::Job.database_adapter_name,
+          jobs: jobs,
         }
       end
     end

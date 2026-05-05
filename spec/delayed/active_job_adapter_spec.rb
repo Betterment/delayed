@@ -544,15 +544,32 @@ RSpec.describe Delayed::ActiveJobAdapter do
       expect(Delayed::Job.last.name).to eq('JobClass')
     end
 
-    it "does not fire Delayed's :enqueue lifecycle callback" do
+    it "fires Delayed's :enqueue lifecycle callback once with the jobs array" do
       observed = []
       lifecycle_was = Delayed.lifecycle
       Delayed.instance_variable_set(:@lifecycle, Delayed::Lifecycle.new)
-      Delayed.lifecycle.before(:enqueue) { |job| observed << job }
+      Delayed.lifecycle.before(:enqueue) { |jobs| observed << jobs }
 
-      adapter.enqueue_all([JobClass.new, JobClass.new, JobClass.new])
+      input = Array.new(3) { JobClass.new }
+      adapter.enqueue_all(input)
 
-      expect(observed).to be_empty
+      expect(observed.size).to eq(1)
+      expect(observed.first).to eq(input)
+    ensure
+      Delayed.instance_variable_set(:@lifecycle, lifecycle_was)
+    end
+
+    it 'populates provider_job_id before after(:enqueue) callbacks fire' do
+      skip 'requires INSERT ... RETURNING support' unless Delayed::Job.connection.supports_insert_returning?
+
+      ids_seen = nil
+      lifecycle_was = Delayed.lifecycle
+      Delayed.instance_variable_set(:@lifecycle, Delayed::Lifecycle.new)
+      Delayed.lifecycle.after(:enqueue) { |jobs| ids_seen = jobs.map(&:provider_job_id) }
+
+      adapter.enqueue_all([JobClass.new, JobClass.new])
+
+      expect(ids_seen).to all(be_a(Integer))
     ensure
       Delayed.instance_variable_set(:@lifecycle, lifecycle_was)
     end

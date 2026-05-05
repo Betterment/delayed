@@ -22,10 +22,12 @@ module Delayed
 
       assert_safe_to_enqueue!(jobs)
 
-      rows = jobs.map { |job| build_insert_row(job) }
-      result = Delayed::Job.insert_all(rows, record_timestamps: true) # rubocop:disable Rails/SkipsModelValidations
+      Delayed.lifecycle.run_callbacks(:enqueue, jobs) do
+        rows = jobs.map { |job| build_insert_row(job) }
+        result = Delayed::Job.insert_all(rows, record_timestamps: true) # rubocop:disable Rails/SkipsModelValidations
+        assign_provider_job_ids(jobs, result) if Delayed::Job.connection.supports_insert_returning?
+      end
 
-      assign_provider_job_ids(jobs, result) if Delayed::Job.connection.supports_insert_returning?
       mark_successfully_enqueued(jobs)
       jobs.size
     end
