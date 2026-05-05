@@ -39,7 +39,7 @@ module Delayed
       if jobs.any? { |job| enqueue_after_transaction_commit_enabled?(job) }
         raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
       end
-      unless Delayed::Worker.delay_jobs == true
+      if Delayed::Worker.delay_jobs == false
         raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with delay_jobs false"
       end
     end

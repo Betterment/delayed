@@ -427,21 +427,6 @@ RSpec.describe Delayed::ActiveJobAdapter do
       end
     end
 
-    context 'when Delayed::Worker.delay_jobs is :always' do
-      around do |example|
-        was = Delayed::Worker.delay_jobs
-        Delayed::Worker.delay_jobs = :always
-        example.run
-      ensure
-        Delayed::Worker.delay_jobs = was
-      end
-
-      it 'raises UnsafeEnqueueError' do
-        expect { adapter.enqueue_all([JobClass.new]) }
-          .to raise_error(Delayed::ActiveJobAdapter::UnsafeEnqueueError)
-      end
-    end
-
     context 'when the database adapter does not support INSERT RETURNING (e.g. MySQL)' do
       before do
         allow(Delayed::Job.connection).to receive(:supports_insert_returning?).and_return(false)
