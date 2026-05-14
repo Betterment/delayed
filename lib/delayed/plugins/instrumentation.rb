@@ -38,11 +38,20 @@ module Delayed
       def self.bulk_enqueue_tags(jobs)
         {
           count: jobs.size,
-          table: Delayed::Job.table_name,
-          database: Delayed::Job.database_name,
-          database_adapter: Delayed::Job.database_adapter_name,
+          **summarize(jobs),
           jobs: jobs,
         }
+      end
+
+      def self.summarize(jobs)
+        seed = { job_name: Hash.new(0), database: Hash.new(0), database_adapter: Hash.new(0) }
+        jobs.each_with_object(seed) do |job, acc|
+          name = job.respond_to?(:name) ? job.name : job.class.name
+          delayed_class = job.is_a?(Delayed::Job) ? job.class : Delayed::Job
+          acc[:job_name][name] += 1
+          acc[:database][delayed_class.database_name] += 1
+          acc[:database_adapter][delayed_class.database_adapter_name] += 1
+        end
       end
     end
   end

@@ -6,9 +6,9 @@ RSpec.describe Delayed::Plugins::Instrumentation do
   it 'emits delayed.job.enqueue when a job is enqueued' do
     expect { Delayed::Job.enqueue SimpleJob.new }.to emit_notification('delayed.job.enqueue').with_payload(
       count: 1,
-      table: 'delayed_jobs',
-      database: current_database,
-      database_adapter: current_adapter,
+      job_name: { 'SimpleJob' => 1 },
+      database: { current_database_name => 1 },
+      database_adapter: { current_adapter => 1 },
       jobs: a_collection_containing_exactly(an_instance_of(Delayed::Job)),
     )
   end
@@ -26,9 +26,9 @@ RSpec.describe Delayed::Plugins::Instrumentation do
       expect { ActiveJob::Base.queue_adapter.enqueue_all(jobs) }
         .to emit_notification('delayed.job.enqueue').with_payload(
           count: 3,
-          table: 'delayed_jobs',
-          database: current_database,
-          database_adapter: current_adapter,
+          job_name: { 'BatchedJob' => 3 },
+          database: { current_database_name => 3 },
+          database_adapter: { current_adapter => 3 },
           jobs: jobs,
         )
     ensure
