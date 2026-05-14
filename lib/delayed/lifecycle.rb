@@ -4,7 +4,7 @@ module Delayed
   class Lifecycle
     EVENTS = {
       execute: [nil],
-      enqueue: [:job],
+      enqueue: [:jobs],
       perform: %i(worker job),
       error: %i(worker job),
       failure: %i(worker job),
