@@ -17,7 +17,6 @@ module Delayed
     cattr_accessor :max_claims, instance_writer: false, default: 5
     cattr_accessor :max_run_time, instance_writer: false, default: 20.minutes
     cattr_accessor :default_priority, instance_writer: false, default: 10
-    cattr_accessor :delay_jobs, instance_writer: false, default: true
     cattr_accessor :queues, instance_writer: false, default: [].freeze
     cattr_accessor :read_ahead, instance_writer: false, default: 5
     cattr_accessor :destroy_failed_jobs, instance_writer: false, default: false
@@ -35,14 +34,6 @@ module Delayed
     class << self
       delegate :lifecycle, :plugins, :plugins=, :logger, :logger=,
                :default_log_level, :default_log_level=, to: Delayed
-    end
-
-    def self.delay_job?(job)
-      if delay_jobs.is_a?(Proc)
-        delay_jobs.arity == 1 ? delay_jobs.call(job) : delay_jobs.call
-      else
-        delay_jobs
-      end
     end
 
     def initialize

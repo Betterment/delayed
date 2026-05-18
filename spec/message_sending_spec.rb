@@ -116,44 +116,13 @@ describe Delayed::MessageSending do
       expect(job.priority).to eq(20)
     end
 
-    it 'does not delay the job when delay_jobs is false' do
-      Delayed::Worker.delay_jobs = false
-      fairy_tail = FairyTail.new
-      expect {
-        expect {
-          fairy_tail.delay.tell('a', kwarg: 'b')
-        }.to change { fairy_tail.happy_ending }.from(nil).to %w(a b)
-      }.not_to(change { Delayed::Job.count })
-    end
-
-    it 'does delay the job when delay_jobs is true' do
-      Delayed::Worker.delay_jobs = true
+    it 'delays the job' do
       fairy_tail = FairyTail.new
       expect {
         expect {
           fairy_tail.delay.tell('a', kwarg: 'b')
         }.not_to change { fairy_tail.happy_ending }
       }.to change { Delayed::Job.count }.by(1)
-    end
-
-    it 'does delay when delay_jobs is a proc returning true' do
-      Delayed::Worker.delay_jobs = ->(_job) { true }
-      fairy_tail = FairyTail.new
-      expect {
-        expect {
-          fairy_tail.delay.tell('a', kwarg: 'b')
-        }.not_to change { fairy_tail.happy_ending }
-      }.to change { Delayed::Job.count }.by(1)
-    end
-
-    it 'does not delay the job when delay_jobs is a proc returning false' do
-      Delayed::Worker.delay_jobs = ->(_job) { false }
-      fairy_tail = FairyTail.new
-      expect {
-        expect {
-          fairy_tail.delay.tell('a', kwarg: 'b')
-        }.to change { fairy_tail.happy_ending }.from(nil).to %w(a b)
-      }.not_to(change { Delayed::Job.count })
     end
   end
 end

@@ -273,7 +273,7 @@ module Delayed
     end
 
     def run_time_alert?
-      alert_run_time&.<= run_time if run_time # locked_at may be `nil` if `delay_jobs` is false
+      alert_run_time&.<= run_time if run_time
     end
 
     def attempts_alert?

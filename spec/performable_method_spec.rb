@@ -113,36 +113,5 @@ describe Delayed::PerformableMethod do
       expect(method.object).to receive(:failure)
       method.failure
     end
-
-    context 'with delay_job == false' do
-      before do
-        Delayed::Worker.delay_jobs = false
-      end
-
-      after do
-        Delayed::Worker.delay_jobs = true
-      end
-
-      %w(before after success).each do |hook|
-        it "delegates #{hook} hook to object" do
-          story = Story.create
-          expect(story).to receive(hook).with(an_instance_of(Delayed::Job))
-          story.delay.tell
-        end
-      end
-
-      it 'delegates error hook to object' do
-        story = Story.create
-        expect(story).to receive(:error).with(an_instance_of(Delayed::Job), an_instance_of(RuntimeError))
-        expect(story).to receive(:tell).and_raise(RuntimeError)
-        expect { story.delay.tell }.to raise_error(RuntimeError)
-      end
-
-      it 'delegates failure hook to object' do
-        method = described_class.new('object', :size, [], {})
-        expect(method.object).to receive(:failure)
-        method.failure
-      end
-    end
   end
 end

@@ -143,7 +143,6 @@ RSpec.configure do |config|
     aj_queue_name_was = ActiveJob::Base.queue_name
     default_priority_was = Delayed::Worker.default_priority
     default_queue_name_was = Delayed::Worker.default_queue_name
-    delay_jobs_was = Delayed::Worker.delay_jobs
     destroy_failed_jobs_was = Delayed::Worker.destroy_failed_jobs
     max_attempts_was = Delayed::Worker.max_attempts
     max_claims_was = Delayed::Worker.max_claims
@@ -165,7 +164,6 @@ RSpec.configure do |config|
     ActiveJob::Base.queue_name = aj_queue_name_was
     Delayed::Worker.default_priority = default_priority_was
     Delayed::Worker.default_queue_name = default_queue_name_was
-    Delayed::Worker.delay_jobs = delay_jobs_was
     Delayed::Worker.destroy_failed_jobs = destroy_failed_jobs_was
     Delayed::Worker.max_attempts = max_attempts_was
     Delayed::Worker.max_claims = max_claims_was

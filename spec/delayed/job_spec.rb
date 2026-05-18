@@ -12,7 +12,6 @@ describe Delayed::Job do
     Delayed::Worker.min_priority = nil
     Delayed::Worker.max_claims = 1 # disable multithreading because SimpleJob is not threadsafe
     Delayed::Worker.default_priority = 99
-    Delayed::Worker.delay_jobs = true
     Delayed::Worker.deny_stale_enqueues = false
     Delayed::Worker.default_queue_name = 'default_tracking'
     SimpleJob.runs = 0
@@ -111,27 +110,6 @@ describe Delayed::Job do
         options = { priority: 1 }
         described_class.enqueue SimpleJob.new, options
         expect(options).to eq(priority: 1)
-      end
-    end
-
-    context 'with delay_jobs = false' do
-      before(:each) do
-        Delayed::Worker.delay_jobs = false
-      end
-
-      it 'does not increase count after enqueuing items' do
-        described_class.enqueue SimpleJob.new
-        expect(described_class.count).to eq(0)
-      end
-
-      it 'invokes the enqueued job' do
-        job = SimpleJob.new
-        expect(job).to receive(:perform)
-        described_class.enqueue job
-      end
-
-      it 'returns a job, not the result of invocation' do
-        expect(described_class.enqueue(SimpleJob.new)).to be_instance_of(described_class)
       end
     end
 
@@ -1177,7 +1155,7 @@ describe Delayed::Job do
       expect(subject.run_time_alert?).to eq(false)
     end
 
-    context 'when the job is not locked (e.g. delay_jobs is false)' do
+    context 'when the job is not locked' do
       let(:locked_at) { nil }
 
       it 'returns nil' do
