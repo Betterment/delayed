@@ -14,8 +14,8 @@ module Delayed
 
         def enqueue_job(options)
           new(options).tap do |job|
+            warn_deprecated_enqueue_hook(job.payload_object)
             Delayed.lifecycle.run_callbacks(:enqueue, [job]) do
-              job.hook(:enqueue)
               Delayed::Worker.delay_job?(job) ? job.save : job.invoke_job
             end
           end
@@ -44,6 +44,15 @@ module Delayed
 
         def name_assignable?
           column_names.include?('name')
+        end
+
+        private
+
+        def warn_deprecated_enqueue_hook(payload)
+          return if payload.is_a?(Delayed::JobWrapper)
+          return unless payload.respond_to?(:enqueue)
+
+          warn "[DEPRECATION] :enqueue hook on #{payload.class} is deprecated and is no longer invoked"
         end
       end
 
@@ -109,9 +118,12 @@ module Delayed
 
       def hook(name, *args)
         if payload_object.respond_to?(name)
-          if payload_object.is_a?(Delayed::JobWrapper)
-            return if name == :enqueue # this callback is not supported due to method naming conflicts.
+          if name == :enqueue
+            warn '[DEPRECATION] :enqueue hook is deprecated'
+            return
+          end
 
+          if payload_object.is_a?(Delayed::JobWrapper)
             warn '[DEPRECATION] Job hook methods (`before`, `after`, `success`, etc) are deprecated. Use ActiveJob callbacks instead.'
           end
 

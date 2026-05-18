@@ -95,12 +95,6 @@ describe Delayed::PerformableMethod do
       end
     end
 
-    it 'delegates enqueue hook to object' do
-      story = Story.create
-      expect(story).to receive(:enqueue).with(an_instance_of(Delayed::Job))
-      story.delay.tell
-    end
-
     it 'delegates error hook to object' do
       story = Story.create
       expect(story).to receive(:error).with(an_instance_of(Delayed::Job), an_instance_of(RuntimeError))
