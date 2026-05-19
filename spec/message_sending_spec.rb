@@ -135,37 +135,5 @@ describe Delayed::MessageSending do
         }.not_to change { fairy_tail.happy_ending }
       }.to change { Delayed::Job.count }.by(1)
     end
-
-    it 'does delay when delay_jobs is a proc returning true' do
-      Delayed::Worker.delay_jobs = -> { true }
-      fairy_tail = FairyTail.new
-      expect {
-        expect {
-          fairy_tail.delay.tell('a', kwarg: 'b')
-        }.not_to change { fairy_tail.happy_ending }
-      }.to change { Delayed::Job.count }.by(1)
-    end
-
-    it 'does not delay the job when delay_jobs is a proc returning false' do
-      Delayed::Worker.delay_jobs = -> { false }
-      fairy_tail = FairyTail.new
-      expect {
-        expect {
-          fairy_tail.delay.tell('a', kwarg: 'b')
-        }.to change { fairy_tail.happy_ending }.from(nil).to %w(a b)
-      }.not_to(change { Delayed::Job.count })
-    end
-
-    it 'warns and behaves as delay_jobs=true when delay_jobs is a proc with arity 1' do
-      Delayed::Worker.delay_jobs = ->(_job) { false }
-      fairy_tail = FairyTail.new
-      expect {
-        expect {
-          expect {
-            fairy_tail.delay.tell('a', kwarg: 'b')
-          }.not_to change { fairy_tail.happy_ending }
-        }.to change { Delayed::Job.count }.by(1)
-      }.to output(/\[DEPRECATION\] delay_jobs proc arity 1 support is deprecated/).to_stderr
-    end
   end
 end

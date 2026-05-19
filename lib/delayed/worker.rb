@@ -37,19 +37,6 @@ module Delayed
                :default_log_level, :default_log_level=, to: Delayed
     end
 
-    def self.delay_job?
-      if delay_jobs.is_a?(Proc)
-        if delay_jobs.arity.positive?
-          warn '[DEPRECATION] delay_jobs proc arity 1 support is deprecated and behaves as delay_jobs=true'
-          true
-        else
-          delay_jobs.call
-        end
-      else
-        delay_jobs
-      end
-    end
-
     def initialize
       @failed_reserve_count = 0
 

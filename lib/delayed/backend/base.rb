@@ -16,7 +16,7 @@ module Delayed
           new(options).tap do |job|
             Delayed.lifecycle.run_callbacks(:enqueue, job) do
               job.hook(:enqueue)
-              Delayed::Worker.delay_job? ? job.save : job.invoke_job
+              Delayed::Worker.delay_jobs ? job.save : job.invoke_job
             end
           end
         end
