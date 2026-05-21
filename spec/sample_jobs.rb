@@ -77,10 +77,6 @@ end
 class CallbackJob
   cattr_accessor :messages
 
-  def enqueue(_job)
-    self.class.messages << 'enqueue'
-  end
-
   def before(_job)
     self.class.messages << 'before'
   end
@@ -103,12 +99,6 @@ class CallbackJob
 
   def failure(_job)
     self.class.messages << 'failure'
-  end
-end
-
-class EnqueueJobMod < SimpleJob
-  def enqueue(job)
-    job.run_at = 20.minutes.from_now
   end
 end
 

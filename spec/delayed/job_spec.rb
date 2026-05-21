@@ -37,12 +37,6 @@ describe Delayed::Job do
   end
 
   describe 'enqueue' do
-    it "allows enqueue hook to modify job at DB level" do
-      later = described_class.db_time_now + 20.minutes
-      job = described_class.enqueue payload_object: EnqueueJobMod.new
-      expect(described_class.find(job.id).run_at).to be_within(1).of(later)
-    end
-
     context 'with a hash' do
       it "raises ArgumentError when handler doesn't respond_to :perform" do
         expect { described_class.enqueue(payload_object: Object.new) }.to raise_error(ArgumentError)
@@ -170,6 +164,59 @@ describe Delayed::Job do
         expect(job).to be_persisted
       end
     end
+
+    context 'when payload defines an :enqueue hook' do
+      before do
+        stub_const('JobWithEnqueueHook', Class.new do
+          def enqueue(_job); end
+
+          def perform; end
+        end)
+      end
+
+      it 'raises an error naming the payload class' do
+        expect { described_class.enqueue(JobWithEnqueueHook.new) }
+          .to raise_error(RuntimeError, ':enqueue hook on JobWithEnqueueHook is no longer supported')
+      end
+
+      it 'does not invoke the payload enqueue method' do
+        payload = JobWithEnqueueHook.new
+        expect(payload).not_to receive(:enqueue)
+        expect { described_class.enqueue(payload) }.to raise_error(RuntimeError, /:enqueue hook/)
+      end
+    end
+
+    context 'when payload does not define :enqueue' do
+      it 'does not raise' do
+        expect { described_class.enqueue(SimpleJob.new) }.not_to raise_error
+      end
+    end
+
+    context 'when payload is an ActiveJob wrapper that responds to :enqueue' do
+      it 'does not raise' do
+        wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
+        expect { described_class.enqueue(payload_object: wrapper) }.not_to raise_error
+      end
+    end
+  end
+
+  describe '#hook' do
+    context 'with :enqueue' do
+      before do
+        stub_const('JobWithEnqueueHook', Class.new do
+          def enqueue(_job); end
+
+          def perform; end
+        end)
+      end
+
+      it 'raises rather than invoking the payload hook' do
+        job = described_class.new(payload_object: JobWithEnqueueHook.new)
+        expect(job.payload_object).not_to receive(:enqueue)
+        expect { job.hook(:enqueue) }
+          .to raise_error(RuntimeError, ':enqueue hook is no longer supported')
+      end
+    end
   end
 
   describe 'callbacks' do
@@ -187,9 +234,9 @@ describe Delayed::Job do
 
     it 'calls before and after callbacks' do
       job = described_class.enqueue(CallbackJob.new)
-      expect(CallbackJob.messages).to eq(['enqueue'])
+      expect(CallbackJob.messages).to eq([])
       job.invoke_job
-      expect(CallbackJob.messages).to eq(%w(enqueue before perform success after))
+      expect(CallbackJob.messages).to eq(%w(before perform success after))
     end
 
     it 'calls the after callback with an error' do
@@ -197,14 +244,14 @@ describe Delayed::Job do
       expect(job.payload_object).to receive(:perform).and_raise(RuntimeError.new('fail'))
 
       expect { job.invoke_job }.to raise_error(RuntimeError, 'fail')
-      expect(CallbackJob.messages).to eq(['enqueue', 'before', 'error: RuntimeError', 'after'])
+      expect(CallbackJob.messages).to eq(['before', 'error: RuntimeError', 'after'])
     end
 
     it 'calls error when before raises an error' do
       job = described_class.enqueue(CallbackJob.new)
       expect(job.payload_object).to receive(:before).and_raise(RuntimeError.new('fail'))
       expect { job.invoke_job }.to raise_error(RuntimeError, 'fail')
-      expect(CallbackJob.messages).to eq(['enqueue', 'error: RuntimeError', 'after'])
+      expect(CallbackJob.messages).to eq(['error: RuntimeError', 'after'])
     end
   end
 
