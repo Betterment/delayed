@@ -136,23 +136,13 @@ describe Delayed::MessageSending do
       }.to change { Delayed::Job.count }.by(1)
     end
 
-    it 'does delay when delay_jobs is a proc returning true' do
-      Delayed::Worker.delay_jobs = ->(_job) { true }
+    it 'raises when delay_jobs is a Proc' do
+      Delayed::Worker.delay_jobs = -> { true }
       fairy_tail = FairyTail.new
       expect {
         expect {
           fairy_tail.delay.tell('a', kwarg: 'b')
-        }.not_to change { fairy_tail.happy_ending }
-      }.to change { Delayed::Job.count }.by(1)
-    end
-
-    it 'does not delay the job when delay_jobs is a proc returning false' do
-      Delayed::Worker.delay_jobs = ->(_job) { false }
-      fairy_tail = FairyTail.new
-      expect {
-        expect {
-          fairy_tail.delay.tell('a', kwarg: 'b')
-        }.to change { fairy_tail.happy_ending }.from(nil).to %w(a b)
+        }.to raise_error('Delayed::Worker.delay_jobs may not be a Proc')
       }.not_to(change { Delayed::Job.count })
     end
   end
