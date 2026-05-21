@@ -14,7 +14,7 @@ module Delayed
 
         def enqueue_job(options)
           new(options).tap do |job|
-            warn_deprecated_enqueue_hook(job.payload_object)
+            raise_deprecated_enqueue_hook(job.payload_object)
             Delayed.lifecycle.run_callbacks(:enqueue, job) do
               Delayed::Worker.delay_job?(job) ? job.save : job.invoke_job
             end
@@ -48,11 +48,11 @@ module Delayed
 
         private
 
-        def warn_deprecated_enqueue_hook(payload)
+        def raise_deprecated_enqueue_hook(payload)
           return if payload.is_a?(Delayed::JobWrapper)
           return unless payload.respond_to?(:enqueue)
 
-          warn "[DEPRECATION] :enqueue hook on #{payload.class} is deprecated and is no longer invoked"
+          raise ":enqueue hook on #{payload.class} is no longer supported"
         end
       end
 
@@ -119,8 +119,7 @@ module Delayed
       def hook(name, *args)
         if payload_object.respond_to?(name)
           if name == :enqueue
-            warn '[DEPRECATION] :enqueue hook is deprecated'
-            return
+            raise ':enqueue hook is no longer supported'
           end
 
           if payload_object.is_a?(Delayed::JobWrapper)
