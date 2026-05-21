@@ -165,7 +165,7 @@ describe Delayed::Job do
       end
     end
 
-    context 'when payload defines a deprecated :enqueue hook' do
+    context 'when payload defines an :enqueue hook' do
       before do
         stub_const('JobWithEnqueueHook', Class.new do
           def enqueue(_job); end
@@ -174,30 +174,47 @@ describe Delayed::Job do
         end)
       end
 
-      it 'emits a deprecation warning naming the payload class' do
+      it 'raises an error naming the payload class' do
         expect { described_class.enqueue(JobWithEnqueueHook.new) }
-          .to output(/\[DEPRECATION\] :enqueue hook on JobWithEnqueueHook/).to_stderr
+          .to raise_error(RuntimeError, ':enqueue hook on JobWithEnqueueHook is no longer supported')
       end
 
       it 'does not invoke the payload enqueue method' do
         payload = JobWithEnqueueHook.new
         expect(payload).not_to receive(:enqueue)
-        expect { described_class.enqueue(payload) }.to output(/DEPRECATION/).to_stderr
+        expect { described_class.enqueue(payload) }.to raise_error(RuntimeError, /:enqueue hook/)
       end
     end
 
     context 'when payload does not define :enqueue' do
-      it 'does not emit a deprecation warning' do
-        expect { described_class.enqueue(SimpleJob.new) }
-          .not_to output(/\[DEPRECATION\] :enqueue hook/).to_stderr
+      it 'does not raise' do
+        expect { described_class.enqueue(SimpleJob.new) }.not_to raise_error
       end
     end
 
     context 'when payload is an ActiveJob wrapper that responds to :enqueue' do
-      it 'does not emit the deprecation warning' do
+      it 'does not raise' do
         wrapper = ActiveJob::QueueAdapters::DelayedJobAdapter::JobWrapper.new(ActiveJobJob.new.serialize)
-        expect { described_class.enqueue(payload_object: wrapper) }
-          .not_to output(/\[DEPRECATION\] :enqueue hook/).to_stderr
+        expect { described_class.enqueue(payload_object: wrapper) }.not_to raise_error
+      end
+    end
+  end
+
+  describe '#hook' do
+    context 'with :enqueue' do
+      before do
+        stub_const('JobWithEnqueueHook', Class.new do
+          def enqueue(_job); end
+
+          def perform; end
+        end)
+      end
+
+      it 'raises rather than invoking the payload hook' do
+        job = described_class.new(payload_object: JobWithEnqueueHook.new)
+        expect(job.payload_object).not_to receive(:enqueue)
+        expect { job.hook(:enqueue) }
+          .to raise_error(RuntimeError, ':enqueue hook is no longer supported')
       end
     end
   end
