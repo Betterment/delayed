@@ -8,9 +8,14 @@ module Delayed
       module ClassMethods
         # Add a job to the queue
         def enqueue(*args)
-          job = new(Delayed::Backend::JobPreparer.new(*args).prepare)
-          enqueue_all([job])
-          job
+          job_options = Delayed::Backend::JobPreparer.new(*args).prepare
+          enqueue_job(job_options)
+        end
+
+        def enqueue_job(options)
+          new(options).tap do |job|
+            enqueue_all([job])
+          end
         end
 
         # Bulk-enqueue an array of pre-built Delayed::Job instances. Callers are
