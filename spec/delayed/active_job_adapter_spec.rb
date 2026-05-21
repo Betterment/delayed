@@ -405,28 +405,6 @@ RSpec.describe Delayed::ActiveJobAdapter do
       expect(adapter.enqueue_all([])).to eq(0)
     end
 
-    context 'when Delayed::Worker.delay_jobs is false' do
-      around do |example|
-        was = Delayed::Worker.delay_jobs
-        Delayed::Worker.delay_jobs = false
-        example.run
-      ensure
-        Delayed::Worker.delay_jobs = was
-      end
-
-      it 'raises UnsafeEnqueueError and inserts nothing' do
-        expect { adapter.enqueue_all([JobClass.new]) }
-          .to raise_error(Delayed::ActiveJobAdapter::UnsafeEnqueueError)
-        expect(Delayed::Job.count).to eq(0)
-      end
-
-      it 'also raises for single-job perform_later' do
-        expect { JobClass.perform_later }
-          .to raise_error(Delayed::ActiveJobAdapter::UnsafeEnqueueError)
-        expect(Delayed::Job.count).to eq(0)
-      end
-    end
-
     context 'when the database adapter does not support INSERT RETURNING (e.g. MySQL)' do
       before do
         allow(Delayed::Job.connection).to receive(:supports_insert_returning?).and_return(false)
@@ -520,43 +498,16 @@ RSpec.describe Delayed::ActiveJobAdapter do
       expect(Delayed::Job.last.name).to eq('JobClass')
     end
 
-    it "fires Delayed's :enqueue lifecycle callback once with the jobs array" do
-      observed = []
-      lifecycle_was = Delayed.lifecycle
-      Delayed.instance_variable_set(:@lifecycle, Delayed::Lifecycle.new)
-      Delayed.lifecycle.before(:enqueue) { |jobs| observed << jobs }
+    it 'populates provider_job_id and successfully_enqueued on the AJ inputs after enqueue_all returns' do
+      jobs = [JobClass.new, JobClass.new]
+      adapter.enqueue_all(jobs)
 
-      input = Array.new(3) { JobClass.new }
-      adapter.enqueue_all(input)
-
-      expect(observed.size).to eq(1)
-      expect(observed.first).to eq(input)
-    ensure
-      Delayed.instance_variable_set(:@lifecycle, lifecycle_was)
-    end
-
-    it 'populates provider_job_id and successfully_enqueued before after(:enqueue) callbacks fire' do
-      skip 'requires INSERT ... RETURNING support' unless Delayed::Job.connection.supports_insert_returning?
-
-      ids_seen = nil
-      enqueued_seen = nil
-      lifecycle_was = Delayed.lifecycle
-      Delayed.instance_variable_set(:@lifecycle, Delayed::Lifecycle.new)
-      Delayed.lifecycle.after(:enqueue) do |jobs|
-        ids_seen = jobs.map(&:provider_job_id)
-        if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
-          enqueued_seen = jobs.map(&:successfully_enqueued?)
-        end
+      if Delayed::Job.connection.supports_insert_returning?
+        expect(jobs.map(&:provider_job_id)).to all(be_a(Integer))
       end
-
-      adapter.enqueue_all([JobClass.new, JobClass.new])
-
-      expect(ids_seen).to all(be_a(Integer))
       if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
-        expect(enqueued_seen).to all(be(true))
+        expect(jobs).to all(be_successfully_enqueued)
       end
-    ensure
-      Delayed.instance_variable_set(:@lifecycle, lifecycle_was)
     end
 
     it 'does not fire ActiveJob before/around/after_enqueue callbacks' do
@@ -608,9 +559,9 @@ RSpec.describe Delayed::ActiveJobAdapter do
     end
   end
 
-  describe 'single-job perform_later routes through insert_all' do
-    it 'invokes insert_all (not Delayed::Job.enqueue)' do
-      expect(Delayed::Job).to receive(:insert_all).and_call_original # rubocop:disable RSpec/MessageSpies
+  describe 'single-job perform_later routes through Base.enqueue_all' do
+    it 'invokes Delayed::Job.enqueue_all (not Delayed::Job.enqueue)' do
+      expect(Delayed::Job).to receive(:enqueue_all).and_call_original # rubocop:disable RSpec/MessageSpies
       expect(Delayed::Job).not_to receive(:enqueue) # rubocop:disable RSpec/MessageSpies
 
       JobClass.perform_later

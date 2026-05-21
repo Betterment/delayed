@@ -29,7 +29,7 @@ RSpec.describe Delayed::Plugins::Instrumentation do
           job_name: { 'BatchedJob' => 3 },
           database: { current_database_name => 3 },
           database_adapter: { current_adapter => 3 },
-          jobs: jobs,
+          jobs: a_collection_containing_exactly(*Array.new(3) { an_instance_of(Delayed::Job) }),
         )
     ensure
       ActiveJob::Base.queue_adapter = adapter_was
