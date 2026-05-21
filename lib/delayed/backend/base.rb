@@ -24,7 +24,7 @@ module Delayed
         def enqueue_all(jobs)
           return 0 if jobs.empty?
 
-          jobs.each { |job| raise_deprecated_enqueue_hook(job.payload_object) }
+          jobs.each { |job| assert_no_enqueue_hook!(job.payload_object) }
           assert_delay_jobs_not_proc!
 
           Delayed.lifecycle.run_callbacks(:enqueue, jobs) do
@@ -82,7 +82,7 @@ module Delayed
           job.send(:changes_applied)
         end
 
-        def raise_deprecated_enqueue_hook(payload)
+        def assert_no_enqueue_hook!(payload)
           return if payload.is_a?(Delayed::JobWrapper)
           return unless payload.respond_to?(:enqueue)
 
