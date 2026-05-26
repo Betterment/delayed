@@ -78,13 +78,7 @@ module Delayed
           return unless connection.supports_insert_returning?
 
           ids = result.rows.map(&:first)
-          jobs.zip(ids) { |job, id| mark_inserted!(job, id) }
-        end
-
-        def mark_inserted!(job, id)
-          job.id = id
-          job.instance_variable_set(:@new_record, false)
-          job.changes_applied
+          jobs.zip(ids) { |job, id| job.id = id }
         end
 
         def assert_no_enqueue_hook!(payload)
