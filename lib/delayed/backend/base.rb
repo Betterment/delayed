@@ -14,7 +14,12 @@ module Delayed
 
         def enqueue_job(options)
           new(options).tap do |job|
-            enqueue_all([job])
+            assert_no_enqueue_hook!(job.payload_object)
+            assert_delay_jobs_not_proc!
+
+            Delayed.lifecycle.run_callbacks(:enqueue, [job]) do
+              Delayed::Worker.delay_jobs ? job.save : job.invoke_job
+            end
           end
         end
 
