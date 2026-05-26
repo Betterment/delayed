@@ -79,7 +79,7 @@ module Delayed
         def mark_inserted!(job, id)
           job.id = id
           job.instance_variable_set(:@new_record, false)
-          job.send(:changes_applied)
+          job.changes_applied
         end
 
         def assert_no_enqueue_hook!(payload)
