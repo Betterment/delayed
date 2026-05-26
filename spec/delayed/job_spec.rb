@@ -142,18 +142,18 @@ describe Delayed::Job do
       it 'allows run_at within lock_timeout of now' do
         recent_past = described_class.db_time_now - described_class.lock_timeout + 1.minute
         job = described_class.enqueue SimpleJob.new, run_at: recent_past
-        expect(job.id).to be_present
+        expect(job).to be_persisted
       end
 
       it 'allows run_at in the future' do
         future = described_class.db_time_now + 5.minutes
         job = described_class.enqueue SimpleJob.new, run_at: future
-        expect(job.id).to be_present
+        expect(job).to be_persisted
       end
 
       it 'allows enqueue without run_at' do
         job = described_class.enqueue SimpleJob.new
-        expect(job.id).to be_present
+        expect(job).to be_persisted
       end
     end
 
@@ -161,7 +161,7 @@ describe Delayed::Job do
       it 'allows run_at far in the past' do
         stale_time = described_class.db_time_now - 1.day
         job = described_class.enqueue SimpleJob.new, run_at: stale_time
-        expect(job.id).to be_present
+        expect(job).to be_persisted
       end
     end
 
