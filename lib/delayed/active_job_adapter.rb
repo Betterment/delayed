@@ -7,20 +7,18 @@ module Delayed
     end
 
     def enqueue(job)
-      enqueue_all([job])
-      job
+      _enqueue(job)
     end
 
     def enqueue_at(job, timestamp)
       job.scheduled_at = Time.at(timestamp) # rubocop:disable Rails/TimeZone
-      enqueue_all([job])
-      job
+      _enqueue(job)
     end
 
     def enqueue_all(jobs)
       return 0 if jobs.empty?
 
-      assert_safe_to_enqueue!(jobs)
+      assert_jobs_safe_to_enqueue!(jobs)
 
       delayed_jobs = jobs.map { |job| build_delayed_job(job) }
       Delayed::Job.enqueue_all(delayed_jobs)
@@ -32,27 +30,41 @@ module Delayed
 
     private
 
-    def assert_safe_to_enqueue!(jobs)
-      if jobs.any? { |job| enqueue_after_transaction_commit_enabled?(job) }
+    def _enqueue(job)
+      assert_job_safe_to_enqueue!(job)
+      job_options = build_job_options(job)
+      delayed_job = Delayed::Job.enqueue_job(job_options)
+      perform_post_enqueue_assignments([job], [delayed_job])
+      job
+    end
+
+    def assert_jobs_safe_to_enqueue!(jobs)
+      jobs.each { |job| assert_job_safe_to_enqueue!(job) }
+    end
+
+    def assert_job_safe_to_enqueue!(job)
+      if enqueue_after_transaction_commit_enabled?(job)
         raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
       end
     end
 
     def build_delayed_job(job)
+      prepared = build_job_options(job)
+      Delayed::Job.new(prepared)
+    end
+
+    def build_job_options(job)
       opts = { queue: job.queue_name, priority: job.priority }.compact
       opts.merge!(job.provider_attributes || {})
       opts[:run_at] = coerce_scheduled_at(job.scheduled_at) if job.scheduled_at
 
-      prepared = Delayed::Backend::JobPreparer.new(JobWrapper.new(job), opts).prepare
-      Delayed::Job.new(prepared)
+      Delayed::Backend::JobPreparer.new(JobWrapper.new(job), opts).prepare
     end
 
     def perform_post_enqueue_assignments(active_jobs, delayed_jobs)
-      insert_returning_supported = Delayed::Job.connection.supports_insert_returning?
-
       active_jobs.zip(delayed_jobs) do |active_job, delayed_job|
         active_job.successfully_enqueued = true if active_job.respond_to?(:successfully_enqueued=)
-        active_job.provider_job_id = delayed_job.id if insert_returning_supported
+        active_job.provider_job_id = delayed_job.id
       end
     end
 

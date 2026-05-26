@@ -16,11 +16,18 @@ RSpec.describe Delayed::ActiveJobAdapter do
     stub_const 'JobClass', job_class
 
     next_id = 0
+    allow(Delayed::Job).to receive(:enqueue_job) do |options|
+      delayed_job = Delayed::Job.new(options)
+      next_id += 1
+      delayed_job.id = next_id
+      enqueued_delayed_jobs << delayed_job
+      delayed_job
+    end
     allow(Delayed::Job).to receive(:enqueue_all) do |delayed_jobs|
       if Delayed::Job.connection.supports_insert_returning?
-        delayed_jobs.each do |dj|
+        delayed_jobs.each do |delayed_job|
           next_id += 1
-          dj.id = next_id
+          delayed_job.id = next_id
         end
       end
       enqueued_delayed_jobs.concat(delayed_jobs)
@@ -81,14 +88,24 @@ RSpec.describe Delayed::ActiveJobAdapter do
     expect { JobClass.perform_later }.to raise_error(RuntimeError, "uh oh, serialize failed!")
   end
 
-  it 'bubbles out an error if Delayed::Job.enqueue_all raises' do
-    allow(Delayed::Job).to receive(:enqueue_all).and_raise('uh oh, enqueue failed!')
+  it 'bubbles out an error if Delayed::Job.enqueue_job raises (single-job path)' do
+    allow(Delayed::Job).to receive(:enqueue_job).and_raise('uh oh, enqueue failed!')
 
     expect { JobClass.perform_later }.to raise_error(RuntimeError, 'uh oh, enqueue failed!')
   end
 
-  context 'when integrated with Delayed::Job.enqueue_all (and_call_original)' do
-    before { allow(Delayed::Job).to receive(:enqueue_all).and_call_original }
+  it 'bubbles out an error if Delayed::Job.enqueue_all raises (bulk path)' do
+    allow(Delayed::Job).to receive(:enqueue_all).and_raise('uh oh, enqueue failed!')
+
+    expect { ActiveJob::Base.queue_adapter.enqueue_all([JobClass.new]) }
+      .to raise_error(RuntimeError, 'uh oh, enqueue failed!')
+  end
+
+  context 'when integrated end-to-end (and_call_original)' do
+    before do
+      allow(Delayed::Job).to receive(:enqueue_job).and_call_original
+      allow(Delayed::Job).to receive(:enqueue_all).and_call_original
+    end
 
     it 'deserializes even if the underlying job class is not defined' do
       JobClass.perform_later
@@ -325,7 +342,10 @@ RSpec.describe Delayed::ActiveJobAdapter do
         end
       end
 
-      before { allow(Delayed::Job).to receive(:enqueue_all).and_call_original }
+      before do
+        allow(Delayed::Job).to receive(:enqueue_job).and_call_original
+        allow(Delayed::Job).to receive(:enqueue_all).and_call_original
+      end
 
       it 'passes arguments through to the perform method' do
         JobClass.perform_later('foo', kwarg: 'bar')
@@ -570,13 +590,14 @@ RSpec.describe Delayed::ActiveJobAdapter do
     end
   end
 
-  describe 'single-job perform_later routes through Delayed::Job.enqueue_all' do
-    it 'invokes Delayed::Job.enqueue_all (not Delayed::Job.enqueue)' do
+  describe 'single-job perform_later routes through Delayed::Job.enqueue_job' do
+    it 'invokes Delayed::Job.enqueue_job (not Delayed::Job.enqueue or Delayed::Job.enqueue_all)' do
       expect(Delayed::Job).not_to receive(:enqueue) # rubocop:disable RSpec/MessageSpies
+      expect(Delayed::Job).not_to receive(:enqueue_all) # rubocop:disable RSpec/MessageSpies
 
       JobClass.perform_later
 
-      expect(Delayed::Job).to have_received(:enqueue_all).once
+      expect(Delayed::Job).to have_received(:enqueue_job).once
     end
 
     it 'delegates exactly one Delayed::Job' do
