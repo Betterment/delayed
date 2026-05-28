@@ -92,10 +92,12 @@ module Delayed
         break if jobs.empty?
 
         total += jobs.length
-        pool = Concurrent::FixedThreadPool.new(jobs.length)
+        pool = Concurrent::FixedThreadPool.new(thread_pool_size(jobs.length))
         jobs.each do |job|
           pool.post do
+            thread_started = false
             self.class.lifecycle.run_callbacks(:thread, self) do
+              thread_started = true
               success.increment if perform(job)
             rescue DeserializationError => e
               handle_unrecoverable_error(job, e)
@@ -103,7 +105,7 @@ module Delayed
               handle_erroring_job(job, e)
             end
           rescue Exception => e # rubocop:disable Lint/RescueException
-            say "Job thread crashed with #{e.class.name}: #{e.message}", 'error'
+            handle_thread_error(job, e, thread_started)
           end
         end
 
@@ -215,6 +217,16 @@ module Delayed
       failed(job)
     end
 
+    def handle_thread_error(job, error, thread_started)
+      phase = thread_started ? 'after perform' : 'before perform'
+      job_say job, "thread crashed #{phase} with #{error.class.name}: #{error.message}", 'error'
+      return if thread_started
+
+      handle_erroring_job(job, error)
+    rescue Exception => inner_error # rubocop:disable Lint/RescueException
+      job_say job, "could not record pre-perform thread crash: #{inner_error.class.name}: #{inner_error.message}", 'error'
+    end
+
     # The backend adapter may return either a list or a single job
     # In some backends, this can be controlled with the `max_claims` config
     # Either way, we map this to an array of job instances
@@ -233,6 +245,17 @@ module Delayed
 
     def reload!
       Rails.application.reloader.reload! if defined?(Rails.application.reloader) && Rails.application.reloader.check!
+    end
+
+    def thread_pool_size(job_count)
+      return job_count unless Delayed::Job.respond_to?(:connection_pool)
+
+      pool_size = Delayed::Job.connection_pool.size
+      return job_count unless pool_size
+
+      [job_count, [pool_size - 1, 1].max].min
+    rescue StandardError
+      job_count
     end
 
     def clock_time
