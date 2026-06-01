@@ -31,20 +31,14 @@ module Delayed
     private
 
     def _enqueue(job)
-      assert_job_safe_to_enqueue!(job)
-      job_options = build_job_options(job)
-      delayed_job = Delayed::Job.enqueue_job(job_options)
-      perform_post_enqueue_assignments([job], [delayed_job])
-      job
+      job.tap { |j| enqueue_all([j]) }
     end
 
     def assert_jobs_safe_to_enqueue!(jobs)
-      jobs.each { |job| assert_job_safe_to_enqueue!(job) }
-    end
-
-    def assert_job_safe_to_enqueue!(job)
-      if enqueue_after_transaction_commit_enabled?(job)
-        raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
+      jobs.each do |job|
+        if enqueue_after_transaction_commit_enabled?(job)
+          raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
+        end
       end
     end
 
