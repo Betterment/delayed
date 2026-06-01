@@ -10,9 +10,29 @@ RSpec.describe Delayed::ActiveJobAdapter do
       def perform; end
     end
   end
+  let(:enqueued_delayed_jobs) { [] }
 
   before do
     stub_const 'JobClass', job_class
+
+    next_id = 0
+    allow(Delayed::Job).to receive(:enqueue_job) do |options|
+      delayed_job = Delayed::Job.new(options)
+      next_id += 1
+      delayed_job.id = next_id
+      enqueued_delayed_jobs << delayed_job
+      delayed_job
+    end
+    allow(Delayed::Job).to receive(:enqueue_all) do |delayed_jobs|
+      if Delayed::Job.connection.supports_insert_returning?
+        delayed_jobs.each do |delayed_job|
+          next_id += 1
+          delayed_job.id = next_id
+        end
+      end
+      enqueued_delayed_jobs.concat(delayed_jobs)
+      delayed_jobs.size
+    end
   end
 
   around do |example|
@@ -38,7 +58,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
       JobClass.perform_later
     end
 
-    Delayed::Job.last.tap do |dj|
+    enqueued_delayed_jobs.last.tap do |dj|
       expect(dj.handler.lines).to match [
         "--- !ruby/object:Delayed::JobWrapper\n",
         "job_data:\n",
@@ -68,55 +88,69 @@ RSpec.describe Delayed::ActiveJobAdapter do
     expect { JobClass.perform_later }.to raise_error(RuntimeError, "uh oh, serialize failed!")
   end
 
-  it 'bubbles out an error if Delayed::Job.enqueue fails' do
-    allow(Delayed::Job).to receive(:enqueue).and_raise("uh oh, enqueue failed!")
+  it 'bubbles out an error if Delayed::Job.enqueue_job raises (single-job path)' do
+    allow(Delayed::Job).to receive(:enqueue_job).and_raise('uh oh, enqueue failed!')
 
-    expect { JobClass.perform_later }.to raise_error(RuntimeError, "uh oh, enqueue failed!")
+    expect { JobClass.perform_later }.to raise_error(RuntimeError, 'uh oh, enqueue failed!')
   end
 
-  it 'deserializes even if the underlying job class is not defined' do
-    JobClass.perform_later
+  it 'bubbles out an error if Delayed::Job.enqueue_all raises (bulk path)' do
+    allow(Delayed::Job).to receive(:enqueue_all).and_raise('uh oh, enqueue failed!')
 
-    Delayed::Job.last.tap do |dj|
-      dj.update!(handler: dj.handler.gsub('JobClass', 'MissingJobClass'))
-      expect { dj.payload_object }.not_to raise_error
-      expect { dj.payload_object.job_id }.to raise_error(NameError, 'uninitialized constant MissingJobClass')
-    end
-    expect(Delayed::Worker.new.work_off).to eq([0, 1])
-    expect(Delayed::Job.last.last_error).to match(/uninitialized constant MissingJobClass/)
+    expect { ActiveJob::Base.queue_adapter.enqueue_all([JobClass.new]) }
+      .to raise_error(RuntimeError, 'uh oh, enqueue failed!')
   end
 
-  it 'deserializes even if an underlying argument gid is not defined' do
-    ActiveJobJob.perform_later(story: Story.create!)
-    Delayed::Job.last.tap do |dj|
-      dj.update!(handler: dj.handler.gsub('Story', 'MissingArgumentClass'))
-      expect { dj.payload_object }.not_to raise_error
-      expect { dj.payload_object.perform_now }.to raise_error(ActiveJob::DeserializationError)
+  context 'when integrated end-to-end (and_call_original)' do
+    before do
+      allow(Delayed::Job).to receive(:enqueue_job).and_call_original
+      allow(Delayed::Job).to receive(:enqueue_all).and_call_original
     end
-    expect(Delayed::Worker.new.work_off).to eq([0, 1])
-    expect(Delayed::Job.last.last_error).to match(/Error while trying to deserialize arguments/)
+
+    it 'deserializes even if the underlying job class is not defined' do
+      JobClass.perform_later
+
+      Delayed::Job.last.tap do |dj|
+        dj.update!(handler: dj.handler.gsub('JobClass', 'MissingJobClass'))
+        expect { dj.payload_object }.not_to raise_error
+        expect { dj.payload_object.job_id }.to raise_error(NameError, 'uninitialized constant MissingJobClass')
+      end
+      expect(Delayed::Worker.new.work_off).to eq([0, 1])
+      expect(Delayed::Job.last.last_error).to match(/uninitialized constant MissingJobClass/)
+    end
+
+    it 'deserializes even if an underlying argument gid is not defined' do
+      ActiveJobJob.perform_later(story: Story.create!)
+      Delayed::Job.last.tap do |dj|
+        dj.update!(handler: dj.handler.gsub('Story', 'MissingArgumentClass'))
+        expect { dj.payload_object }.not_to raise_error
+        expect { dj.payload_object.perform_now }.to raise_error(ActiveJob::DeserializationError)
+      end
+      expect(Delayed::Worker.new.work_off).to eq([0, 1])
+      expect(Delayed::Job.last.last_error).to match(/Error while trying to deserialize arguments/)
+    end
   end
 
   describe '.set' do
     it 'supports priority as an integer' do
       JobClass.set(priority: 43).perform_later
 
-      expect(Delayed::Job.last.priority).to be_reporting
-      expect(Delayed::Job.last.priority).to eq(43)
+      expect(enqueued_delayed_jobs.last.priority).to be_reporting
+      expect(enqueued_delayed_jobs.last.priority).to eq(43)
     end
 
     it 'supports priority as a Delayed::Priority' do
       JobClass.set(priority: Delayed::Priority.eventual).perform_later
 
-      expect(Delayed::Job.last.priority).to be_eventual
-      expect(Delayed::Job.last.priority).to eq(20)
+      expect(enqueued_delayed_jobs.last.priority).to be_eventual
+      expect(enqueued_delayed_jobs.last.priority).to eq(20)
     end
 
     it 'supports priority as a symbol' do
       JobClass.set(priority: :eventual).perform_later
 
-      expect(Delayed::Job.last.priority).to be_eventual
-      expect(Delayed::Job.last.priority).to eq(20)
+      expect(enqueued_delayed_jobs.last.priority).to be_eventual
+      expect(enqueued_delayed_jobs.last.priority).to eq(20)
     end
 
     it 'raises an error when run_at is used' do
@@ -127,7 +161,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
     it 'converts wait_until to run_at' do
       JobClass.set(wait_until: arbitrary_time).perform_later
 
-      expect(Delayed::Job.last.run_at).to eq('2021-01-05 03:34:33 UTC')
+      expect(enqueued_delayed_jobs.last.run_at).to eq('2021-01-05 03:34:33 UTC')
     end
 
     context 'when running at a specific time' do
@@ -138,7 +172,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
       it 'adds wait input to current time' do
         JobClass.set(wait: (1.day + 1.hour + 1.minute)).perform_later
 
-        expect(Delayed::Job.last.run_at).to eq('2021-01-06 04:35:33 UTC')
+        expect(enqueued_delayed_jobs.last.run_at).to eq('2021-01-06 04:35:33 UTC')
       end
     end
 
@@ -158,7 +192,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
       it 'calls the expected setter' do
         JobClass.set(foo: 'bar').perform_later
 
-        expect(Delayed::Job.last.queue).to eq('foo-bar')
+        expect(enqueued_delayed_jobs.last.queue).to eq('foo-bar')
       end
     end
 
@@ -176,7 +210,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
       it 'surfaces max_attempts on the JobWrapper' do
         JobClass.perform_later
 
-        expect(Delayed::Job.last.max_attempts).to eq 3
+        expect(enqueued_delayed_jobs.last.max_attempts).to eq 3
       end
     end
 
@@ -194,7 +228,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
       it 'surfaces arbitrary_method on the JobWrapper' do
         JobClass.perform_later
 
-        expect(Delayed::Job.last.payload_object.arbitrary_method).to eq 'hello'
+        expect(enqueued_delayed_jobs.last.payload_object.arbitrary_method).to eq 'hello'
       end
     end
   end
@@ -203,15 +237,15 @@ RSpec.describe Delayed::ActiveJobAdapter do
     it 'applies the default ActiveJob queue and priority' do
       JobClass.perform_later
 
-      expect(Delayed::Job.last.queue).to eq('default')
-      expect(Delayed::Job.last.priority).to eq(10)
+      expect(enqueued_delayed_jobs.last.queue).to eq('default')
+      expect(enqueued_delayed_jobs.last.priority).to eq(10)
     end
 
     it 'supports overriding queue and priority' do
       JobClass.set(queue: 'a', priority: 3).perform_later
 
-      expect(Delayed::Job.last.queue).to eq('a')
-      expect(Delayed::Job.last.priority).to eq(3)
+      expect(enqueued_delayed_jobs.last.queue).to eq('a')
+      expect(enqueued_delayed_jobs.last.priority).to eq(3)
     end
 
     context 'when all default queues and priorities are nil' do
@@ -225,15 +259,15 @@ RSpec.describe Delayed::ActiveJobAdapter do
       it 'applies no queue or priority' do
         JobClass.perform_later
 
-        expect(Delayed::Job.last.queue).to be_nil
-        expect(Delayed::Job.last.priority).to eq(0)
+        expect(enqueued_delayed_jobs.last.queue).to be_nil
+        expect(enqueued_delayed_jobs.last.priority).to eq(0)
       end
 
       it 'supports overriding queue and priority' do
         JobClass.set(queue: 'a', priority: 3).perform_later
 
-        expect(Delayed::Job.last.queue).to eq('a')
-        expect(Delayed::Job.last.priority).to eq(3)
+        expect(enqueued_delayed_jobs.last.queue).to eq('a')
+        expect(enqueued_delayed_jobs.last.priority).to eq(3)
       end
     end
 
@@ -248,15 +282,15 @@ RSpec.describe Delayed::ActiveJobAdapter do
       it 'applies the default Delayed queue and priority' do
         JobClass.perform_later
 
-        expect(Delayed::Job.last.queue).to eq('dj_default')
-        expect(Delayed::Job.last.priority).to eq(99)
+        expect(enqueued_delayed_jobs.last.queue).to eq('dj_default')
+        expect(enqueued_delayed_jobs.last.priority).to eq(99)
       end
 
       it 'supports overriding queue and priority' do
         JobClass.set(queue: 'a', priority: 3).perform_later
 
-        expect(Delayed::Job.last.queue).to eq('a')
-        expect(Delayed::Job.last.priority).to eq(3)
+        expect(enqueued_delayed_jobs.last.queue).to eq('a')
+        expect(enqueued_delayed_jobs.last.priority).to eq(3)
       end
     end
 
@@ -269,15 +303,15 @@ RSpec.describe Delayed::ActiveJobAdapter do
       it 'applies the default ActiveJob queue and priority' do
         JobClass.perform_later
 
-        expect(Delayed::Job.last.queue).to eq('aj_default')
-        expect(Delayed::Job.last.priority).to eq(11)
+        expect(enqueued_delayed_jobs.last.queue).to eq('aj_default')
+        expect(enqueued_delayed_jobs.last.priority).to eq(11)
       end
 
       it 'supports overriding queue and priority' do
         JobClass.set(queue: 'a', priority: 3).perform_later
 
-        expect(Delayed::Job.last.queue).to eq('a')
-        expect(Delayed::Job.last.priority).to eq(3)
+        expect(enqueued_delayed_jobs.last.queue).to eq('a')
+        expect(enqueued_delayed_jobs.last.priority).to eq(3)
       end
     end
 
@@ -293,7 +327,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
       it 'applies the specified priority' do
         JobClass.perform_later
 
-        expect(Delayed::Job.last.priority).to eq(30)
+        expect(enqueued_delayed_jobs.last.priority).to eq(30)
       end
     end
 
@@ -306,6 +340,11 @@ RSpec.describe Delayed::ActiveJobAdapter do
             self.class.result = [arg, kwarg]
           end
         end
+      end
+
+      before do
+        allow(Delayed::Job).to receive(:enqueue_job).and_call_original
+        allow(Delayed::Job).to receive(:enqueue_all).and_call_original
       end
 
       it 'passes arguments through to the perform method' do
@@ -394,6 +433,190 @@ RSpec.describe Delayed::ActiveJobAdapter do
         JobClass.set(queue: 'a', priority: 3, wait_until: arbitrary_time).perform_later
 
         expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 3, queue: 'a', at: arbitrary_time.to_f)
+      end
+    end
+  end
+
+  describe '.enqueue_all' do # rubocop:disable Metrics/BlockLength
+    let(:adapter) { ActiveJob::Base.queue_adapter }
+
+    it 'returns 0 when given no jobs' do
+      expect(adapter.enqueue_all([])).to eq(0)
+    end
+
+    it 'does not delegate to Delayed::Job.enqueue_all for empty input' do
+      adapter.enqueue_all([])
+      expect(enqueued_delayed_jobs).to be_empty
+    end
+
+    it 'delegates to Delayed::Job.enqueue_all with an Array<Delayed::Job>' do
+      jobs = Array.new(3) { JobClass.new }
+      adapter.enqueue_all(jobs)
+
+      expect(Delayed::Job).to have_received(:enqueue_all).once
+      expect(enqueued_delayed_jobs.size).to eq(3)
+      expect(enqueued_delayed_jobs).to all(be_a(Delayed::Job))
+    end
+
+    it 'returns the count of jobs delegated' do
+      jobs = Array.new(3) { JobClass.new }
+      expect(adapter.enqueue_all(jobs)).to eq(3)
+    end
+
+    it 'honors per-job scheduled_at on the delegated Delayed::Job' do
+      job = JobClass.new
+      job.scheduled_at = arbitrary_time
+      adapter.enqueue_all([JobClass.new, job])
+
+      expect(enqueued_delayed_jobs[1].run_at).to eq(arbitrary_time)
+    end
+
+    it 'applies db_time_now to run_at when no scheduled_at is set' do
+      Timecop.freeze(arbitrary_time) do
+        adapter.enqueue_all([JobClass.new])
+      end
+
+      expect(enqueued_delayed_jobs.last.run_at).to eq(arbitrary_time)
+    end
+
+    it 'honors per-job queue and priority overrides on the delegated Delayed::Job' do
+      a = JobClass.new.tap do |j|
+        j.queue_name = 'q-a'
+        j.priority = 3
+      end
+      b = JobClass.new.tap do |j|
+        j.queue_name = 'q-b'
+        j.priority = 7
+      end
+
+      adapter.enqueue_all([a, b])
+
+      expect(enqueued_delayed_jobs[0]).to have_attributes(queue: 'q-a', priority: 3)
+      expect(enqueued_delayed_jobs[1]).to have_attributes(queue: 'q-b', priority: 7)
+    end
+
+    it 'supports a mix of job classes in one call' do
+      other_class = Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
+        def perform; end
+      end
+      stub_const('OtherJobClass', other_class)
+
+      adapter.enqueue_all([JobClass.new, OtherJobClass.new])
+
+      expect(enqueued_delayed_jobs.map(&:name)).to eq(%w(JobClass OtherJobClass))
+    end
+
+    it 'sets the name on the delegated Delayed::Job from display_name' do
+      adapter.enqueue_all([JobClass.new])
+      expect(enqueued_delayed_jobs.last.name).to eq('JobClass')
+    end
+
+    it 'copies the id from each delegated Delayed::Job onto the AJ input as provider_job_id' do
+      skip 'requires INSERT ... RETURNING support' unless Delayed::Job.connection.supports_insert_returning?
+
+      jobs = Array.new(3) { JobClass.new }
+      adapter.enqueue_all(jobs)
+
+      expect(jobs.map(&:provider_job_id)).to eq(enqueued_delayed_jobs.map(&:id))
+      expect(jobs.map(&:provider_job_id)).to all(be_a(Integer))
+    end
+
+    if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
+      it 'marks each AJ input as successfully_enqueued' do
+        jobs = Array.new(2) { JobClass.new }
+        adapter.enqueue_all(jobs)
+        expect(jobs).to all(be_successfully_enqueued)
+      end
+    end
+
+    context 'when the database adapter does not support INSERT RETURNING (e.g. MySQL)' do
+      before do
+        allow(Delayed::Job.connection).to receive(:supports_insert_returning?).and_return(false)
+      end
+
+      it 'leaves provider_job_id nil on each AJ input' do
+        jobs = Array.new(2) { JobClass.new }
+        adapter.enqueue_all(jobs)
+        expect(jobs.map(&:provider_job_id)).to all(be_nil)
+      end
+    end
+
+    it 'does not fire ActiveJob before/around/after_enqueue callbacks' do
+      fires = []
+      JobClass.before_enqueue { fires << :before }
+      JobClass.around_enqueue do |_j, block|
+        fires << :around_before
+        block.call
+        fires << :around_after
+      end
+      JobClass.after_enqueue { fires << :after }
+
+      adapter.enqueue_all([JobClass.new, JobClass.new])
+
+      expect(fires).to be_empty
+    end
+
+    if ActiveJob.gem_version.release >= Gem::Version.new('7.2')
+      context 'when a job sets enqueue_after_transaction_commit to :always' do
+        before do
+          JobClass.include ActiveJob::EnqueueAfterTransactionCommit
+          JobClass.enqueue_after_transaction_commit = :always
+        end
+
+        it 'raises UnsafeEnqueueError and does not delegate to Delayed::Job.enqueue_all' do
+          ActiveJob.deprecator.silence do
+            expect { adapter.enqueue_all([JobClass.new]) }.to raise_error(Delayed::ActiveJobAdapter::UnsafeEnqueueError)
+          end
+          expect(enqueued_delayed_jobs).to be_empty
+        end
+      end
+    end
+
+    context 'when a job has a stale run_at and deny_stale_enqueues is enabled' do
+      around do |example|
+        was = Delayed::Worker.deny_stale_enqueues
+        Delayed::Worker.deny_stale_enqueues = true
+        example.run
+      ensure
+        Delayed::Worker.deny_stale_enqueues = was
+      end
+
+      it 'raises StaleEnqueueError and does not delegate to Delayed::Job.enqueue_all' do
+        job = JobClass.new
+        job.scheduled_at = Time.now.utc - 1.day
+        expect { adapter.enqueue_all([JobClass.new, job]) }.to raise_error(Delayed::StaleEnqueueError)
+        expect(enqueued_delayed_jobs).to be_empty
+      end
+    end
+  end
+
+  describe 'single-job perform_later routes through Delayed::Job.enqueue_job' do
+    it 'invokes Delayed::Job.enqueue_job (not Delayed::Job.enqueue or Delayed::Job.enqueue_all)' do
+      expect(Delayed::Job).not_to receive(:enqueue) # rubocop:disable RSpec/MessageSpies
+      expect(Delayed::Job).not_to receive(:enqueue_all) # rubocop:disable RSpec/MessageSpies
+
+      JobClass.perform_later
+
+      expect(Delayed::Job).to have_received(:enqueue_job).once
+    end
+
+    it 'delegates exactly one Delayed::Job' do
+      JobClass.perform_later
+      expect(enqueued_delayed_jobs.size).to eq(1)
+    end
+  end
+
+  if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
+    describe 'ActiveJob.perform_all_later' do
+      it 'delegates all jobs to Delayed::Job.enqueue_all in a single call' do
+        ActiveJob.perform_all_later([JobClass.new, JobClass.new, JobClass.new])
+
+        expect(Delayed::Job).to have_received(:enqueue_all).once
+        expect(enqueued_delayed_jobs.size).to eq(3)
+      end
+
+      it 'returns nil' do
+        expect(ActiveJob.perform_all_later([JobClass.new])).to be_nil
       end
     end
   end

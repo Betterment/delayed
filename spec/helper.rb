@@ -268,6 +268,10 @@ def current_database
   end
 end
 
+def current_database_name
+  current_adapter == 'sqlite3' ? 'tmp/database.sqlite' : 'delayed_job_test'
+end
+
 QueryUnderTest = Struct.new(:sql, :connection) do
   def self.for(query, connection: ActiveRecord::Base.connection)
     new(query.respond_to?(:to_sql) ? query.to_sql : query.to_s, connection)

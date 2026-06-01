@@ -284,11 +284,13 @@ The following events will be emitted automatically by workers as jobs are reserv
 - **delayed.job.run** - an event measuring the duration of a job's execution
 - **delayed.job.error** - an event indicating that a job has errored and may be retried (no duration attached)
 - **delayed.job.failure** - an event indicating that a job has permanently failed (no duration attached)
-- **delayed.job.enqueue** - an event measuring the time it takes to enqueue a job
+- **delayed.job.enqueue** - an event measuring the time it takes to enqueue one or more jobs (fires once per `Delayed::Job.enqueue` call and once per `perform_all_later` / `enqueue_all` batch)
 - **delayed.worker.reserve_jobs** - an event measuring the duration of the job "pickup query"
 
-The "run", "error", "failure" and "enqueue" events will include a `:job` argument in the event's payload,
-providing access to the job instance.
+The "run", "error", and "failure" events will include a `:job` argument in the event's payload,
+providing access to the job instance. The "enqueue" event will include a `:jobs` array (along with a
+`:count`) — note that elements may be either `Delayed::Job` instances (when enqueued directly via
+`Delayed::Job.enqueue`) or `ActiveJob` instances (when enqueued via `perform_later` / `perform_all_later`).
 
 ```ruby
 ActiveSupport::Notifications.subscribe('delayed.job.run') do |*args|

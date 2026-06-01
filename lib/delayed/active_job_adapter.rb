@@ -11,22 +11,65 @@ module Delayed
     end
 
     def enqueue_at(job, timestamp)
-      _enqueue(job, run_at: Time.at(timestamp)) # rubocop:disable Rails/TimeZone
+      job.scheduled_at = Time.at(timestamp) # rubocop:disable Rails/TimeZone
+      _enqueue(job)
+    end
+
+    def enqueue_all(jobs)
+      return 0 if jobs.empty?
+
+      assert_jobs_safe_to_enqueue!(jobs)
+
+      delayed_jobs = jobs.map { |job| build_delayed_job(job) }
+      Delayed::Job.enqueue_all(delayed_jobs)
+
+      perform_post_enqueue_assignments(jobs, delayed_jobs)
+
+      jobs.size
     end
 
     private
 
-    def _enqueue(job, opts = {})
+    def _enqueue(job)
+      assert_job_safe_to_enqueue!(job)
+      job_options = build_job_options(job)
+      delayed_job = Delayed::Job.enqueue_job(job_options)
+      perform_post_enqueue_assignments([job], [delayed_job])
+      job
+    end
+
+    def assert_jobs_safe_to_enqueue!(jobs)
+      jobs.each { |job| assert_job_safe_to_enqueue!(job) }
+    end
+
+    def assert_job_safe_to_enqueue!(job)
       if enqueue_after_transaction_commit_enabled?(job)
         raise UnsafeEnqueueError, "The ':delayed' ActiveJob adapter is not compatible with enqueue_after_transaction_commit"
       end
+    end
 
-      opts.merge!({ queue: job.queue_name, priority: job.priority }.compact)
-        .merge!(job.provider_attributes || {})
+    def build_delayed_job(job)
+      prepared = build_job_options(job)
+      Delayed::Job.new(prepared)
+    end
 
-      Delayed::Job.enqueue(JobWrapper.new(job), opts).tap do |dj|
-        job.provider_job_id = dj.id
+    def build_job_options(job)
+      opts = { queue: job.queue_name, priority: job.priority }.compact
+      opts.merge!(job.provider_attributes || {})
+      opts[:run_at] = coerce_scheduled_at(job.scheduled_at) if job.scheduled_at
+
+      Delayed::Backend::JobPreparer.new(JobWrapper.new(job), opts).prepare
+    end
+
+    def perform_post_enqueue_assignments(active_jobs, delayed_jobs)
+      active_jobs.zip(delayed_jobs) do |active_job, delayed_job|
+        active_job.successfully_enqueued = true if active_job.respond_to?(:successfully_enqueued=)
+        active_job.provider_job_id = delayed_job.id
       end
+    end
+
+    def coerce_scheduled_at(value)
+      value.is_a?(Numeric) ? Time.at(value) : value # rubocop:disable Rails/TimeZone
     end
 
     def enqueue_after_transaction_commit_enabled?(job)

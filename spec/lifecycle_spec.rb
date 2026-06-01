@@ -3,7 +3,7 @@ require 'helper'
 describe Delayed::Lifecycle do
   let(:lifecycle) { described_class.new }
   let(:callback) { lambda { |*_args| } }
-  let(:arguments) { [1] }
+  let(:arguments) { [%i(job_a job_b)] }
   let(:behavior) { double(Object, before!: nil, after!: nil, inside!: nil) }
   let(:wrapped_block) { proc { behavior.inside! } }
 

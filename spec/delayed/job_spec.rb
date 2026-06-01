@@ -200,6 +200,79 @@ describe Delayed::Job do
     end
   end
 
+  describe '.enqueue_all' do
+    def build_job(payload = SimpleJob.new, opts = {})
+      described_class.new(Delayed::Backend::JobPreparer.new(payload, opts).prepare)
+    end
+
+    it 'returns 0 when given no jobs' do
+      expect(described_class.enqueue_all([])).to eq(0)
+    end
+
+    it 'inserts all jobs in a single INSERT' do
+      jobs = Array.new(3) { build_job }
+      expect { described_class.enqueue_all(jobs) }
+        .to emit_notification('sql.active_record').with_payload(hash_including(sql: a_string_matching(/\AINSERT INTO/i)))
+      expect(described_class.count).to eq(3)
+    end
+
+    it 'returns the count of enqueued jobs' do
+      jobs = Array.new(3) { build_job }
+      expect(described_class.enqueue_all(jobs)).to eq(3)
+    end
+
+    it 'sets id on each job from INSERT RETURNING when supported' do
+      skip 'requires INSERT ... RETURNING support' unless described_class.connection.supports_insert_returning?
+
+      jobs = Array.new(2) { build_job }
+      described_class.enqueue_all(jobs)
+      expect(jobs.map(&:id)).to match_array(described_class.pluck(:id))
+    end
+
+    it 'fires :enqueue lifecycle once with the jobs array' do
+      observed = []
+      lifecycle_was = Delayed.lifecycle
+      Delayed.instance_variable_set(:@lifecycle, Delayed::Lifecycle.new)
+      Delayed.lifecycle.before(:enqueue) { |jobs| observed << jobs }
+
+      jobs = [build_job]
+      described_class.enqueue_all(jobs)
+
+      expect(observed.size).to eq(1)
+      expect(observed.first).to eq(jobs)
+    ensure
+      Delayed.instance_variable_set(:@lifecycle, lifecycle_was)
+    end
+
+    context 'when delay_jobs is false' do
+      before { Delayed::Worker.delay_jobs = false }
+
+      it 'inline-invokes each job and inserts nothing' do
+        payload = SimpleJob.new
+        expect(payload).to receive(:perform)
+        described_class.enqueue_all([build_job(payload)])
+        expect(described_class.count).to eq(0)
+      end
+    end
+
+    context 'when a job payload defines an :enqueue hook' do
+      before do
+        stub_const('JobWithEnqueueHook', Class.new do
+          def enqueue(_job); end
+
+          def perform; end
+        end)
+      end
+
+      it 'raises before inserting anything' do
+        jobs = [build_job(JobWithEnqueueHook.new)]
+        expect { described_class.enqueue_all(jobs) }
+          .to raise_error(RuntimeError, ':enqueue hook on JobWithEnqueueHook is no longer supported')
+        expect(described_class.count).to eq(0)
+      end
+    end
+  end
+
   describe '#hook' do
     context 'with :enqueue' do
       before do

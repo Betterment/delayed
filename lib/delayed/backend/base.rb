@@ -14,13 +14,33 @@ module Delayed
 
         def enqueue_job(options)
           new(options).tap do |job|
-            raise_deprecated_enqueue_hook(job.payload_object)
-            Delayed.lifecycle.run_callbacks(:enqueue, job) do
-              raise 'Delayed::Worker.delay_jobs may not be a Proc' if Delayed::Worker.delay_jobs.is_a?(Proc)
+            assert_no_enqueue_hook!(job.payload_object)
+            assert_delay_jobs_not_proc!
 
+            Delayed.lifecycle.run_callbacks(:enqueue, [job]) do
               Delayed::Worker.delay_jobs ? job.save : job.invoke_job
             end
           end
+        end
+
+        # Bulk-enqueue an array of pre-built Delayed::Job instances. Callers are
+        # responsible for running JobPreparer and instantiating each job via
+        # `Delayed::Job.new(...)` before calling this method.
+        def enqueue_all(jobs)
+          return 0 if jobs.empty?
+
+          jobs.each { |job| assert_no_enqueue_hook!(job.payload_object) }
+          assert_delay_jobs_not_proc!
+
+          Delayed.lifecycle.run_callbacks(:enqueue, jobs) do
+            if Delayed::Worker.delay_jobs
+              bulk_insert_all(jobs)
+            else
+              jobs.each(&:invoke_job)
+            end
+          end
+
+          jobs.size
         end
 
         def reserve(worker, max_run_time = Worker.max_run_time)
@@ -50,11 +70,26 @@ module Delayed
 
         private
 
-        def raise_deprecated_enqueue_hook(payload)
+        def bulk_insert_all(jobs)
+          now = db_time_now
+          jobs.each { |job| job.created_at = job.updated_at = now }
+          rows = jobs.map { |job| job.attributes.compact }
+          result = insert_all(rows) # rubocop:disable Rails/SkipsModelValidations
+          return unless connection.supports_insert_returning?
+
+          ids = result.rows.map(&:first)
+          jobs.zip(ids) { |job, id| job.id = id }
+        end
+
+        def assert_no_enqueue_hook!(payload)
           return if payload.is_a?(Delayed::JobWrapper)
           return unless payload.respond_to?(:enqueue)
 
           raise ":enqueue hook on #{payload.class} is no longer supported"
+        end
+
+        def assert_delay_jobs_not_proc!
+          raise 'Delayed::Worker.delay_jobs may not be a Proc' if Delayed::Worker.delay_jobs.is_a?(Proc)
         end
       end
 
