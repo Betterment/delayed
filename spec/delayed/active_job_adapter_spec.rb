@@ -89,7 +89,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
   end
 
   it 'bubbles out an error if Delayed::Job.enqueue_job raises (single-job path)' do
-    allow(Delayed::Job).to receive(:enqueue_job).and_raise('uh oh, enqueue failed!')
+    allow(Delayed::Job).to receive(:enqueue_all).and_raise('uh oh, enqueue failed!')
 
     expect { JobClass.perform_later }.to raise_error(RuntimeError, 'uh oh, enqueue failed!')
   end
@@ -590,14 +590,14 @@ RSpec.describe Delayed::ActiveJobAdapter do
     end
   end
 
-  describe 'single-job perform_later routes through Delayed::Job.enqueue_job' do
-    it 'invokes Delayed::Job.enqueue_job (not Delayed::Job.enqueue or Delayed::Job.enqueue_all)' do
+  describe 'single-job perform_later routes through Delayed::Job.enqueue_all' do
+    it 'invokes Delayed::Job.enqueue_all (not Delayed::Job.enqueue or Delayed::Job.enqueue_job)' do
       expect(Delayed::Job).not_to receive(:enqueue) # rubocop:disable RSpec/MessageSpies
-      expect(Delayed::Job).not_to receive(:enqueue_all) # rubocop:disable RSpec/MessageSpies
+      expect(Delayed::Job).not_to receive(:enqueue_job) # rubocop:disable RSpec/MessageSpies
 
       JobClass.perform_later
 
-      expect(Delayed::Job).to have_received(:enqueue_job).once
+      expect(Delayed::Job).to have_received(:enqueue_all).once
     end
 
     it 'delegates exactly one Delayed::Job' do
