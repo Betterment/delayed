@@ -43,16 +43,12 @@ module Delayed
     end
 
     def build_delayed_job(job)
-      prepared = build_job_options(job)
-      Delayed::Job.new(prepared)
-    end
-
-    def build_job_options(job)
       opts = { queue: job.queue_name, priority: job.priority }.compact
       opts.merge!(job.provider_attributes || {})
       opts[:run_at] = coerce_scheduled_at(job.scheduled_at) if job.scheduled_at
 
-      Delayed::Backend::JobPreparer.new(JobWrapper.new(job), opts).prepare
+      prepared = Delayed::Backend::JobPreparer.new(JobWrapper.new(job), opts).prepare
+      Delayed::Job.new(prepared)
     end
 
     def perform_post_enqueue_assignments(active_jobs, delayed_jobs)
