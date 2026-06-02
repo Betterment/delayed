@@ -210,6 +210,18 @@ describe Delayed::Job do
         described_class.enqueue(payload_object: payload)
       end
     end
+
+    context 'when passed a bare ActiveJob::Base instance' do
+      it 'does not raise' do
+        expect { described_class.enqueue(ActiveJobJob.new) }.not_to raise_error
+      end
+
+      it 'does not invoke the ActiveJob :enqueue method' do
+        job = ActiveJobJob.new
+        expect(job).not_to receive(:enqueue)
+        described_class.enqueue(job)
+      end
+    end
   end
 
   describe '.enqueue_all' do
