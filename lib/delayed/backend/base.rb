@@ -14,6 +14,7 @@ module Delayed
 
         def enqueue_job(options)
           new(options).tap do |job|
+            assert_payload_not_active_job!(job.payload_object)
             assert_no_enqueue_hook!(job.payload_object)
             assert_delay_jobs_not_proc!
 
@@ -29,7 +30,10 @@ module Delayed
         def enqueue_all(jobs)
           return 0 if jobs.empty?
 
-          jobs.each { |job| assert_no_enqueue_hook!(job.payload_object) }
+          jobs.each do |job|
+            assert_payload_not_active_job!(job.payload_object)
+            assert_no_enqueue_hook!(job.payload_object)
+          end
           assert_delay_jobs_not_proc!
 
           Delayed.lifecycle.run_callbacks(:enqueue, jobs) do
@@ -79,6 +83,10 @@ module Delayed
 
           ids = result.rows.map(&:first)
           jobs.zip(ids) { |job, id| job.id = id }
+        end
+
+        def assert_payload_not_active_job!(payload)
+          raise "Delayed::Job enqueue methods do not accept ActiveJobs, use perform_later instead" if payload.is_a?(ActiveJob::Base)
         end
 
         def assert_no_enqueue_hook!(payload)
