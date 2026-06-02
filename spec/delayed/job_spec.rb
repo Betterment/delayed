@@ -200,26 +200,14 @@ describe Delayed::Job do
     end
 
     context 'when payload is a bare ActiveJob::Base instance' do
-      it 'does not raise' do
-        expect { described_class.enqueue(payload_object: ActiveJobJob.new) }.not_to raise_error
-      end
-
-      it 'does not invoke the ActiveJob :enqueue method' do
-        payload = ActiveJobJob.new
-        expect(payload).not_to receive(:enqueue)
-        described_class.enqueue(payload_object: payload)
+      it 'raises' do
+        expect { described_class.enqueue(payload_object: ActiveJobJob.new) }.to raise_error(RuntimeError, /Delayed::Job enqueue methods do not accept ActiveJobs/)
       end
     end
 
     context 'when passed a bare ActiveJob::Base instance' do
-      it 'does not raise' do
-        expect { described_class.enqueue(ActiveJobJob.new) }.not_to raise_error
-      end
-
-      it 'does not invoke the ActiveJob :enqueue method' do
-        job = ActiveJobJob.new
-        expect(job).not_to receive(:enqueue)
-        described_class.enqueue(job)
+      it 'raises' do
+        expect { described_class.enqueue(ActiveJobJob.new) }.to raise_error(RuntimeError, /Delayed::Job enqueue methods do not accept ActiveJobs/)
       end
     end
   end
@@ -297,14 +285,9 @@ describe Delayed::Job do
     end
 
     context 'when a job payload is a bare ActiveJob::Base instance' do
-      it 'does not raise' do
+      it 'raises' do
         jobs = [build_job(ActiveJobJob.new)]
-        expect { described_class.enqueue_all(jobs) }.not_to raise_error
-      end
-
-      it 'inserts the job' do
-        jobs = [build_job(ActiveJobJob.new)]
-        expect { described_class.enqueue_all(jobs) }.to change { described_class.count }.by(1)
+        expect { described_class.enqueue_all(jobs) }.to raise_error(RuntimeError, /Delayed::Job enqueue methods do not accept ActiveJobs/)
       end
     end
   end
