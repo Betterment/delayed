@@ -82,7 +82,7 @@ module Delayed
         end
 
         def assert_no_enqueue_hook!(payload)
-          return if payload.is_a?(Delayed::JobWrapper)
+          return if payload.is_a?(Delayed::JobWrapper) || payload.is_a?(ActiveJob::Base)
           return unless payload.respond_to?(:enqueue)
 
           raise ":enqueue hook on #{payload.class} is no longer supported"

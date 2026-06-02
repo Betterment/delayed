@@ -198,6 +198,18 @@ describe Delayed::Job do
         expect { described_class.enqueue(payload_object: wrapper) }.not_to raise_error
       end
     end
+
+    context 'when payload is a bare ActiveJob::Base instance' do
+      it 'does not raise' do
+        expect { described_class.enqueue(payload_object: ActiveJobJob.new) }.not_to raise_error
+      end
+
+      it 'does not invoke the ActiveJob :enqueue method' do
+        payload = ActiveJobJob.new
+        expect(payload).not_to receive(:enqueue)
+        described_class.enqueue(payload_object: payload)
+      end
+    end
   end
 
   describe '.enqueue_all' do
@@ -269,6 +281,18 @@ describe Delayed::Job do
         expect { described_class.enqueue_all(jobs) }
           .to raise_error(RuntimeError, ':enqueue hook on JobWithEnqueueHook is no longer supported')
         expect(described_class.count).to eq(0)
+      end
+    end
+
+    context 'when a job payload is a bare ActiveJob::Base instance' do
+      it 'does not raise' do
+        jobs = [build_job(ActiveJobJob.new)]
+        expect { described_class.enqueue_all(jobs) }.not_to raise_error
+      end
+
+      it 'inserts the job' do
+        jobs = [build_job(ActiveJobJob.new)]
+        expect { described_class.enqueue_all(jobs) }.to change { described_class.count }.by(1)
       end
     end
   end
