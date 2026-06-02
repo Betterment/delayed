@@ -288,9 +288,7 @@ The following events will be emitted automatically by workers as jobs are reserv
 - **delayed.worker.reserve_jobs** - an event measuring the duration of the job "pickup query"
 
 The "run", "error", and "failure" events will include a `:job` argument in the event's payload,
-providing access to the job instance. The "enqueue" event will include a `:jobs` array (along with a
-`:count`) — note that elements may be either `Delayed::Job` instances (when enqueued directly via
-`Delayed::Job.enqueue`) or `ActiveJob` instances (when enqueued via `perform_later` / `perform_all_later`).
+providing access to the job instance. The "enqueue" event will include a `:jobs` array.
 
 ```ruby
 ActiveSupport::Notifications.subscribe('delayed.job.run') do |*args|
