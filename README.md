@@ -442,6 +442,20 @@ workers will sleep for 5 seconds.
 
 ```ruby
 # The max number of jobs a worker may lock at a time (also the size of the thread pool):
+# NOTE: This should be less than your ActiveRecord connection pool size. The worker process
+# itself needs one connection for polling and locking, so if max_claims >= pool_size, a job
+# thread that cannot check out a connection within the checkout timeout may raise
+# ActiveRecord::ConnectionTimeoutError. The worker will log a warning at startup if this
+# is detected.
+#
+# The general rule is: if each job thread needs N connections and max_claims is M,
+# your pool should have at least N * (M + 1) connections. The most common case is N=1
+# (one connection per thread), so pool_size should be at least max_claims + 1.
+#
+# For example, if your pool size is 5, set max_claims to 4:
+#
+#   # config/initializers/delayed_job.rb
+#   Delayed::Worker.max_claims = ActiveRecord::Base.connection_pool.size - 1
 Delayed::Worker.max_claims = 5
 
 # The number of jobs to which a worker may "read ahead" when locking jobs (mysql only!):
