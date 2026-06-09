@@ -88,20 +88,14 @@ module Delayed
 
       while total < num
         start = clock_time
-        say "Attempting to reserve up to #{num - total} job(s)", 'debug'
         jobs = reserve_jobs
-        say 'No jobs reserved; exiting work_off loop', 'debug' if jobs.empty?
         break if jobs.empty?
 
         total += jobs.length
-        say "Reserved #{jobs.length} job(s); dispatching batch", 'debug'
-        pool = Concurrent::FixedThreadPool.new(thread_pool_size(jobs.length))
+        pool = Concurrent::FixedThreadPool.new(jobs.length)
         jobs.each do |job|
-          job_say job, 'Queued for thread execution', 'debug'
           pool.post do
-            thread_started = false
             self.class.lifecycle.run_callbacks(:thread, self) do
-              thread_started = true
               success.increment if perform(job)
             rescue DeserializationError => e
               handle_unrecoverable_error(job, e)
@@ -109,19 +103,16 @@ module Delayed
               handle_erroring_job(job, e)
             end
           rescue Exception => e # rubocop:disable Lint/RescueException
-            handle_thread_error(job, e, thread_started)
+            say "Job thread crashed with #{e.class.name}: #{e.message}", 'error'
           end
         end
 
-        say 'Waiting for worker threads to finish', 'debug'
         pool.shutdown
         pool.wait_for_termination
-        say "Batch finished with #{success.value} successful job(s) out of #{total} attempted so far", 'debug'
 
         break if stop? # leave if we're exiting
 
         elapsed = clock_time - start
-        say format('Batch elapsed %.4f seconds', elapsed), 'debug'
         interruptable_sleep(self.class.min_reserve_interval - elapsed)
       end
 
@@ -242,17 +233,6 @@ module Delayed
 
     def reload!
       Rails.application.reloader.reload! if defined?(Rails.application.reloader) && Rails.application.reloader.check!
-    end
-
-    def thread_pool_size(job_count)
-      return job_count unless Delayed::Job.respond_to?(:connection_pool)
-
-      pool_size = Delayed::Job.connection_pool.size
-      return job_count unless pool_size
-
-      [job_count, [pool_size - 1, 1].max].min
-    rescue StandardError
-      job_count
     end
 
     def clock_time
