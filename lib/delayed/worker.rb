@@ -224,16 +224,6 @@ module Delayed
       failed(job)
     end
 
-    def handle_thread_error(job, error, thread_started)
-      phase = thread_started ? 'after perform' : 'before perform'
-      job_say job, "thread crashed #{phase} with #{error.class.name}: #{error.message}", 'error'
-      return if thread_started
-
-      handle_erroring_job(job, error)
-    rescue Exception => inner_error # rubocop:disable Lint/RescueException
-      job_say job, "could not record pre-perform thread crash: #{inner_error.class.name}: #{inner_error.message}", 'error'
-    end
-
     # The backend adapter may return either a list or a single job
     # In some backends, this can be controlled with the `max_claims` config
     # Either way, we map this to an array of job instances
