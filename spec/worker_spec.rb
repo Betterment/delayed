@@ -19,6 +19,79 @@ describe Delayed::Worker do
       expect(performances).to eq [true, nil, nil]
       expect(Delayed::Job).to have_received(:reserve)
     end
+
+    describe 'connection pool config check' do
+      let(:connection_pool) { instance_double(ActiveRecord::ConnectionAdapters::ConnectionPool, size: pool_size) }
+
+      before do
+        subject.send(:stop) # prevent start from running more than one loop
+        allow(Delayed::Job).to receive(:reserve).and_return([])
+        allow(Delayed::Job).to receive(:connection_pool).and_return(connection_pool)
+        allow(Delayed::Job).to receive(:clear_locks!)
+        allow(subject).to receive(:say).and_call_original
+      end
+
+      around do |example|
+        max_claims_was = described_class.max_claims
+        described_class.max_claims = max_claims
+        example.run
+      ensure
+        described_class.max_claims = max_claims_was
+      end
+
+      context 'when max_claims equals pool size' do
+        let(:max_claims) { 5 }
+        let(:pool_size) { 5 }
+
+        it 'logs a warning at startup' do
+          subject.start
+          expect(subject).to have_received(:say).with(
+            'WARNING: max_claims (5) >= DB connection pool size (5). ' \
+            'The worker process needs at least 1 connection for its own housekeeping, so job threads may ' \
+            'starve waiting for a connection. Set Delayed::Worker.max_claims to at most 4.',
+            'warn',
+          )
+        end
+      end
+
+      context 'when max_claims exceeds pool size' do
+        let(:max_claims) { 6 }
+        let(:pool_size) { 5 }
+
+        it 'logs a warning at startup' do
+          subject.start
+          expect(subject).to have_received(:say).with(
+            'WARNING: max_claims (6) >= DB connection pool size (5). ' \
+            'The worker process needs at least 1 connection for its own housekeeping, so job threads may ' \
+            'starve waiting for a connection. Set Delayed::Worker.max_claims to at most 4.',
+            'warn',
+          )
+        end
+      end
+
+      context 'when max_claims is less than pool size' do
+        let(:max_claims) { 4 }
+        let(:pool_size) { 5 }
+
+        it 'does not log a warning' do
+          subject.start
+          expect(subject).not_to have_received(:say).with(/WARNING/i, 'warn')
+        end
+      end
+
+      context 'when connection_pool introspection raises' do
+        let(:max_claims) { 5 }
+        let(:pool_size) { 5 }
+
+        before do
+          allow(Delayed::Job).to receive(:connection_pool).and_raise(StandardError, 'unavailable')
+        end
+
+        it 'starts without raising' do
+          expect { subject.start }.not_to raise_error
+        end
+      end
+    end
   end
 
   # rubocop:disable RSpec/SubjectStub
