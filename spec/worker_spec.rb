@@ -23,14 +23,6 @@ describe Delayed::Worker do
     describe 'connection pool config check' do
       let(:connection_pool) { instance_double(ActiveRecord::ConnectionAdapters::ConnectionPool, size: pool_size) }
 
-      before do
-        subject.send(:stop) # prevent start from running more than one loop
-        allow(Delayed::Job).to receive(:reserve).and_return([])
-        allow(Delayed::Job).to receive(:connection_pool).and_return(connection_pool)
-        allow(Delayed::Job).to receive(:clear_locks!)
-        allow(subject).to receive(:say).and_call_original
-      end
-
       around do |example|
         max_claims_was = described_class.max_claims
         described_class.max_claims = max_claims
@@ -39,17 +31,27 @@ describe Delayed::Worker do
         described_class.max_claims = max_claims_was
       end
 
+      before do
+        allow(Delayed.logger).to receive(:warn)
+        subject.send(:stop) # prevent start from running more than one loop
+        allow(Delayed::Job).to receive(:reserve).and_return([])
+        allow(Delayed::Job).to receive(:connection_pool).and_return(connection_pool)
+        allow(Delayed::Job).to receive(:clear_locks!)
+      end
+
       context 'when max_claims equals pool size' do
         let(:max_claims) { 5 }
         let(:pool_size) { 5 }
 
         it 'logs a warning at startup' do
           subject.start
-          expect(subject).to have_received(:say).with(
-            'WARNING: max_claims (5) >= DB connection pool size (5). ' \
-            'The worker process needs at least 1 connection for its own housekeeping, so job threads may ' \
-            'starve waiting for a connection. Set Delayed::Worker.max_claims to at most 4.',
-            'warn',
+          expect(Delayed.logger).to have_received(:warn).with(
+            include(
+              'WARNING: Delayed::Worker.max_claims (5) >= ActiveRecord connection pool size (5). ' \
+              'The worker process itself also needs a connection for polling and locking, so at least one job thread ' \
+              'will likely fail with ActiveRecord::ConnectionTimeoutError. ' \
+              'Set Delayed::Worker.max_claims to 4 or less, or increase your connection pool size.',
+            ),
           )
         end
       end
@@ -60,11 +62,13 @@ describe Delayed::Worker do
 
         it 'logs a warning at startup' do
           subject.start
-          expect(subject).to have_received(:say).with(
-            'WARNING: max_claims (6) >= DB connection pool size (5). ' \
-            'The worker process needs at least 1 connection for its own housekeeping, so job threads may ' \
-            'starve waiting for a connection. Set Delayed::Worker.max_claims to at most 4.',
-            'warn',
+          expect(Delayed.logger).to have_received(:warn).with(
+            include(
+              'WARNING: Delayed::Worker.max_claims (6) >= ActiveRecord connection pool size (5). ' \
+              'The worker process itself also needs a connection for polling and locking, so at least one job thread ' \
+              'will likely fail with ActiveRecord::ConnectionTimeoutError. ' \
+              'Set Delayed::Worker.max_claims to 4 or less, or increase your connection pool size.',
+            ),
           )
         end
       end
@@ -75,7 +79,7 @@ describe Delayed::Worker do
 
         it 'does not log a warning' do
           subject.start
-          expect(subject).not_to have_received(:say).with(/WARNING/i, 'warn')
+          expect(Delayed.logger).not_to have_received(:warn).with(/WARNING/i)
         end
       end
 

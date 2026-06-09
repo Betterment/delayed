@@ -247,9 +247,10 @@ module Delayed
       return unless pool_size
       return if self.class.max_claims < pool_size
 
-      say "WARNING: max_claims (#{self.class.max_claims}) >= DB connection pool size (#{pool_size}). " \
-          "The worker process needs at least 1 connection for its own housekeeping, so job threads may " \
-          "starve waiting for a connection. Set Delayed::Worker.max_claims to at most #{[pool_size - 1, 1].max}.", 'warn'
+      say "WARNING: Delayed::Worker.max_claims (#{self.class.max_claims}) >= ActiveRecord connection pool size (#{pool_size}). " \
+          "The worker process itself also needs a connection for polling and locking, so at least one job thread " \
+          "will likely fail with ActiveRecord::ConnectionTimeoutError. " \
+          "Set Delayed::Worker.max_claims to #{[pool_size - 1, 1].max} or less, or increase your connection pool size.", 'warn'
     rescue StandardError
       nil
     end
