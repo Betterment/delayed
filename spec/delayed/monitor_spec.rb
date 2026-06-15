@@ -344,6 +344,44 @@ RSpec.describe Delayed::Monitor do
         end
       end
     end
+
+    context 'when a job is locked (in-flight)' do
+      let(:payload) { default_payload.merge(priority: 'interactive') }
+      let(:base_attributes) do
+        {
+          priority: 0,
+          queue: 'default',
+          handler: "--- !ruby/object:SimpleJob\n",
+          name: 'SimpleJob',
+          attempts: 0,
+        }
+      end
+
+      # A single slow, in-flight job: old run_at, but currently locked by a worker.
+      let!(:locked_job) { Delayed::Job.create! base_attributes.merge(run_at: now - 1.hour, locked_at: now - 5.minutes) }
+
+      it 'excludes the locked job from max_age and alert_age_percent' do
+        expect { subject.run! }
+          .to emit_notification("delayed.job.locked_count").with_payload(payload).with_value(1)
+          .and emit_notification("delayed.job.workable_count").with_payload(payload).with_value(0)
+          .and emit_notification("delayed.job.max_lock_age").with_payload(payload).approximately.with_value(5.minutes)
+          .and emit_notification("delayed.job.max_age").with_payload(payload).approximately.with_value(0)
+          .and emit_notification("delayed.job.alert_age_percent").with_payload(payload).approximately.with_value(0)
+      end
+
+      context 'and a workable job is also present in the same group' do
+        # The workable job's run_at is newer than the locked job's, so max_age must
+        # track the workable job (30s), not the locked job (1 hour).
+        let!(:workable_job) { Delayed::Job.create! base_attributes.merge(run_at: now - 30.seconds) }
+
+        it 'reports max_age from the workable job only' do
+          expect { subject.run! }
+            .to emit_notification("delayed.job.locked_count").with_payload(payload).with_value(1)
+            .and emit_notification("delayed.job.workable_count").with_payload(payload).with_value(1)
+            .and emit_notification("delayed.job.max_age").with_payload(payload).approximately.with_value(30.seconds)
+        end
+      end
+    end
   end
 
   describe 'SQL' do

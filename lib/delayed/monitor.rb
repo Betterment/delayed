@@ -147,11 +147,11 @@ module Delayed
     end
 
     def max_age_grouped
-      live_counts.transform_values { |j| time_ago(db_now(j), j.run_at) }
+      pending_counts.transform_values { |j| time_ago(db_now(j), j.run_at) }
     end
 
     def alert_age_percent_grouped
-      live_counts.each_with_object({}) do |((priority, queue), j), metrics|
+      pending_counts.each_with_object({}) do |((priority, queue), j), metrics|
         max_age = time_ago(db_now(j), j.run_at)
         alert_age = Priority.new(priority).alert_age
         metrics[[priority, queue]] = [max_age / alert_age * 100, 100].min if alert_age
@@ -169,17 +169,15 @@ module Delayed
     end
 
     def oldest_workable_job_grouped
-      live_counts.transform_values(&:run_at).compact
+      pending_counts.transform_values(&:run_at).compact
     end
 
     def live_counts
       @memo[:live_counts] ||= grouped_query(
         jobs.live,
-        include_db_time: true,
         count: [:count, '*'],
         future_count: [:sum, case_when(Job.future_clause.to_sql)],
         erroring_count: [:sum, case_when(Job.erroring_clause.to_sql)],
-        run_at: [:min, case_when(Job.pending_clause.to_sql, 'run_at')],
       )
     end
 
@@ -190,6 +188,7 @@ module Delayed
         claimed_count: [:sum, case_when(Job.claimed_clause.to_sql)],
         claimable_count: [:sum, case_when(Job.claimable_clause.to_sql)],
         locked_at: [:min, case_when(Job.claimed_clause.to_sql, 'locked_at')],
+        run_at: [:min, case_when(Job.claimable_clause.to_sql, 'run_at')],
       )
     end
 
