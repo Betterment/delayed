@@ -74,6 +74,7 @@ module Delayed
         @alerts = nil
         @names_to_priority = nil
         @names = names&.sort_by(&:last)&.to_h&.transform_values { |v| new(v) }
+        redefine_named_priority_methods
       end
 
       def alerts=(alerts)
@@ -124,16 +125,30 @@ module Delayed
         low + ((high - low).to_d / 2).ceil
       end
 
-      def respond_to_missing?(method_name, include_private = false)
-        names_to_priority.key?(method_name) || super
+      # Defines a class method (e.g. `Priority.eventual`) and an instance predicate (e.g.
+      # `priority.eventual?`) per name, as real, introspectable methods (visible to `methods`,
+      # RDoc, and Sorbet's tapioca, unlike `method_missing` dispatch). Pre-existing methods
+      # (e.g. a name of `superclass`) are never overridden.
+      def redefine_named_priority_methods
+        @named_priority_class_methods&.each { |m| singleton_class.send(:remove_method, m) }
+        @named_priority_predicates&.each { |m| remove_method(m) }
+        @named_priority_class_methods = names.keys.filter_map { |name| define_priority_class_method(name) }
+        @named_priority_predicates = names.keys.filter_map { |name| define_priority_predicate(name) }
       end
 
-      def method_missing(method_name, *args)
-        if names_to_priority.key?(method_name) && args.none?
-          names_to_priority[method_name]
-        else
-          super
-        end
+      def define_priority_class_method(name)
+        return if singleton_class.method_defined?(name) || singleton_class.private_method_defined?(name)
+
+        define_singleton_method(name) { names_to_priority.fetch(name) }
+        name
+      end
+
+      def define_priority_predicate(name)
+        predicate = :"#{name}?"
+        return if method_defined?(predicate) || private_method_defined?(predicate)
+
+        define_method(predicate) { name.to_s == to_s }
+        predicate
       end
     end
 
@@ -188,18 +203,6 @@ module Delayed
       to_i.to_d
     end
 
-    private
-
-    def respond_to_missing?(method_name, include_private = false)
-      (method_name.to_s.end_with?('?') && self.class.names.key?(method_name.to_s[0..-2].to_sym)) || super
-    end
-
-    def method_missing(method_name, *args)
-      if method_name.to_s.end_with?('?') && self.class.names.key?(method_name.to_s[0..-2].to_sym)
-        method_name.to_s[0..-2] == to_s
-      else
-        super
-      end
-    end
+    send(:redefine_named_priority_methods)
   end
 end
