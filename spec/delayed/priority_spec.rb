@@ -13,9 +13,10 @@ RSpec.describe Delayed::Priority do
   ensure
     described_class.alerts = nil
     described_class.names = nil
+    described_class.assign_at_midpoint = nil
   end
 
-  describe '.names, .ranges, .alerts, .names_to_priority, method_missing' do
+  describe '.names, .ranges, .alerts, .names_to_priority, named priority methods' do
     it 'defaults to interactive, user_visible, eventual, reporting' do
       expect(described_class.names).to eq(
         interactive: 0,
@@ -65,6 +66,34 @@ RSpec.describe Delayed::Priority do
         expect(described_class.user_visible).to eq 15
         expect(described_class.eventual).to eq 25
         expect(described_class.reporting).to eq 35
+      end
+    end
+
+    it 'defines named priority methods as real, introspectable methods' do
+      expect(described_class.singleton_class.method_defined?(:eventual)).to be true
+      expect(described_class.method_defined?(:eventual?)).to be true
+    end
+
+    it 'removes methods for the old names when names are reassigned' do
+      described_class.names = { high: 0 }
+      expect(described_class).to respond_to(:high)
+      expect(described_class.new(0)).to be_high
+
+      described_class.names = nil
+      expect(described_class).not_to respond_to(:high)
+      expect(described_class.new(0)).not_to respond_to(:high?)
+      expect(described_class).to respond_to(:interactive)
+      expect(described_class.new(0)).to be_interactive
+    end
+
+    context 'when a name collides with an existing method' do
+      let(:custom_names) { { superclass: 0, zero: 10 } }
+
+      it 'does not redefine the existing method' do
+        expect(described_class.superclass).to eq Numeric # Class#superclass, not the priority
+        expect(described_class.new(0).zero?).to be true # Numeric#zero?, not the range predicate
+        expect(described_class.zero).to eq 10
+        expect(described_class.new(5).superclass?).to be true
       end
     end
 

@@ -70,10 +70,12 @@ module Delayed
       def names=(names)
         raise "must include a name for priority >= 0" if names && !names.value?(0)
 
+        remove_named_priority_methods
         @ranges = nil
         @alerts = nil
         @names_to_priority = nil
         @names = names&.sort_by(&:last)&.to_h&.transform_values { |v| new(v) }
+        define_named_priority_methods
       end
 
       def alerts=(alerts)
@@ -124,16 +126,34 @@ module Delayed
         low + ((high - low).to_d / 2).ceil
       end
 
-      def respond_to_missing?(method_name, include_private = false)
-        names_to_priority.key?(method_name) || super
+      # Defines a class method (e.g. `Priority.eventual`) and an instance predicate (e.g.
+      # `priority.eventual?`) per name, as real, introspectable methods (visible to `methods`,
+      # RDoc, and Sorbet's tapioca, unlike `method_missing` dispatch). Pre-existing methods
+      # (e.g. a name of `superclass`) are never overridden.
+      def define_named_priority_methods
+        names.each_key do |name|
+          predicate = :"#{name}?"
+          define_singleton_method(name) { names_to_priority.fetch(name) } unless method_defined_on?(singleton_class, name)
+          define_method(predicate) { name.to_s == to_s } unless method_defined_on?(self, predicate)
+        end
       end
 
-      def method_missing(method_name, *args)
-        if names_to_priority.key?(method_name) && args.none?
-          names_to_priority[method_name]
-        else
-          super
+      # Removes the methods previously defined for the current `names` (called before `names` is
+      # reassigned). The non-inherited (`false`) checks mean we only remove methods we defined
+      # ourselves, leaving any pre-existing method a colliding name never overrode (e.g.
+      # `Class#superclass`, `Numeric#zero?`) in place.
+      def remove_named_priority_methods
+        names.each_key do |name|
+          predicate = :"#{name}?"
+          singleton_class.send(:remove_method, name) if singleton_class.method_defined?(name, false)
+          remove_method(predicate) if method_defined?(predicate, false)
         end
+      end
+
+      # Whether `mod` already responds to `name` (public, protected, private, or inherited), in
+      # which case a same-named priority must not override it.
+      def method_defined_on?(mod, name)
+        mod.method_defined?(name) || mod.private_method_defined?(name)
       end
     end
 
@@ -188,18 +208,6 @@ module Delayed
       to_i.to_d
     end
 
-    private
-
-    def respond_to_missing?(method_name, include_private = false)
-      (method_name.to_s.end_with?('?') && self.class.names.key?(method_name.to_s[0..-2].to_sym)) || super
-    end
-
-    def method_missing(method_name, *args)
-      if method_name.to_s.end_with?('?') && self.class.names.key?(method_name.to_s[0..-2].to_sym)
-        method_name.to_s[0..-2] == to_s
-      else
-        super
-      end
-    end
+    send(:define_named_priority_methods)
   end
 end
