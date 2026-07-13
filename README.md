@@ -54,6 +54,7 @@ migration paths where possible.
   * [Priority-based Alerting Threshholds](#priority-based-alerting-threshholds)
   * [Continuous Monitoring](#continuous-monitoring)
 * [Configuration](#configuration)
+* [Rate Limiting Jobs](#rate-limiting-jobs)
 * [Migrating from other ActiveJob backends](#migrating-from-other-activejob-backends)
   * [Migrating from DelayedJob](#migrating-from-delayedjob)
 * [How to Contribute](#how-to-contribute)
@@ -530,6 +531,94 @@ Delayed.logger = Rails.logger
 # Specify a default log level for all job lifecycle logging:
 Delayed.default_log_level = 'info'
 ```
+
+## Rate Limiting Jobs
+
+The `Delayed::Limit` class provides a database-backed **concurrency limiter/optimizer** for jobs
+(via a [Generic Cell Rate Algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm)
+implemented in SQL+Ruby). Use it to (e.g.) stay under a third-party API's published rate limit, or
+to keep from overwhelming a downstream datastore:
+
+```ruby
+Delayed::Limit.within_limit(:widgets_api, max: 100, per: 1.minute) do
+  WidgetsApi.create_widget!(...)
+end
+```
+
+It will then attempt to maximize throughput without exceeding the limit. (Because its state lives in
+the database, the limit applies across every worker and process at once.)
+
+If the limit would be exceeded within a configurable timeout, **the call will immediately raise a
+`Delayed::Limit::LimitExceededError`**. (Background jobs will, in turn, fail fast and retry with the
+usual back-off behavior.)
+
+
+#### Setup
+
+To use this feature, make sure you have a `delayed_limits` table, or run `rake
+delayed:install:migrations` to add it (see [Database Setup](#database-setup)).
+
+As of now, **only PostgreSQL and SQLite (3.35+) are supported.** The primary SQL query relies on an
+upserting `RETURNING` clause and database-native timestamp arithmetic. You can check the current
+connection at runtime with `Delayed::Limit.supported?`.
+
+#### Traffic Shaping vs Traffic Enforcement
+
+By default, `within_limit` will `sleep` up to 5 seconds (or a specified `wait_timeout`) before
+yielding to the block. (This behavior is subject to the usual GIL and OS scheduling, so treat the
+configured rate as a best-effort target rather than a hard guarantee.)
+
+Use a longer `wait_timeout` for even better throughput smoothing, at the cost of blocking threads
+for longer:
+
+```ruby
+Delayed::Limit.within_limit(:outbound_traffic, max: 100, per: 1.minute, wait_timeout: 30.seconds) do
+  # A longer wait timeout is best for longer-running or lower-priority background jobs.
+end
+```
+
+Or set it to `0` to fail fast:
+
+```ruby
+Delayed::Limit.within_limit(:inbound_traffic, max: 5, per: 1.second, wait_timeout: 0) do
+  # A shorter wait timeout is best for high-throughput or synchronous contexts (like web requests).
+end
+```
+
+#### Shared Limits
+
+To avoid repeating the same purpose's `max` and `per` across multiple call sites, register a limit
+in advance (e.g. in an initializer):
+
+```ruby
+Delayed::Limit.register!(:widgets_api, max: 100, per: 1.minute)
+```
+
+Then, reference it by just its name at each call site:
+
+```ruby
+Delayed::Limit.within_limit(:widgets_api) do
+  WidgetsApi.create_widget!(...)
+end
+```
+
+Registered limits are cached indefinitely in memory and are not thread-safe on write, so avoid
+registering them dynamically or at runtime!
+
+#### Handling "Burst" Throughput
+
+As of now, **there is no "burst" capacity.** The limiter allows one call per "drain interval" (`per
+/ max`), so a limit of 60-per-minute behaves identically to 1-per-second (and will not allow
+more than 1 call in the first second).
+
+This is generally acceptable for background job processing (and for traffic shaping in general), but
+may be revisited in the future in order to support use cases like like API traffic enforcement.
+
+#### Monitoring Limit Usage
+
+Each call emits an `ActiveSupport::Notification` (`delayed.limit.within_limit` or
+`delayed.limit.exceeded`), so you can monitor limiting activity the same way you would any other
+event (see [Monitoring Jobs & Workers](#monitoring-jobs--workers)).
 
 ## Migrating from other ActiveJob backends
 
