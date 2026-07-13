@@ -22,6 +22,7 @@ if defined?(Rails::Engine)
 else
   require 'active_record'
   require_relative '../app/models/delayed/job'
+  require_relative '../app/models/delayed/limit'
 end
 
 ActiveSupport.on_load(:active_job) do
