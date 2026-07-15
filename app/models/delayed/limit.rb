@@ -70,10 +70,17 @@ module Delayed
       # Register a limit policy for a given 'purpose' (stringy/symbol
       # identifier). This is optional and should not be used for dynamic purpose
       # names or limits, for memory and thread-safety reasons.
+      #
+      # Re-registering a purpose is a no-op if the config matches exactly, and
+      # raises ArgumentError otherwise.
       def register!(purpose, max:, per:)
-        raise ArgumentError, "Limit policy '#{purpose}' already registered" if limits.key?(purpose.to_sym)
+        config = { max: max, per: per }.freeze
 
-        @limits = limits.merge(purpose.to_sym => { max: max, per: per }.freeze).freeze
+        if limits.key?(purpose.to_sym) && limits.fetch(purpose.to_sym) != config
+          raise ArgumentError, "Limit policy '#{purpose}' is already registered and does not match #{config.inspect}"
+        end
+
+        @limits = limits.merge(purpose.to_sym => config).freeze
       end
 
       # This method implements a leaky bucket algorithm (or, more specifically,
@@ -89,11 +96,6 @@ module Delayed
       # - T (emission interval)          -> drain_interval
       # - t0 (time of request)           -> the database's current time
       # - τ (bucket capacity)            -> 1 call (implicitly)
-      #
-      # IMPORTANT: For best results, the calling code MUST make its best attempt
-      # to sleep for the returned 'wait' duration before proceeding. (Sleeping is
-      # what shapes traffic to a smooth rate; it's best-effort, subject to
-      # GIL / OS scheduling variability.)
       def within_limit(purpose, max: nil, per: nil, wait_timeout: 5.seconds)
         config = limits[purpose.to_sym]
         if config && (max || per)
@@ -126,6 +128,9 @@ module Delayed
         # If we successfully reserved capacity within the `wait_timeout`, it
         # means that we've been told by the query how long to sleep in order to
         # comply with the configured rate.
+        #
+        # (For best results, we MUST make a best attempt to sleep for the
+        # returned 'wait' duration before proceeding.)
         wait = limit.wait.to_f
         sleep(wait) if wait.positive?
 

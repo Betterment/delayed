@@ -164,11 +164,19 @@ RSpec.describe Delayed::Limit do
       expect(described_class.limits.fetch(:some_purpose)).to eq(max: 10, per: 1.minute)
     end
 
-    it 'raises when a policy is already registered for the purpose' do
+    it 'is a no-op when re-registering a purpose with an identical config' do
+      described_class.register!(:some_purpose, max: 10, per: 1.minute)
+
+      expect { described_class.register!(:some_purpose, max: 10, per: 1.minute) }
+        .not_to change { described_class.limits.fetch(:some_purpose) }
+        .from(max: 10, per: 1.minute)
+    end
+
+    it 'raises when a policy is already registered with a conflicting config' do
       described_class.register!(:some_purpose, max: 10, per: 1.minute)
 
       expect { described_class.register!(:some_purpose, max: 5, per: 1.second) }
-        .to raise_error(ArgumentError, /already registered/)
+        .to raise_error(ArgumentError, /already registered and does not match/)
     end
   end
 end
