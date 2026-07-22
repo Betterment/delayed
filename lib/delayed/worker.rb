@@ -63,6 +63,11 @@ module Delayed
     # Setting the name to nil will reset the default worker name
     attr_writer :name
 
+    def start
+      check_connection_pool_config!
+      super
+    end
+
     def run!
       @realtime = Benchmark.realtime do
         @result = work_off
@@ -233,6 +238,21 @@ module Delayed
 
     def reload!
       Rails.application.reloader.reload! if defined?(Rails.application.reloader) && Rails.application.reloader.check!
+    end
+
+    def check_connection_pool_config!
+      return unless Delayed::Job.respond_to?(:connection_pool)
+
+      pool_size = Delayed::Job.connection_pool.size
+      return unless pool_size
+      return if self.class.max_claims < pool_size
+
+      say "WARNING: Delayed::Worker.max_claims (#{self.class.max_claims}) >= ActiveRecord connection pool size (#{pool_size}). " \
+          "The worker process itself also needs a connection for polling and locking, so at least one job thread " \
+          "will likely fail with ActiveRecord::ConnectionTimeoutError. " \
+          "Set Delayed::Worker.max_claims to #{[pool_size - 1, 1].max} or less, or increase your connection pool size.", 'warn'
+    rescue StandardError
+      nil
     end
 
     def clock_time
