@@ -16,12 +16,14 @@ require 'delayed/backend/job_preparer'
 require 'delayed/helpers/migration'
 require 'delayed/worker'
 require 'delayed/job_wrapper'
+require 'delayed/limitable'
 
 if defined?(Rails::Engine)
   require 'delayed/engine'
 else
   require 'active_record'
   require_relative '../app/models/delayed/job'
+  require_relative '../app/models/delayed/limit'
 end
 
 ActiveSupport.on_load(:active_job) do
@@ -29,6 +31,7 @@ ActiveSupport.on_load(:active_job) do
   ActiveJob::QueueAdapters::DelayedAdapter = Class.new(Delayed::ActiveJobAdapter)
 
   include Delayed::ActiveJobAdapter::EnqueuingPatch
+  include Delayed::Limitable
 end
 
 ActiveSupport.on_load(:action_mailer) do

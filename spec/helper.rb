@@ -73,8 +73,10 @@ Dir['db/migrate/*.rb'].each { |f| require_relative("../#{f}") }
 ActiveRecord::Schema.define do
   if ActiveRecord::VERSION::MAJOR >= 7
     drop_table :delayed_jobs, if_exists: true
-  elsif ActiveRecord::Base.connection.table_exists?(:delayed_jobs)
-    drop_table :delayed_jobs
+    drop_table :delayed_limits, if_exists: true
+  else
+    drop_table :delayed_jobs if ActiveRecord::Base.connection.table_exists?(:delayed_jobs)
+    drop_table :delayed_limits if ActiveRecord::Base.connection.table_exists?(:delayed_limits)
   end
 
   # Let's prove reversibility when we set up our test DB:
@@ -94,6 +96,7 @@ ActiveRecord::Schema.define do
     run_migration(RemoveLegacyIndex)
     run_migration(AddRunAtAndNameNotNullCheck)
     run_migration(ValidateRunAtAndNameNotNull)
+    run_migration(CreateDelayedLimits)
 
     # Test that these index migrations can be re-applied idempotently.
     # (In case identical indexes had been manually applied previously.)

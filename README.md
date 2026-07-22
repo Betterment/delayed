@@ -54,6 +54,7 @@ migration paths where possible.
   * [Priority-based Alerting Threshholds](#priority-based-alerting-threshholds)
   * [Continuous Monitoring](#continuous-monitoring)
 * [Configuration](#configuration)
+* [Rate Limiting Jobs](#rate-limiting-jobs)
 * [Migrating from other ActiveJob backends](#migrating-from-other-activejob-backends)
   * [Migrating from DelayedJob](#migrating-from-delayedjob)
 * [How to Contribute](#how-to-contribute)
@@ -530,6 +531,138 @@ Delayed.logger = Rails.logger
 # Specify a default log level for all job lifecycle logging:
 Delayed.default_log_level = 'info'
 ```
+
+## Rate Limiting Jobs
+
+The `Delayed::Limit` class provides a database-backed **concurrency limiter/optimizer** for jobs
+(via a [Generic Cell Rate Algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm)
+implemented in SQL+Ruby). Use it to (e.g.) stay under a third-party API's published rate limit, or
+to keep from overwhelming a downstream datastore.
+
+The recommended interface is `with_limit`, provided via the `Delayed::Limitable` module (which is
+included in all `ActiveJob` classes by default):
+
+```ruby
+class TouchesThirdPartyApiJob < ApplicationJob
+  with_limit :third_party_api, max: 100, per: 1.minute
+
+  def perform
+    # ...
+  end
+end
+```
+
+The limiter will then attempt to maximize throughput without exceeding the limit. If the limit would
+be exceeded within a configurable timeout, the job will immediately end and enqueue a retry attempt
+with polynomial backoff. Because its state lives in the database, the limit applies across every
+worker and process at once.
+
+Plain (non-ActiveJob) classes may `include Delayed::Limitable` to use `with_limit`, but they must
+define their own rescheduling/lifecycle behavior for `Delayed::Limit::LimitExceededError` errors.
+
+#### Setup
+
+To use this feature, make sure you have a `delayed_limits` table, or run `rake
+delayed:install:migrations` to add it (see [Database Setup](#database-setup)).
+
+As of now, **only PostgreSQL and SQLite (3.35+) are supported.** The primary SQL query relies on an
+upserting `RETURNING` clause and database-native timestamp arithmetic. You can check the current
+connection at runtime with `Delayed::Limit.supported?`. (Attempting to use the limiter on an
+unsupported database will raise `Delayed::Limit::UnsupportedDatabaseError`.)
+
+#### Traffic Shaping vs Traffic Enforcement
+
+By default, the limiter will `sleep` up to 5 seconds (or a specified `wait_timeout`) before
+yielding to the limited work. (This behavior is subject to the usual GIL and OS scheduling, so
+treat the configured rate as a best-effort target rather than a hard guarantee.)
+
+Use a longer `wait_timeout` for even better throughput smoothing (at the cost of blocking threads):
+
+```ruby
+# A longer wait timeout is best for shaping outbound traffic in asynchronous contexts.
+with_limit :outbound_traffic, max: 100, per: 1.minute, wait_timeout: 30.seconds
+```
+
+Or set it to `0` to fail fast, so that the job never blocks a worker thread:
+
+```ruby
+# A zero wait timeout is best for enforcing inbound limits and shedding excess traffic.
+with_limit :inbound_traffic, max: 5, per: 1.second, wait_timeout: 0
+```
+
+#### Customizing `with_limit`
+
+The purpose defaults to the job's underscored class name, so it may be omitted entirely if the
+limit is not shared with any other class:
+
+```ruby
+with_limit max: 100, per: 1.minute
+```
+
+Use `on:` to wrap one or more other instance methods instead of `perform` (e.g. if only a portion
+of the job's work is subject to the limit):
+
+```ruby
+with_limit :third_party_api, on: :deliver!
+```
+
+**For ActiveJob classes only**, use `retry_attempts:`, `retry_wait:`, and `retry_jitter:` to
+customize the retry behavior. (By default, jobs retry indefinitely with a polynomial backoff, with
+the `wait_timeout` acting as a floor on the computed wait.) If `with_limit` is declared multiple
+times on the same class (e.g. to apply different limits to different methods), only the first
+declaration defines the job's retry behavior.
+
+#### Manually Limiting a Block of Code
+
+To rate limit code that doesn't belong to a job class, call `Delayed::Limit.within_limit`
+directly. It accepts the same `purpose`, `max:`, `per:`, and `wait_timeout:` arguments as
+`with_limit`, and wraps the limited work in a block:
+
+```ruby
+Delayed::Limit.within_limit(:widgets_api, max: 100, per: 1.minute) do
+  WidgetsApi.create_widget!(...)
+end
+```
+
+The key difference is that there is no built-in retry behavior: if the limit would be exceeded
+within the `wait_timeout`, the call raises `Delayed::Limit::LimitExceededError` immediately, and
+it is up to the caller to rescue and/or retry.
+
+#### Shared Limits
+
+To avoid repeating the same purpose's `max` and `per` across multiple call sites, register a
+limit in advance (e.g. in an initializer):
+
+```ruby
+Delayed::Limit.register!(:widgets_api, max: 100, per: 1.minute)
+```
+
+Then, reference it by just its name at each declaration:
+
+```ruby
+with_limit :widgets_api
+
+# or:
+Delayed::Limit.within_limit(:widgets_api) { ... }
+```
+
+Registered limits are cached indefinitely in memory and are not thread-safe on write, so avoid
+registering them dynamically or at runtime!
+
+#### Handling "Burst" Throughput
+
+As of now, **there is no "burst" capacity.** The limiter allows one call per "drain interval" (`per
+/ max`), so a limit of 60-per-minute behaves identically to 1-per-second (and will not allow
+more than 1 call in the first second).
+
+This is generally acceptable for background job processing (and for traffic shaping in general), but
+may be revisited in the future in order to support use cases like API traffic enforcement.
+
+#### Monitoring Limit Usage
+
+Each call emits an `ActiveSupport::Notification` (`delayed.limit.within_limit` or
+`delayed.limit.exceeded`), so you can monitor limiting activity the same way you would any other
+event (see [Monitoring Jobs & Workers](#monitoring-jobs--workers)).
 
 ## Migrating from other ActiveJob backends
 
