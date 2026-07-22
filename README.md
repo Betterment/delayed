@@ -567,7 +567,8 @@ delayed:install:migrations` to add it (see [Database Setup](#database-setup)).
 
 As of now, **only PostgreSQL and SQLite (3.35+) are supported.** The primary SQL query relies on an
 upserting `RETURNING` clause and database-native timestamp arithmetic. You can check the current
-connection at runtime with `Delayed::Limit.supported?`.
+connection at runtime with `Delayed::Limit.supported?`. (Attempting to use the limiter on an
+unsupported database will raise `Delayed::Limit::UnsupportedDatabaseError`.)
 
 #### Traffic Shaping vs Traffic Enforcement
 

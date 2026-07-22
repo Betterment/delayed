@@ -48,6 +48,10 @@ module Delayed
     # Raised when limit adherence would require exceeding the `wait_timeout`.
     class LimitExceededError < StandardError; end
 
+    # Raised when the database adapter/version does not support the limiter
+    # (see `.supported?`).
+    class UnsupportedDatabaseError < StandardError; end
+
     class << self
       # Used only for limits registered in advance (via `.register!`):
       def limits
@@ -160,7 +164,7 @@ module Delayed
             RETURNING EXTRACT(EPOCH FROM (drained_at - statement_timestamp() - :drain_interval)) AS wait
           SQL
         when 'SQLite'
-          raise NotImplementedError, "Delayed::Limit requires SQLite #{MINIMUM_SQLITE_VERSION} or newer" unless supported?
+          raise UnsupportedDatabaseError, "Delayed::Limit requires SQLite #{MINIMUM_SQLITE_VERSION} or newer" unless supported?
 
           # SQLite has no interval type. Instead, `julianday` yields a
           # sub-second-precise number of days, and we bind the intervals as a
@@ -176,7 +180,7 @@ module Delayed
             RETURNING (julianday(drained_at) - julianday('now') - :drain_interval) * #{SECONDS_PER_DAY} AS wait
           SQL
         else
-          raise NotImplementedError, "Delayed::Limit is not supported on #{connection.adapter_name.inspect}"
+          raise UnsupportedDatabaseError, "Delayed::Limit is not supported on #{connection.adapter_name.inspect}"
         end
       end
     end
