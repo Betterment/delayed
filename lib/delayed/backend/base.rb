@@ -76,7 +76,10 @@ module Delayed
 
         def bulk_insert_all(jobs)
           now = db_time_now
-          jobs.each { |job| job.created_at = job.updated_at = now }
+          jobs.each do |job|
+            job.created_at ||= now
+            job.updated_at ||= now
+          end
           rows = jobs.map { |job| job.attributes.compact }
           result = insert_all(rows) # rubocop:disable Rails/SkipsModelValidations
           return unless connection_pool.with_connection(&:supports_insert_returning?)

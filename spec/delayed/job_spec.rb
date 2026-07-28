@@ -290,6 +290,26 @@ describe Delayed::Job do
         expect { described_class.enqueue_all(jobs) }.to raise_error(RuntimeError, /Delayed::Job enqueue methods do not accept ActiveJobs/)
       end
     end
+
+    it 'stamps created_at and updated_at' do
+      now = described_class.db_time_now
+      described_class.enqueue_all([build_job])
+
+      described_class.last.tap do |job|
+        expect(job.created_at).to be_within(1).of(now)
+        expect(job.updated_at).to be_within(1).of(now)
+      end
+    end
+
+    it 'preserves a pre-assigned created_at while still stamping updated_at' do
+      original_time = described_class.db_time_now - 3.hours
+      described_class.enqueue_all([build_job(SimpleJob.new, created_at: original_time)])
+
+      described_class.last.tap do |job|
+        expect(job.created_at).to be_within(1).of(original_time)
+        expect(job.updated_at).to be_within(1).of(described_class.db_time_now)
+      end
+    end
   end
 
   describe '#hook' do
