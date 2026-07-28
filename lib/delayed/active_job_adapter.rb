@@ -78,7 +78,7 @@ module Delayed
           raise "`:run_at` is not supported. Use `:wait_until` instead." if opts.key?(:run_at)
 
           self.provider_attributes = opts.except(:wait, :wait_until, :queue, :priority)
-          opts[:priority] = Delayed::Priority.new(opts[:priority]) if opts.key?(:priority)
+          opts[:priority] = Delayed::Priority.new(opts[:priority]) if opts[:priority]
           super(opts)
         end
       end
