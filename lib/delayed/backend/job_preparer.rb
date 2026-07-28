@@ -37,6 +37,7 @@ module Delayed
       end
 
       def set_run_at
+        options[:run_at] ||= options[:payload_object].scheduled_at if options[:payload_object].respond_to?(:scheduled_at)
         options[:run_at] ||= Job.db_time_now
       end
 

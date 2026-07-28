@@ -199,6 +199,21 @@ describe Delayed::Job do
       end
     end
 
+    context 'when payload is an ActiveJob wrapper built from previously-serialized job data' do
+      let(:arbitrary_time) { Time.parse('2021-01-05 03:34:33 UTC') }
+
+      if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
+        it "preserves the wrapped job's scheduled_at as run_at" do
+          active_job = ActiveJobJob.new
+          active_job.scheduled_at = arbitrary_time + 1.hour
+
+          job = described_class.enqueue(Delayed::JobWrapper.new(active_job.serialize))
+
+          expect(job.run_at).to eq(arbitrary_time + 1.hour)
+        end
+      end
+    end
+
     context 'when payload is a bare ActiveJob::Base instance' do
       it 'raises' do
         expect { described_class.enqueue(payload_object: ActiveJobJob.new) }.to raise_error(RuntimeError, /Delayed::Job enqueue methods do not accept ActiveJobs/)
