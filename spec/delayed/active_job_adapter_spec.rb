@@ -196,6 +196,33 @@ RSpec.describe Delayed::ActiveJobAdapter do
       end
     end
 
+    context 'when using the ActiveJob test adapter' do
+      let(:queue_adapter) { :test }
+
+      it 'raises an error when run_at is used' do
+        expect { JobClass.set(run_at: arbitrary_time).perform_later }
+          .to raise_error(/`:run_at` is not supported./)
+      end
+
+      it 'supports priority as a Delayed::Priority' do
+        JobClass.set(priority: Delayed::Priority.eventual).perform_later
+
+        expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 20)
+      end
+
+      it 'supports priority as a symbol' do
+        JobClass.set(priority: :eventual).perform_later
+
+        expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 20)
+      end
+
+      it 'captures arbitrary provider attributes without interfering with enqueue' do
+        JobClass.set(foo: 'bar').perform_later
+
+        expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, queue: 'default')
+      end
+    end
+
     context 'when the ActiveJob performable defines a max_attempts' do
       let(:job_class) do
         Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
@@ -433,6 +460,104 @@ RSpec.describe Delayed::ActiveJobAdapter do
         JobClass.set(queue: 'a', priority: 3, wait_until: arbitrary_time).perform_later
 
         expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 3, queue: 'a', at: arbitrary_time.to_f)
+      end
+    end
+  end
+
+  describe 'ActiveJob .retry_on' do
+    let(:retry_job_class) do
+      Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
+        retry_on(RetryTestError)
+        retry_on(RetryTestErrorWithSpecificPriority, priority: 123)
+
+        queue_with_priority 567
+
+        def perform(error_class_name)
+          raise error_class_name.constantize
+        end
+      end
+    end
+
+    before do
+      allow(Delayed::Job).to receive(:enqueue_job).and_call_original
+      allow(Delayed::Job).to receive(:enqueue_all).and_call_original
+
+      stub_const('RetryTestError', Class.new(StandardError))
+      stub_const('RetryTestErrorWithSpecificPriority', Class.new(StandardError))
+      stub_const('MyRetryJob', retry_job_class)
+    end
+
+    context 'when retry_on specifies a priority' do
+      it 're-enqueues with the specified priority' do
+        MyRetryJob.perform_later('RetryTestErrorWithSpecificPriority')
+
+        expect(Delayed::Worker.new.work_off).to eq([1, 0])
+
+        expect(Delayed::Job.last.priority).to eq(123)
+      end
+    end
+
+    it 'records the error that triggered the retry on the re-enqueued job' do
+      MyRetryJob.perform_later('RetryTestError')
+
+      expect(Delayed::Worker.new.work_off).to eq([1, 0])
+
+      expect(Delayed::Job.last.last_error).to start_with('RetryTestError')
+    end
+
+    context 'when attempts are exhausted' do
+      it 're-raises the error, leaving the job to be retried by the worker itself' do
+        job = MyRetryJob.new('RetryTestError')
+        job.exception_executions = { '[RetryTestError]' => 4 } # retry_on defaults to 5 attempts
+        job.enqueue
+        original = Delayed::Job.last
+
+        expect(Delayed::Worker.new.work_off).to eq([0, 1])
+
+        expect(Delayed::Job.count).to eq(1)
+        Delayed::Job.last.tap do |dj|
+          expect(dj.id).to eq(original.id)
+          expect(dj.attempts).to eq(1)
+          expect(dj.last_error).to match(/RetryTestError/)
+          expect(dj.payload_object.job_data['exception_executions']).to eq('[RetryTestError]' => 4)
+        end
+      end
+    end
+
+    if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
+      context 'when attempts is :unlimited' do
+        let(:retry_job_class) do
+          Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
+            retry_on(RetryTestError, attempts: :unlimited)
+
+            queue_with_priority 567
+
+            def perform(error_class_name)
+              raise error_class_name.constantize
+            end
+          end
+        end
+
+        it 're-enqueues the job even when executions far exceed the default attempt limit' do
+          job = MyRetryJob.new('RetryTestError')
+          job.exception_executions = { '[RetryTestError]' => 10_000 }
+          job.enqueue
+
+          expect(Delayed::Worker.new.work_off).to eq([1, 0])
+
+          retried = Delayed::Job.last
+          expect(retried.payload_object.job_data['exception_executions']).to eq('[RetryTestError]' => 10_001)
+        end
+      end
+    end
+
+    context 'when using the ActiveJob test adapter' do
+      let(:queue_adapter) { :test }
+
+      it 're-enqueues with the priority specified by retry_on' do
+        ActiveJob::Base.execute(MyRetryJob.new('RetryTestErrorWithSpecificPriority').serialize)
+
+        expect(MyRetryJob.queue_adapter.enqueued_jobs.first).to include(job: MyRetryJob, 'priority' => 123)
       end
     end
   end
