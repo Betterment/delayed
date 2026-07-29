@@ -409,8 +409,26 @@ An additional _experimental_ metric is available, intended for use with applicat
 
 - **delayed.job.alert_age_percent** - the _percent_ to which the oldest job has reached the "age alert" threshold. (See the [Alerting Threshholds](#priority-based-alerting-threshholds) section above.)
 
-All of these events may be subscribed to via a single regular expression (again, in your application
-config or in an initializer):
+If your jobs table has a `name` column (see [Database Setup](#database-setup)), one additional
+event will be emitted, grouped by priority name, queue name, **and job name**:
+
+- **delayed.job.max_age_by_name** - the age of the oldest run_at value, per job name (excludes failed jobs)
+
+This answers "_which_ job is stuck?" when `delayed.job.max_age` alerts. A few behavioral notes:
+
+- Unlike the other metrics, it is not zero-filled: job names cannot be enumerated in advance, so a
+  (priority, queue, name) series is only emitted while matching jobs are present in the queue.
+- Jobs enqueued before the `name` column existed (i.e. mid-upgrade) are reported under the name
+  `"unknown"`.
+- Because this metric's cardinality scales with the number of distinct job names, it can be
+  disabled if that's a concern for your metrics provider:
+
+```ruby
+Delayed::Monitor.emit_max_age_by_name = false
+```
+
+All of these events (including `max_age_by_name`) may be subscribed to via a single regular
+expression (again, in your application config or in an initializer):
 
 ```ruby
 ActiveSupport::Notifications.subscribe(/delayed\.job\..*_(count|age|percent)/) do |*args|

@@ -16,6 +16,7 @@ module Delayed
     ).freeze
 
     cattr_accessor :sleep_delay, instance_writer: false, default: 60
+    cattr_accessor :emit_max_age_by_name, instance_writer: false, default: true
 
     def initialize
       @jobs = Job.group(:priority, :queue)
@@ -27,6 +28,7 @@ module Delayed
       @memo = {}
       ActiveSupport::Notifications.instrument('delayed.monitor.run', default_tags) do
         METRICS.each { |metric| emit_metric!(metric) }
+        emit_metric_by_name!('max_age') if emit_max_age_by_name && Job.name_assignable?
       end
       interruptable_sleep(sleep_delay)
     end
@@ -75,6 +77,15 @@ module Delayed
       end
     end
 
+    def emit_metric_by_name!(metric)
+      query_for("#{metric}_by_name").each do |(priority, queue, name), value|
+        ActiveSupport::Notifications.instrument(
+          "delayed.job.#{metric}_by_name",
+          default_tags.merge(priority: Priority.new(priority).to_s, queue: queue, name: name || 'unknown', value: value),
+        )
+      end
+    end
+
     def default_results
       @default_results ||= Priority.names.values.flat_map { |priority|
         (Worker.queues.presence || [Worker.default_queue_name]).map do |queue|
@@ -96,22 +107,28 @@ module Delayed
     end
 
     # This method generates a query that scans the specified scope, groups by
-    # priority and queue, and calculates the specified aggregates. An outer
-    # query is executed for priority bucketing and appending db_now_utc (to
-    # avoid running these computations for each tuple in the inner query).
-    def grouped_query(scope, include_db_time: false, **kwargs)
+    # priority and queue (plus any extra_group_columns), and calculates the
+    # specified aggregates. An outer query is executed for priority bucketing
+    # and appending db_now_utc (to avoid running these computations for each
+    # tuple in the inner query).
+    def grouped_query(scope, include_db_time: false, extra_group_columns: [], **kwargs)
       inner_selects = kwargs.map { |key, (agg, expr)| as_expression(agg, expr, key) }
       outer_selects = kwargs.map { |key, (agg, _)| as_expression(agg == :count ? :sum : agg, key, key) }
       outer_selects << "#{self.class.sql_now_in_utc} AS db_now_utc" if include_db_time
 
       Delayed::Job
-        .from(scope.select(:priority, :queue, *inner_selects).group(:priority, :queue))
-        .group(priority_case_statement, :queue).select(
+        .from(scope.select(:priority, :queue, *extra_group_columns, *inner_selects).group(:priority, :queue, *extra_group_columns))
+        .group(priority_case_statement, :queue, *extra_group_columns).select(
           *outer_selects,
           "#{priority_case_statement} AS priority",
           'queue AS queue',
-        ).group_by { |j| [j.priority.to_i, j.queue] }
+          *extra_group_columns.map { |column| "#{column} AS #{column}" },
+        ).group_by { |j| result_key(j, extra_group_columns) }
         .transform_values(&:first)
+    end
+
+    def result_key(record, extra_group_columns)
+      [record.priority.to_i, record.queue, *extra_group_columns.map { |column| record[column] }]
     end
 
     def as_expression(aggregate_function, aggregate_expression, column_name)
@@ -148,6 +165,10 @@ module Delayed
 
     def max_age_grouped
       pending_counts.transform_values { |j| time_ago(db_now(j), j.run_at) }
+    end
+
+    def max_age_by_name_grouped
+      pending_run_ats_by_name.transform_values { |j| time_ago(db_now(j), j.run_at) }
     end
 
     def alert_age_percent_grouped
@@ -188,6 +209,15 @@ module Delayed
         claimed_count: [:sum, case_when(Job.claimed_clause.to_sql)],
         claimable_count: [:sum, case_when(Job.claimable_clause.to_sql)],
         locked_at: [:min, case_when(Job.claimed_clause.to_sql, 'locked_at')],
+        run_at: [:min, case_when(Job.claimable_clause.to_sql, 'run_at')],
+      )
+    end
+
+    def pending_run_ats_by_name
+      @memo[:pending_run_ats_by_name] ||= grouped_query(
+        jobs.pending,
+        include_db_time: true,
+        extra_group_columns: %i(name),
         run_at: [:min, case_when(Job.claimable_clause.to_sql, 'run_at')],
       )
     end

@@ -5,6 +5,13 @@ RSpec.describe Delayed::Monitor do
     described_class.sleep_delay = 0
   end
 
+  def emitted_event_names(pattern, &block)
+    events = []
+    callback = ->(name, *) { events << name }
+    ActiveSupport::Notifications.subscribed(callback, pattern, &block)
+    events
+  end
+
   let(:default_payload) do
     {
       table: 'delayed_jobs',
@@ -81,6 +88,10 @@ RSpec.describe Delayed::Monitor do
         .and emit_notification("delayed.job.alert_age_percent").with_payload(default_payload.merge(priority: 'user_visible')).approximately.with_value(0)
         .and emit_notification("delayed.job.alert_age_percent").with_payload(default_payload.merge(priority: 'eventual')).approximately.with_value(0)
         .and emit_notification("delayed.job.alert_age_percent").with_payload(default_payload.merge(priority: 'reporting')).approximately.with_value(0)
+    end
+
+    it 'does not emit max_age_by_name when no jobs are present' do
+      expect(emitted_event_names("delayed.job.max_age_by_name") { subject.run! }).to be_empty
     end
 
     context 'when named priorities are customized' do
@@ -199,6 +210,67 @@ RSpec.describe Delayed::Monitor do
           .and emit_notification("delayed.job.alert_age_percent").with_payload(p30_payload).approximately.with_value(100) # 6 hours / 4 hours (overflow)
           .and emit_notification("delayed.job.workable_count").with_payload(p30_payload.merge(queue: 'banana')).with_value(1)
           .and emit_notification("delayed.job.max_age").with_payload(p30_payload.merge(queue: 'banana')).approximately.with_value(4.hours)
+      end
+
+      it 'emits max_age_by_name grouped by job name' do
+        expect { subject.run! }
+          .to emit_notification("delayed.job.max_age_by_name").with_payload(p0_payload.merge(name: 'SimpleJob')).approximately.with_value(30.seconds)
+          .and emit_notification("delayed.job.max_age_by_name").with_payload(p10_payload.merge(name: 'SimpleJob')).approximately.with_value(2.minutes)
+          .and emit_notification("delayed.job.max_age_by_name").with_payload(p20_payload.merge(name: 'SimpleJob')).approximately.with_value(1.hour)
+          .and emit_notification("delayed.job.max_age_by_name").with_payload(p30_payload.merge(name: 'SimpleJob')).approximately.with_value(6.hours)
+          .and emit_notification("delayed.job.max_age_by_name").with_payload(p30_payload.merge(queue: 'banana', name: 'SimpleJob')).approximately.with_value(4.hours)
+      end
+
+      context 'when multiple job names share a priority and queue' do
+        let!(:other_named_job) { Delayed::Job.create! p0_attributes.merge(name: 'OtherJob', run_at: now - 10.minutes) }
+
+        it 'emits a separate max_age_by_name series per name' do
+          expect { subject.run! }
+            .to emit_notification("delayed.job.max_age_by_name").with_payload(p0_payload.merge(name: 'SimpleJob')).approximately.with_value(30.seconds)
+            .and emit_notification("delayed.job.max_age_by_name").with_payload(p0_payload.merge(name: 'OtherJob')).approximately.with_value(10.minutes)
+        end
+      end
+
+      context 'when emit_max_age_by_name is disabled' do
+        around do |example|
+          described_class.emit_max_age_by_name = false
+          example.run
+        ensure
+          described_class.emit_max_age_by_name = true
+        end
+
+        it 'does not emit max_age_by_name' do
+          expect(emitted_event_names("delayed.job.max_age_by_name") { subject.run! }).to be_empty
+        end
+      end
+
+      context 'when the delayed_jobs table has no name column' do
+        before do
+          allow(Delayed::Job).to receive(:name_assignable?).and_return(false)
+        end
+
+        it 'does not emit max_age_by_name' do
+          expect(emitted_event_names("delayed.job.max_age_by_name") { subject.run! }).to be_empty
+        end
+      end
+
+      context 'when a job predates the name column' do
+        around do |example|
+          ValidateRunAtAndNameNotNull.migrate(:down)
+          AddRunAtAndNameNotNullCheck.migrate(:down)
+          example.run
+        ensure
+          Delayed::Job.delete_all
+          AddRunAtAndNameNotNullCheck.migrate(:up)
+          ValidateRunAtAndNameNotNull.migrate(:up)
+        end
+
+        let!(:unnamed_job) { Delayed::Job.create! p0_attributes.merge(name: nil, run_at: now - 10.minutes) }
+
+        it "emits max_age_by_name under the name 'unknown'" do
+          expect { subject.run! }
+            .to emit_notification("delayed.job.max_age_by_name").with_payload(p0_payload.merge(name: 'unknown')).approximately.with_value(10.minutes)
+        end
       end
 
       context 'when named priorities are customized' do
@@ -369,6 +441,11 @@ RSpec.describe Delayed::Monitor do
           .and emit_notification("delayed.job.alert_age_percent").with_payload(payload).approximately.with_value(0)
       end
 
+      it 'excludes the locked job from max_age_by_name' do
+        expect { subject.run! }
+          .to emit_notification("delayed.job.max_age_by_name").with_payload(payload.merge(name: 'SimpleJob')).approximately.with_value(0)
+      end
+
       context 'and a workable job is also present in the same group' do
         # The workable job's run_at is newer than the locked job's, so max_age must
         # track the workable job (30s), not the locked job (1 hour).
@@ -405,7 +482,7 @@ RSpec.describe Delayed::Monitor do
     end
 
     def query_descriptions
-      described_class::METRICS.each do |metric|
+      (described_class::METRICS + %w(max_age_by_name)).each do |metric|
         queries << "-- QUERIES FOR `#{metric}`:"
         queries << "---------------------------------"
         monitor.query_for(metric)
