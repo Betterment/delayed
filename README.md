@@ -420,14 +420,47 @@ This answers "_which_ job is stuck?" when `delayed.job.max_age` alerts. A few be
   (priority, queue, name) series is only emitted while matching jobs are present in the queue.
 - Jobs enqueued before the `name` column existed (i.e. mid-upgrade) are reported under the name
   `"unknown"`.
-- Because this metric's cardinality scales with the number of distinct job names, it can be
-  disabled if that's a concern for your metrics provider:
+
+These by-attribute pairings are driven by `Delayed::Monitor.metrics_by_attribute`, which defaults
+to `{ max_age: %i(name) }`. Any metric can be paired with any groupable column — including columns
+your application adds to the jobs table (populated at enqueue time) — and each pairing emits its
+own **delayed.job.&lt;metric&gt;_by_&lt;column&gt;** event, grouped by priority name, queue name,
+and that column's value (`'unknown'` when NULL). For example, with a per-record `owner` column:
 
 ```ruby
-Delayed::Monitor.emit_max_age_by_name = false
+Delayed::Monitor.metrics_by_attribute = {
+  max_age: %i(name owner),
+  failed_count: %i(owner),
+}
 ```
 
-All of these events (including `max_age_by_name`) may be subscribed to via a single regular
+The above would result in the following monitors:
+
+- 'delayed.job.max_age_by_name'
+- 'delayed.job.max_age_by_owner'
+- 'delayed.job.failed_count_by_owner'
+
+Configured columns that do not (yet) exist on the table are skipped. For example:
+
+```ruby
+Delayed::Monitor.metrics_by_attribute = {
+  max_age: %i(owner non_existent_attribute),
+  failed_count: %i(owner),
+}
+```
+
+The above would result in the following monitors based on attribute column availability:
+
+- 'delayed.job.max_age_by_owner'
+- 'delayed.job.failed_count_by_owner'
+
+Metric names, on the other hand, are validated when the config is assigned — pairing a metric that
+does not exist (e.g. `min_age`) raises an `ArgumentError` at boot, rather than failing later in the
+monitor process.
+
+Each pairing's cardinality scales with the number of distinct values in the column, so if series cardinality is a concern for your metrics provider, by-attribute metrics can be disabled entirely by setting the config to `{}`.
+
+All of these events (including the `*_by_*` pairings) may be subscribed to via a single regular
 expression (again, in your application config or in an initializer):
 
 ```ruby

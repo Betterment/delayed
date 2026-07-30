@@ -231,12 +231,12 @@ RSpec.describe Delayed::Monitor do
         end
       end
 
-      context 'when emit_max_age_by_name is disabled' do
+      context 'when metrics_by_attribute is empty' do
         around do |example|
-          described_class.emit_max_age_by_name = false
+          described_class.metrics_by_attribute = {}
           example.run
         ensure
-          described_class.emit_max_age_by_name = true
+          described_class.metrics_by_attribute = { max_age: %i(name) }
         end
 
         it 'does not emit max_age_by_name' do
@@ -246,7 +246,7 @@ RSpec.describe Delayed::Monitor do
 
       context 'when the delayed_jobs table has no name column' do
         before do
-          allow(Delayed::Job).to receive(:name_assignable?).and_return(false)
+          allow(Delayed::Job).to receive(:column_names).and_return(Delayed::Job.column_names - ['name'])
         end
 
         it 'does not emit max_age_by_name' do
@@ -270,6 +270,54 @@ RSpec.describe Delayed::Monitor do
         it "emits max_age_by_name under the name 'unknown'" do
           expect { subject.run! }
             .to emit_notification("delayed.job.max_age_by_name").with_payload(p0_payload.merge(name: 'unknown')).approximately.with_value(10.minutes)
+        end
+      end
+
+      context 'when metrics_by_attribute pairs metrics with a custom column' do
+        around do |example|
+          Delayed::Job.connection.add_column :delayed_jobs, :owner, :string
+          Delayed::Job.reset_column_information
+          described_class.metrics_by_attribute = { max_age: %i(name owner), failed_count: %i(owner) }
+          example.run
+        ensure
+          described_class.metrics_by_attribute = { max_age: %i(name) }
+          Delayed::Job.connection.remove_column :delayed_jobs, :owner
+          Delayed::Job.reset_column_information
+        end
+
+        let!(:team_a_job) { Delayed::Job.create! p0_attributes.merge(owner: 'team_a', run_at: now - 10.minutes) }
+        let!(:team_b_job) { Delayed::Job.create! p0_attributes.merge(owner: 'team_b', run_at: now - 20.minutes) }
+
+        it "emits a max_age_by_owner series per owner, reporting ownerless rows as 'unknown'" do
+          expect { subject.run! }
+            .to emit_notification("delayed.job.max_age_by_owner").with_payload(p0_payload.merge(owner: 'team_a')).approximately.with_value(10.minutes)
+            .and emit_notification("delayed.job.max_age_by_owner").with_payload(p0_payload.merge(owner: 'team_b')).approximately.with_value(20.minutes)
+            .and emit_notification("delayed.job.max_age_by_owner").with_payload(p0_payload.merge(owner: 'unknown')).approximately.with_value(30.seconds)
+        end
+
+        it 'emits other paired metrics by the same column' do
+          expect { subject.run! }
+            .to emit_notification("delayed.job.failed_count_by_owner").with_payload(p0_payload.merge(owner: 'unknown')).with_value(1)
+        end
+
+        it 'emits max_age_by_name independently, without owner tags' do
+          expect { subject.run! }
+            .to emit_notification("delayed.job.max_age_by_name").with_payload(p0_payload.merge(name: 'SimpleJob')).approximately.with_value(20.minutes)
+        end
+      end
+
+      context 'when metrics_by_attribute names a column that does not exist' do
+        around do |example|
+          described_class.metrics_by_attribute = { max_age: %i(name owner) }
+          example.run
+        ensure
+          described_class.metrics_by_attribute = { max_age: %i(name) }
+        end
+
+        it 'skips the missing column but still emits max_age_by_name' do
+          events = emitted_event_names(/delayed\.job\.max_age_by_/) { subject.run! }
+          expect(events).to include("delayed.job.max_age_by_name")
+          expect(events).not_to include("delayed.job.max_age_by_owner")
         end
       end
 
@@ -461,6 +509,13 @@ RSpec.describe Delayed::Monitor do
     end
   end
 
+  describe '.metrics_by_attribute=' do
+    it 'rejects unknown metrics at assignment time' do
+      expect { described_class.metrics_by_attribute = { min_age: %i(name) } }
+        .to raise_error(ArgumentError, /Unknown metrics in metrics_by_attribute: min_age/)
+    end
+  end
+
   describe 'SQL' do
     let(:monitor) { described_class.new }
     let(:queries) { [] }
@@ -485,7 +540,8 @@ RSpec.describe Delayed::Monitor do
       (described_class::METRICS + %w(max_age_by_name)).each do |metric|
         queries << "-- QUERIES FOR `#{metric}`:"
         queries << "---------------------------------"
-        monitor.query_for(metric)
+        base, attribute = metric.split('_by_')
+        monitor.query_for(base, *[attribute&.to_sym].compact)
         queries << "-- (no new queries)" unless queries.last == '---'
       end
       queries.dup.map { |query| query.try(:full_description) || query }
