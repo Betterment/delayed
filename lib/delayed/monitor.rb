@@ -17,6 +17,19 @@ module Delayed
 
     cattr_accessor :sleep_delay, instance_writer: false, default: 60
 
+    def self.tag_columns
+      @tag_columns ||= (Job.column_names.include?('name') ? %i(name) : []).freeze
+    end
+
+    def self.tag_columns=(columns)
+      if columns.any? { |column| Job.column_names.exclude?(column.to_s) }
+        raise ArgumentError, "Delayed::Monitor.tag_columns includes columns missing from #{Job.table_name}. " \
+                             "Available columns: #{Job.column_names.join(', ')}"
+      end
+
+      @tag_columns = columns.map(&:to_sym).freeze
+    end
+
     def initialize
       @jobs = Job.group(:priority, :queue)
       @jobs = @jobs.where(queue: Worker.queues) if Worker.queues.any?
@@ -67,10 +80,13 @@ module Delayed
     attr_reader :jobs
 
     def emit_metric!(metric)
-      query_for(metric).reverse_merge(default_results).each do |(priority, queue), value|
+      query_for(metric)
+        .merge!(default_results) { |_key, existing, _default| existing }
+        .each do |(priority, queue, *column_values), value|
+        tags = column_values.zip(self.class.tag_columns).to_h { |val, column| [column, val.nil? ? 'unset' : val] }
         ActiveSupport::Notifications.instrument(
           "delayed.job.#{metric}",
-          default_tags.merge(priority: Priority.new(priority).to_s, queue: queue, value: value),
+          default_tags.merge(priority: Priority.new(priority).to_s, queue: queue, **tags, value: value),
         )
       end
     end
@@ -96,22 +112,28 @@ module Delayed
     end
 
     # This method generates a query that scans the specified scope, groups by
-    # priority and queue, and calculates the specified aggregates. An outer
-    # query is executed for priority bucketing and appending db_now_utc (to
-    # avoid running these computations for each tuple in the inner query).
-    def grouped_query(scope, include_db_time: false, **kwargs)
+    # priority and queue (plus any extra_group_columns), and calculates the
+    # specified aggregates. An outer query is executed for priority bucketing
+    # and appending db_now_utc (to avoid running these computations for each
+    # tuple in the inner query).
+    def grouped_query(scope, include_db_time: false, extra_group_columns: [], **kwargs)
       inner_selects = kwargs.map { |key, (agg, expr)| as_expression(agg, expr, key) }
       outer_selects = kwargs.map { |key, (agg, _)| as_expression(agg == :count ? :sum : agg, key, key) }
       outer_selects << "#{self.class.sql_now_in_utc} AS db_now_utc" if include_db_time
 
       Delayed::Job
-        .from(scope.select(:priority, :queue, *inner_selects).group(:priority, :queue))
-        .group(priority_case_statement, :queue).select(
+        .from(scope.select(:priority, :queue, *extra_group_columns, *inner_selects).group(:priority, :queue, *extra_group_columns))
+        .group(priority_case_statement, :queue, *extra_group_columns).select(
           *outer_selects,
           "#{priority_case_statement} AS priority",
           'queue AS queue',
-        ).group_by { |j| [j.priority.to_i, j.queue] }
+          *extra_group_columns.map { |column| "#{column} AS #{column}" },
+        ).group_by { |j| result_key(j, extra_group_columns) }
         .transform_values(&:first)
+    end
+
+    def result_key(record, extra_group_columns)
+      [record.priority.to_i, record.queue, *extra_group_columns.map { |column| record[column] }]
     end
 
     def as_expression(aggregate_function, aggregate_expression, column_name)
@@ -151,10 +173,10 @@ module Delayed
     end
 
     def alert_age_percent_grouped
-      pending_counts.each_with_object({}) do |((priority, queue), j), metrics|
+      pending_counts.each_with_object({}) do |(key, j), metrics|
         max_age = time_ago(db_now(j), j.run_at)
-        alert_age = Priority.new(priority).alert_age
-        metrics[[priority, queue]] = [max_age / alert_age * 100, 100].min if alert_age
+        alert_age = Priority.new(key.first).alert_age
+        metrics[key] = [max_age / alert_age * 100, 100].min if alert_age
       end
     end
 
@@ -175,6 +197,7 @@ module Delayed
     def live_counts
       @memo[:live_counts] ||= grouped_query(
         jobs.live,
+        extra_group_columns: self.class.tag_columns,
         count: [:count, '*'],
         future_count: [:sum, case_when(Job.future_clause.to_sql)],
         erroring_count: [:sum, case_when(Job.erroring_clause.to_sql)],
@@ -185,6 +208,7 @@ module Delayed
       @memo[:pending_counts] ||= grouped_query(
         jobs.pending,
         include_db_time: true,
+        extra_group_columns: self.class.tag_columns,
         claimed_count: [:sum, case_when(Job.claimed_clause.to_sql)],
         claimable_count: [:sum, case_when(Job.claimable_clause.to_sql)],
         locked_at: [:min, case_when(Job.claimed_clause.to_sql, 'locked_at')],
@@ -193,7 +217,8 @@ module Delayed
     end
 
     def failed_counts
-      @memo[:failed_counts] ||= grouped_query(jobs.failed, count: [:count, '*'])
+      @memo[:failed_counts] ||=
+        grouped_query(jobs.failed, extra_group_columns: self.class.tag_columns, count: [:count, '*'])
     end
 
     def db_now(record)
