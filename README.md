@@ -391,14 +391,16 @@ QUEUE=tracking rake delayed:monitor
 QUEUES=mailers,tasks rake delayed:monitor
 ```
 
-The following events will be emitted, grouped by priority name (e.g. "interactive") and queue name,
-and the metric's "`:value`" will be available in the event's payload.  **This means that there will
-be one value _per_ unique combination of queue & priority**, and totals must be computed via
-downstream aggregation (e.g. as a StatsD "gauge" metric).
+The following events will be emitted, grouped by priority name (e.g. "interactive"), queue name,
+and the values of any configured `tag_columns`. By default, job `name` is included. The
+metric's "`:value`" will be available in the event's payload.  **This means that there will be one
+value _per_ unique combination of queue, priority, and tag column values**, and totals must be
+computed via downstream aggregation (e.g. as a StatsD "gauge" metric, summed or maxed by tag).
 
 - **delayed.job.count** - the total number of jobs
 - **delayed.job.future_count** - jobs where run_at is in the future
 - **delayed.job.working_count** - jobs that are currently being worked off (excludes failed jobs)
+- **delayed.job.locked_count** - jobs that are currently locked by a worker (equivalent to working_count)
 - **delayed.job.workable_count** - jobs that are waiting to be worked off
 - **delayed.job.erroring_count** - jobs where attempts > 0
 - **delayed.job.failed_count** - jobs where failed_at is not nil
@@ -409,59 +411,66 @@ An additional _experimental_ metric is available, intended for use with applicat
 
 - **delayed.job.alert_age_percent** - the _percent_ to which the oldest job has reached the "age alert" threshold. (See the [Alerting Threshholds](#priority-based-alerting-threshholds) section above.)
 
-If your jobs table has a `name` column (see [Database Setup](#database-setup)), one additional
-event will be emitted, grouped by priority name, queue name, **and job name**:
+By default, these events are also tagged with the job's `name` (when the jobs table has a `name`
+column — see [Database Setup](#database-setup)) so that downstream aggregation can answer
+"_which_ job is stuck?" when `delayed.job.max_age` alerts (e.g. `max by {queue, priority, name}`
+in Datadog).
 
-- **delayed.job.max_age_by_name** - the age of the oldest run_at value, per job name (excludes failed jobs)
-
-This answers "_which_ job is stuck?" when `delayed.job.max_age` alerts. A few behavioral notes:
-
-- Unlike the other metrics, it is not zero-filled: job names cannot be enumerated in advance, so a
-  (priority, queue, name) series is only emitted while matching jobs are present in the queue.
-- Jobs enqueued before the `name` column existed (i.e. mid-upgrade) are reported under the name
-  `"unknown"`.
-
-These by-attribute pairings are driven by `Delayed::Monitor.metrics_by_attribute`, which defaults
-to `{ max_age: %i(name) }`. Any metric can be paired with any groupable column — including columns
-your application adds to the jobs table (populated at enqueue time) — and each pairing emits its
-own **delayed.job.&lt;metric&gt;_by_&lt;column&gt;** event, grouped by priority name, queue name,
-and that column's value (`'unknown'` when NULL). For example, with a per-record `owner` column:
+The set of tagged columns is driven by `Delayed::Monitor.tag_columns`, which defaults to
+`%i(name)` when the jobs table has a `name` column (and to `[]` otherwise). You can include
+columns your application adds to the jobs table (populated at enqueue time). For example, if your
+jobs table has an `owner` column you wish to also monitor:
 
 ```ruby
-Delayed::Monitor.metrics_by_attribute = {
-  max_age: %i(name owner),
-  failed_count: %i(owner),
-}
+Delayed::Monitor.tag_columns = %i(name owner)
 ```
 
-The above would result in the following monitors:
+A few behavioral notes:
 
-- 'delayed.job.max_age_by_name'
-- 'delayed.job.max_age_by_owner'
-- 'delayed.job.failed_count_by_owner'
+- Rows whose value was never populated for a tagged column are reported under the value `'unset'`
+  (e.g. jobs enqueued before the `name` column existed, mid-upgrade).
+- Configured columns must exist on the jobs table: assigning a missing column to `tag_columns`
+  raises an `ArgumentError` immediately, rather than the column being silently skipped. Because
+  the assignment validates against the schema, setting `tag_columns` in an initializer requires a
+  database connection at boot, in every process that loads it. See the rollout steps below.
+- Tag values cannot be enumerated in advance, so a tagged series is only emitted while matching
+  jobs are present. Separately, an untagged zero value is always emitted for every
+  (priority, queue) combination, so that each metric maintains a baseline series even when no
+  matching jobs are enqueued. For example, `delayed.job.count` with a single enqueued job would
+  emit the following series:
 
-Configured columns that do not (yet) exist on the table are skipped. For example:
+  ```ruby
+  { priority: 'interactive', queue: 'default', name: 'SimpleJob', value: 1 }
+  { priority: 'interactive', queue: 'default', value: 0 }
+  { priority: 'user_visible', queue: 'default', value: 0 }
+  { priority: 'eventual', queue: 'default', value: 0 }
+  { priority: 'reporting', queue: 'default', value: 0 }
+  ```
+- Each column multiplies a metric's series cardinality by its number of distinct values (though in
+  practice a job's `name` tends to determine its `priority` and any ownership tags, making the
+  number of distinct job names the effective upper bound). If cardinality is a concern for your
+  metrics provider, tagging can be disabled entirely with `Delayed::Monitor.tag_columns = []`.
 
-```ruby
-Delayed::Monitor.metrics_by_attribute = {
-  max_age: %i(owner non_existent_attribute),
-  failed_count: %i(owner),
-}
-```
+#### Rolling out a new tag column
 
-The above would result in the following monitors based on attribute column availability:
+Because assignment fails loudly on a missing column, a new tag column should be rolled out in
+three separate deploys, each fully released before the next begins:
 
-- 'delayed.job.max_age_by_owner'
-- 'delayed.job.failed_count_by_owner'
+1. Migrate the column onto the jobs table (nullable — no backfill required).
+2. Deploy the code that populates the column at enqueue time.
+3. Add the column to `Delayed::Monitor.tag_columns` in an initializer, and deploy.
 
-Metric names, on the other hand, are validated when the config is assigned — pairing a metric that
-does not exist (e.g. `min_age`) raises an `ArgumentError` at boot, rather than failing later in the
-monitor process.
+Adding the column to `tag_columns` before the migration has run everywhere would raise at boot in
+every process that loads the initializer. Jobs enqueued before step 2 will report under the
+`'unset'` tag value until they are worked off (or backfilled).
 
-Each pairing's cardinality scales with the number of distinct values in the column, so if series cardinality is a concern for your metrics provider, by-attribute metrics can be disabled entirely by setting the config to `{}`.
+The default `name` tag needs no such rollout: it applies only when the jobs table already has a
+`name` column, so a monitor running against an older schema simply emits untagged metrics until
+the generated migrations (see [Database Setup](#database-setup)) have run and the monitor process
+has restarted (the default is resolved once per process).
 
-All of these events (including the `*_by_*` pairings) may be subscribed to via a single regular
-expression (again, in your application config or in an initializer):
+All of these events may be subscribed to via a single regular expression (again, in your
+application config or in an initializer):
 
 ```ruby
 ActiveSupport::Notifications.subscribe(/delayed\.job\..*_(count|age|percent)/) do |*args|
@@ -474,7 +483,7 @@ ActiveSupport::Notifications.subscribe(/delayed\.job\..*_(count|age|percent)/) d
 end
 ```
 
-Additionally, the monitor process with emit a **delayed.monitor.run** event with a duration
+Additionally, the monitor process will emit a **delayed.monitor.run** event with a duration
 attached, so that you can monitor the time it takes to emit these aggregate metrics.
 
 ```ruby

@@ -17,18 +17,17 @@ module Delayed
 
     cattr_accessor :sleep_delay, instance_writer: false, default: 60
 
-    def self.metrics_by_attribute
-      @metrics_by_attribute ||= { max_age: %i(name) }.freeze
+    def self.tag_columns
+      @tag_columns ||= (Job.column_names.include?('name') ? %i(name) : []).freeze
     end
 
-    def self.metrics_by_attribute=(value)
-      unknown_metrics = value.keys.map(&:to_s) - METRICS
-      if unknown_metrics.any?
-        raise ArgumentError, "Unknown metrics in metrics_by_attribute: #{unknown_metrics.join(', ')}. " \
-                             "Valid metrics: #{METRICS.join(', ')}"
+    def self.tag_columns=(columns)
+      if columns.any? { |column| Job.column_names.exclude?(column.to_s) }
+        raise ArgumentError, "Delayed::Monitor.tag_columns includes columns missing from #{Job.table_name}. " \
+                             "Available columns: #{Job.column_names.join(', ')}"
       end
 
-      @metrics_by_attribute = value.freeze
+      @tag_columns = columns.map(&:to_sym).freeze
     end
 
     def initialize
@@ -41,13 +40,12 @@ module Delayed
       @memo = {}
       ActiveSupport::Notifications.instrument('delayed.monitor.run', default_tags) do
         METRICS.each { |metric| emit_metric!(metric) }
-        assignable_metrics_by_attribute.each { |(metric, attribute)| emit_metric_by_attribute!(metric, attribute) }
       end
       interruptable_sleep(sleep_delay)
     end
 
-    def query_for(metric, *args)
-      send(:"#{metric}_grouped", *args)
+    def query_for(metric)
+      send(:"#{metric}_grouped")
     end
 
     def self.sql_now_in_utc
@@ -82,26 +80,14 @@ module Delayed
     attr_reader :jobs
 
     def emit_metric!(metric)
-      query_for(metric).reverse_merge(default_results).each do |(priority, queue), value|
+      query_for(metric)
+        .merge!(default_results) { |_key, existing, _default| existing }
+        .each do |(priority, queue, *column_values), value|
+        tags = column_values.zip(self.class.tag_columns).to_h { |val, column| [column, val.nil? ? 'unset' : val] }
         ActiveSupport::Notifications.instrument(
           "delayed.job.#{metric}",
-          default_tags.merge(priority: Priority.new(priority).to_s, queue: queue, value: value),
+          default_tags.merge(priority: Priority.new(priority).to_s, queue: queue, **tags, value: value),
         )
-      end
-    end
-
-    def emit_metric_by_attribute!(metric, attribute)
-      query_for(metric, attribute).each do |(priority, queue, label), value|
-        tags = { priority: Priority.new(priority).to_s, queue: queue, attribute => label || 'unknown', value: value }
-        ActiveSupport::Notifications.instrument("delayed.job.#{metric}_by_#{attribute}", default_tags.merge(tags))
-      end
-    end
-
-    def assignable_metrics_by_attribute
-      self.class.metrics_by_attribute.flat_map do |metric, attributes|
-        Array(attributes)
-          .select { |attribute| Job.column_names.include?(attribute.to_s) }
-          .map { |attribute| [metric.to_s, attribute.to_sym] }
       end
     end
 
@@ -154,48 +140,48 @@ module Delayed
       "#{aggregate_function.to_s.upcase}(#{aggregate_expression}) AS #{column_name}"
     end
 
-    def count_grouped(attribute = nil)
-      failed_count_grouped(attribute).merge(live_count_grouped(attribute)) { |_, l, f| l + f }
+    def count_grouped
+      failed_count_grouped.merge(live_count_grouped) { |_, l, f| l + f }
     end
 
-    def live_count_grouped(attribute = nil)
-      live_counts(attribute).transform_values(&:count)
+    def live_count_grouped
+      live_counts.transform_values(&:count)
     end
 
-    def future_count_grouped(attribute = nil)
-      live_counts(attribute).transform_values(&:future_count)
+    def future_count_grouped
+      live_counts.transform_values(&:future_count)
     end
 
-    def erroring_count_grouped(attribute = nil)
-      live_counts(attribute).transform_values(&:erroring_count)
+    def erroring_count_grouped
+      live_counts.transform_values(&:erroring_count)
     end
 
-    def locked_count_grouped(attribute = nil)
-      pending_counts(attribute).transform_values(&:claimed_count)
+    def locked_count_grouped
+      pending_counts.transform_values(&:claimed_count)
     end
 
-    def failed_count_grouped(attribute = nil)
-      failed_counts(attribute).transform_values(&:count)
+    def failed_count_grouped
+      failed_counts.transform_values(&:count)
     end
 
-    def max_lock_age_grouped(attribute = nil)
-      pending_counts(attribute).transform_values { |j| time_ago(db_now(j), j.locked_at) }
+    def max_lock_age_grouped
+      pending_counts.transform_values { |j| time_ago(db_now(j), j.locked_at) }
     end
 
-    def max_age_grouped(attribute = nil)
-      pending_counts(attribute).transform_values { |j| time_ago(db_now(j), j.run_at) }
+    def max_age_grouped
+      pending_counts.transform_values { |j| time_ago(db_now(j), j.run_at) }
     end
 
-    def alert_age_percent_grouped(attribute = nil)
-      pending_counts(attribute).each_with_object({}) do |(key, j), metrics|
+    def alert_age_percent_grouped
+      pending_counts.each_with_object({}) do |(key, j), metrics|
         max_age = time_ago(db_now(j), j.run_at)
         alert_age = Priority.new(key.first).alert_age
         metrics[key] = [max_age / alert_age * 100, 100].min if alert_age
       end
     end
 
-    def workable_count_grouped(attribute = nil)
-      pending_counts(attribute).transform_values(&:claimable_count)
+    def workable_count_grouped
+      pending_counts.transform_values(&:claimable_count)
     end
 
     alias working_count_grouped locked_count_grouped
@@ -208,21 +194,21 @@ module Delayed
       pending_counts.transform_values(&:run_at).compact
     end
 
-    def live_counts(attribute = nil)
-      @memo[[:live_counts, attribute]] ||= grouped_query(
+    def live_counts
+      @memo[:live_counts] ||= grouped_query(
         jobs.live,
-        extra_group_columns: [attribute].compact,
+        extra_group_columns: self.class.tag_columns,
         count: [:count, '*'],
         future_count: [:sum, case_when(Job.future_clause.to_sql)],
         erroring_count: [:sum, case_when(Job.erroring_clause.to_sql)],
       )
     end
 
-    def pending_counts(attribute = nil)
-      @memo[[:pending_counts, attribute]] ||= grouped_query(
+    def pending_counts
+      @memo[:pending_counts] ||= grouped_query(
         jobs.pending,
         include_db_time: true,
-        extra_group_columns: [attribute].compact,
+        extra_group_columns: self.class.tag_columns,
         claimed_count: [:sum, case_when(Job.claimed_clause.to_sql)],
         claimable_count: [:sum, case_when(Job.claimable_clause.to_sql)],
         locked_at: [:min, case_when(Job.claimed_clause.to_sql, 'locked_at')],
@@ -230,9 +216,9 @@ module Delayed
       )
     end
 
-    def failed_counts(attribute = nil)
-      @memo[[:failed_counts, attribute]] ||=
-        grouped_query(jobs.failed, extra_group_columns: [attribute].compact, count: [:count, '*'])
+    def failed_counts
+      @memo[:failed_counts] ||=
+        grouped_query(jobs.failed, extra_group_columns: self.class.tag_columns, count: [:count, '*'])
     end
 
     def db_now(record)
