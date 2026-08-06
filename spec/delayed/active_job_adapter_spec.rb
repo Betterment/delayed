@@ -523,6 +523,15 @@ RSpec.describe Delayed::ActiveJobAdapter do
         expect(retried.priority).to eq(789)
         expect(retried.queue).to eq('fake_queue')
       end
+
+      it 're-enqueues with the current priority of the job row, in case it was updated after enqueue' do
+        MyRetryJob.perform_later('RetryTestError')
+        Delayed::Job.last.update!(priority: 5)
+
+        expect(Delayed::Worker.new.work_off).to eq([1, 0])
+
+        expect(Delayed::Job.last.priority).to eq(5)
+      end
     end
 
     context 'when retry_on specifies a priority' do
@@ -616,6 +625,47 @@ RSpec.describe Delayed::ActiveJobAdapter do
         ActiveJob::Base.execute(MyRetryJob.new('RetryTestError').serialize)
 
         expect(MyRetryJob.queue_adapter.enqueued_jobs.first).to include(job: MyRetryJob, 'priority' => 567)
+      end
+    end
+  end
+
+  describe 'legacy job hooks' do
+    let(:job_class) do
+      Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
+        cattr_accessor(:messages) { [] }
+
+        def perform
+          self.class.messages << 'perform'
+        end
+
+        def before(_delayed_job)
+          self.class.messages << 'before'
+        end
+      end
+    end
+
+    it 'invokes hooks defined on the job class, with a deprecation warning' do
+      JobClass.perform_later
+      delayed_job = enqueued_delayed_jobs.last
+
+      expect { delayed_job.invoke_job }
+        .to output(/\[DEPRECATION\] Job hook methods .* are deprecated\. Use ActiveJob callbacks instead\./).to_stderr
+
+      expect(JobClass.messages).to eq(%w(before perform))
+    end
+
+    context 'when the job class does not define any hook methods' do
+      let(:job_class) do
+        Class.new(ActiveJob::Base) do # rubocop:disable Rails/ApplicationJob
+          def perform; end
+        end
+      end
+
+      it 'does not emit a deprecation warning' do
+        JobClass.perform_later
+        delayed_job = enqueued_delayed_jobs.last
+
+        expect { delayed_job.invoke_job }.not_to output.to_stderr
       end
     end
   end

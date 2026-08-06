@@ -349,8 +349,25 @@ describe Delayed::Job do
         job = described_class.new(payload_object: JobWithEnqueueHook.new)
         expect(job.payload_object).not_to receive(:enqueue)
         expect { job.hook(:enqueue) }
-          .to raise_error(RuntimeError, ':enqueue hook is no longer supported')
+          .to raise_error(ArgumentError, 'Unknown hook: :enqueue')
       end
+    end
+  end
+
+  describe '#invoke_job' do
+    it "does not clobber a priority attribute on the object receiving a delayed message" do
+      stub_const('PrioritizedThing', Class.new do
+        attr_accessor :priority
+
+        def check_in; end
+      end)
+      thing = PrioritizedThing.new
+      thing.priority = :domain_specific_value
+
+      job = thing.delay(priority: 3).check_in
+      job.invoke_job
+
+      expect(thing.priority).to eq(:domain_specific_value)
     end
   end
 
