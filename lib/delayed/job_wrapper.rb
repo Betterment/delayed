@@ -51,8 +51,17 @@ module Delayed
     end
 
     def before(record)
-      # ActiveJob retries must know the row's current priority (it may have changed since enqueue).
+      # ActiveJob retries should use the row's current priority (it may have changed since enqueue):
       self.priority = record.priority.to_i if respond_to?(:priority=)
+      # If a job is manually reset, we reset ActiveJob's execution log as well:
+      reset_execution_log! if job_data.delete('terminated_at') && record.attempts.zero?
+      super
+    end
+
+    def error(record, error)
+      # The error escaped retry_on (if any), so ActiveJob considers the job terminated.
+      job_data['terminated_at'] = record.class.db_time_now.utc.iso8601(9)
+      record.payload_object = self # re-serialize the handler
       super
     end
 
@@ -67,6 +76,13 @@ module Delayed
     end
 
     private
+
+    def reset_execution_log!
+      job_data['executions'] = 0
+      job_data['exception_executions'] = {}
+      self.executions = job_data['executions'] if respond_to?(:executions=)
+      self.exception_executions = job_data['exception_executions'] if respond_to?(:exception_executions=)
+    end
 
     def job
       @job ||= ActiveJob::Base.deserialize(job_data) if job_data

@@ -212,6 +212,25 @@ ActiveJob also supports the following lifecycle hooks:
 **Read more about ActiveJob usage on the [Active Job
 Basics](https://guides.rubyonrails.org/active_job_basics.html) documentation page.**
 
+#### Retries: `retry_on` vs. `max_attempts`
+
+ActiveJob and `delayed` each provide their own retry mechanisms, which can be used
+together or independently:
+
+- **`retry_on`** is ActiveJob's retry policy. Matching errors are caught by the job
+  itself and re-enqueued as new jobs, without triggering any of `delayed`'s backstop
+  behaviors (such as incrementing `attempts` or marking the job as failed). This is
+  useful for handling transient/expected errors and can be monitored via the
+  `enqueue_retry.active_job` ActiveSupport::Notification event. (See [ActiveJob's
+  documentation](https://guides.rubyonrails.org/v6.1/active_support_instrumentation.html#active-job)
+  for more details.)
+- **`max_attempts`** (25 by default) is `delayed`'s backstop. Any error that escapes
+  the ActiveJob layer without explicit handling will be caught by `delayed`,
+  incrementing the job's `attempts` counter and triggering all other
+  `delayed`-specific behaviors (like exponential backoff, metrics/alerting, and
+  eventual failure). These errors should be treated as unexpected/unhandled, and may
+  indicate a code bug or data issue that needs to be resolved before the job can
+  succeed.
 
 ## Operational Considerations
 
@@ -270,6 +289,9 @@ corner cases more gracefully (perhaps by no-opping). When you're ready to re-run
 ```ruby
 Delayed::Job.find(failing_job_id).update!(failed_at: nil, attempts: 0, run_at: Time.zone.now)
 ```
+
+For ActiveJob-based jobs, resetting `attempts` to 0 will also restore the job's original
+`retry_on` budgets, allowing any exhausted retries to start over.
 
 ## Monitoring Jobs & Workers
 

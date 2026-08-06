@@ -567,7 +567,7 @@ RSpec.describe Delayed::ActiveJobAdapter do
     end
 
     context 'when attempts are exhausted' do
-      it 're-raises the error, leaving the job to be retried by the worker itself' do
+      it 're-raises the error, marking the ActiveJob as terminated and leaving the job to be retried by the worker itself' do
         job = MyRetryJob.new('RetryTestError')
         job.exception_executions = { '[RetryTestError]' => 4 } # retry_on defaults to 5 attempts
         job.enqueue
@@ -580,7 +580,55 @@ RSpec.describe Delayed::ActiveJobAdapter do
           expect(dj.id).to eq(original.id)
           expect(dj.attempts).to eq(1)
           expect(dj.last_error).to match(/RetryTestError/)
-          expect(dj.payload_object.job_data['exception_executions']).to eq('[RetryTestError]' => 4)
+          expect(dj.payload_object.job_data['terminated_at']).to be_present
+          expect(dj.payload_object.job_data['exception_executions']).to eq('[RetryTestError]' => 5)
+        end
+      end
+
+      context 'when the worker then exhausts its own attempts and permanently fails the job' do
+        before do
+          Delayed::Worker.max_attempts = 1
+        end
+
+        it 'resets execution attempts if (and only if) the row attempts is set back to 0' do
+          MyRetryJob.new('RetryTestError').tap do |job|
+            job.executions = 4
+            job.exception_executions = { '[RetryTestError]' => 4 }
+            job.enqueue
+          end
+
+          expect(Delayed::Worker.new.work_off).to eq([0, 1])
+
+          Delayed::Job.last.tap do |dj|
+            expect(dj.failed_at).to be_present
+            expect(dj.payload_object.job_data['terminated_at']).to be_present
+            expect(dj.payload_object.job_data['executions']).to eq(4)
+            expect(dj.payload_object.job_data['exception_executions']).to eq('[RetryTestError]' => 5)
+          end
+
+          # without setting attempts back to 0:
+          Delayed::Job.last.update!(failed_at: nil, locked_at: nil, locked_by: nil)
+
+          expect(Delayed::Worker.new.work_off).to eq([0, 1])
+
+          retried = Delayed::Job.last
+          expect(retried.failed_at).to be_present
+          expect(retried.attempts).to eq(2)
+          expect(retried.payload_object.job_data['terminated_at']).to be_present
+          expect(retried.payload_object.job_data['executions']).to eq(4)
+          expect(retried.payload_object.job_data['exception_executions']).to eq('[RetryTestError]' => 6)
+
+          # also setting attempts back to 0:
+          Delayed::Job.last.update!(failed_at: nil, attempts: 0, locked_at: nil, locked_by: nil)
+
+          expect(Delayed::Worker.new.work_off).to eq([1, 0])
+
+          retried = Delayed::Job.last
+          expect(retried.failed_at).to be_nil
+          expect(retried.attempts).to eq(0)
+          expect(retried.payload_object.job_data['terminated_at']).to be_nil
+          expect(retried.payload_object.job_data['executions']).to eq(1)
+          expect(retried.payload_object.job_data['exception_executions']).to eq('[RetryTestError]' => 1)
         end
       end
     end
