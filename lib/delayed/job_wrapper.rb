@@ -1,5 +1,17 @@
 module Delayed
   class JobWrapper # rubocop:disable Betterment/ActiveJobPerformable
+    module HookDeprecation
+      Delayed::Backend::Base::HOOKS.each do |hook|
+        define_method(hook) do |*args|
+          if respond_to_missing?(hook, false)
+            warn "[DEPRECATION] Job hook methods (`#{hook}`) are deprecated. Use ActiveJob callbacks instead."
+            super(*args)
+          end
+        end
+      end
+    end
+    include HookDeprecation
+
     attr_accessor :job_data
 
     delegate_missing_to :job
@@ -36,6 +48,12 @@ module Delayed
       rescue NameError
         false
       end
+    end
+
+    def before(record)
+      # ActiveJob retries must know the row's current priority (it may have changed since enqueue).
+      self.priority = record.priority.to_i if respond_to?(:priority=)
+      super
     end
 
     def perform

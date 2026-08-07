@@ -1,6 +1,8 @@
 module Delayed
   module Backend
     module Base
+      HOOKS = %i(before success error after failure).freeze
+
       def self.included(base)
         base.extend ClassMethods
       end
@@ -165,15 +167,9 @@ module Delayed
       end
 
       def hook(name, *args)
+        raise ArgumentError, "Unknown hook: #{name.inspect}" unless HOOKS.include?(name)
+
         if payload_object.respond_to?(name)
-          if name == :enqueue
-            raise ':enqueue hook is no longer supported'
-          end
-
-          if payload_object.is_a?(Delayed::JobWrapper)
-            warn '[DEPRECATION] Job hook methods (`before`, `after`, `success`, etc) are deprecated. Use ActiveJob callbacks instead.'
-          end
-
           method = payload_object.method(name)
           method.arity.zero? ? method.call : method.call(self, *args)
         end
