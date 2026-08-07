@@ -153,6 +153,12 @@ RSpec.describe Delayed::ActiveJobAdapter do
       expect(enqueued_delayed_jobs.last.priority).to eq(20)
     end
 
+    it 'ignores a nil priority, applying the default instead' do
+      JobClass.set(priority: nil).perform_later
+
+      expect(enqueued_delayed_jobs.last.priority).to eq(10)
+    end
+
     it 'raises an error when run_at is used' do
       expect { JobClass.set(run_at: arbitrary_time).perform_later }
         .to raise_error(/`:run_at` is not supported./)
@@ -214,6 +220,12 @@ RSpec.describe Delayed::ActiveJobAdapter do
         JobClass.set(priority: :eventual).perform_later
 
         expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => 20)
+      end
+
+      it 'ignores a nil priority, applying the default instead' do
+        JobClass.set(priority: nil).perform_later
+
+        expect(JobClass.queue_adapter.enqueued_jobs.first).to include(job: JobClass, 'priority' => nil)
       end
 
       it 'captures arbitrary provider attributes without interfering with enqueue' do
@@ -487,6 +499,32 @@ RSpec.describe Delayed::ActiveJobAdapter do
       stub_const('MyRetryJob', retry_job_class)
     end
 
+    context 'when retry_on does not specify a priority' do
+      it 're-enqueues a new delayed job with the same priority' do
+        MyRetryJob.perform_later('RetryTestError')
+        original = Delayed::Job.last
+
+        expect(Delayed::Worker.new.work_off).to eq([1, 0])
+
+        retried = Delayed::Job.last
+        expect(retried.id).not_to eq(original.id)
+        expect(retried.priority).to eq(567)
+
+        expect(retried.payload_object.job_data['priority']).to be_an(Integer)
+        expect(retried.payload_object.job_data['priority']).to eq(567)
+      end
+
+      it 'reuses a priority and queue set for the specific job run' do
+        MyRetryJob.set(priority: 789, queue: 'fake_queue').perform_later('RetryTestError')
+
+        expect(Delayed::Worker.new.work_off).to eq([1, 0])
+
+        retried = Delayed::Job.last
+        expect(retried.priority).to eq(789)
+        expect(retried.queue).to eq('fake_queue')
+      end
+    end
+
     context 'when retry_on specifies a priority' do
       it 're-enqueues with the specified priority' do
         MyRetryJob.perform_later('RetryTestErrorWithSpecificPriority')
@@ -558,6 +596,12 @@ RSpec.describe Delayed::ActiveJobAdapter do
         ActiveJob::Base.execute(MyRetryJob.new('RetryTestErrorWithSpecificPriority').serialize)
 
         expect(MyRetryJob.queue_adapter.enqueued_jobs.first).to include(job: MyRetryJob, 'priority' => 123)
+      end
+
+      it 're-enqueues with the original priority when retry_on does not specify one' do
+        ActiveJob::Base.execute(MyRetryJob.new('RetryTestError').serialize)
+
+        expect(MyRetryJob.queue_adapter.enqueued_jobs.first).to include(job: MyRetryJob, 'priority' => 567)
       end
     end
   end
