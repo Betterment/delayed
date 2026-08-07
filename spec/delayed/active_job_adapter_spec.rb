@@ -543,6 +543,20 @@ RSpec.describe Delayed::ActiveJobAdapter do
       expect(Delayed::Job.last.last_error).to start_with('RetryTestError')
     end
 
+    it 'preserves the original creation time on the re-enqueued job' do
+      Timecop.freeze(arbitrary_time) do
+        MyRetryJob.perform_later('RetryTestError')
+      end
+
+      Timecop.freeze(arbitrary_time + 2.hours) do
+        expect(Delayed::Worker.new.work_off).to eq([1, 0])
+      end
+
+      retried = Delayed::Job.last
+      expect(retried.created_at).to eq(arbitrary_time)
+      expect(retried.run_at).to be_within(1.second).of(arbitrary_time + 2.hours + 3.seconds)
+    end
+
     context 'when attempts are exhausted' do
       it 're-raises the error, leaving the job to be retried by the worker itself' do
         job = MyRetryJob.new('RetryTestError')

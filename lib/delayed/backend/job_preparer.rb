@@ -13,6 +13,7 @@ module Delayed
         set_queue_name
         set_priority
         set_run_at
+        set_created_at
         set_name
         handle_dst
         reject_stale_run_at
@@ -39,6 +40,10 @@ module Delayed
       def set_run_at
         options[:run_at] ||= options[:payload_object].scheduled_at if options[:payload_object].respond_to?(:scheduled_at)
         options[:run_at] ||= Job.db_time_now
+      end
+
+      def set_created_at
+        options[:created_at] ||= options[:payload_object].enqueued_at if options[:payload_object].respond_to?(:enqueued_at)
       end
 
       def set_name

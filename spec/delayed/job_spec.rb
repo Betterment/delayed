@@ -202,6 +202,14 @@ describe Delayed::Job do
     context 'when payload is an ActiveJob wrapper built from previously-serialized job data' do
       let(:arbitrary_time) { Time.parse('2021-01-05 03:34:33 UTC') }
 
+      it "preserves the wrapped job's enqueued_at as created_at" do
+        job_data = Timecop.freeze(arbitrary_time) { ActiveJobJob.new.serialize }
+
+        job = described_class.enqueue(Delayed::JobWrapper.new(job_data))
+
+        expect(job.reload.created_at).to eq(arbitrary_time)
+      end
+
       if ActiveJob.gem_version.release >= Gem::Version.new('7.1')
         it "preserves the wrapped job's scheduled_at as run_at" do
           active_job = ActiveJobJob.new
