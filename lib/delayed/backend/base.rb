@@ -79,7 +79,7 @@ module Delayed
           jobs.each { |job| job.created_at = job.updated_at = now }
           rows = jobs.map { |job| job.attributes.compact }
           result = insert_all(rows) # rubocop:disable Rails/SkipsModelValidations
-          return unless connection.supports_insert_returning?
+          return unless connection_pool.with_connection(&:supports_insert_returning?)
 
           ids = result.rows.map(&:first)
           jobs.zip(ids) { |job, id| job.id = id }
