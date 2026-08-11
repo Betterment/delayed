@@ -61,7 +61,17 @@ module Delayed
       # The error escaped retry_on (if any), so ActiveJob considers the job terminated.
       job_data['terminated_at'] = record.class.db_time_now.utc.iso8601(9)
       record.payload_object = self # re-serialize the handler
+
+      # If the error escaped ActiveJob's retry_on policy, we stop the Delayed::Job retries as well.
+      @_aj_retry_terminated = rescue_handlers.any? { |name, _| error.is_a?(name.constantize) }
+
       super
+    end
+
+    def max_attempts
+      return 1 if @_aj_retry_terminated
+
+      super if respond_to_missing?(:max_attempts)
     end
 
     def perform

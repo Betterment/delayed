@@ -232,6 +232,9 @@ together or independently:
   indicate a code bug or data issue that needs to be resolved before the job can
   succeed.
 
+Importantly, `retry_on` always takes precedence over `max_attempts`, and when a
+`retry_on` policy is exhausted, the job will be failed permanently (i.e. `failed_at`).
+
 ## Operational Considerations
 
 `Delayed` has been shaped around Betterment's day-to-day operational needs. In order to benefit from
