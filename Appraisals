@@ -43,6 +43,13 @@ appraise 'rails-8-0' do
   gem 'sqlite3', '>= 2.1'
 end
 
+appraise 'rails-8-1' do
+  gem 'actionmailer', '~> 8.1.0'
+  gem 'activejob', '~> 8.1.0'
+  gem 'activerecord', '~> 8.1.0'
+  gem 'sqlite3', '>= 2.1'
+end
+
 appraise 'rails-main' do
   gem 'actionmailer', github: 'rails/rails', glob: 'actionmailer/*.gemspec'
   gem 'activejob', github: 'rails/rails', glob: 'activejob/*.gemspec'
