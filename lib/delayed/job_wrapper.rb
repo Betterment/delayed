@@ -35,18 +35,12 @@ module Delayed
     # If job failed to deserialize, we can't respond to delegated methods.
     # Returning false here prevents instance method checks from blocking job cleanup.
     # Rails 8.1+ raises ActiveJob::UnknownJobClassError (rails/rails#53770).
-    if Gem::Version.new(ActiveJob.version) >= Gem::Version.new('8.1')
-      def respond_to?(*, **)
-        super
-      rescue ActiveJob::UnknownJobClassError
-        false
-      end
-    else
-      def respond_to?(*, **)
-        super
-      rescue NameError
-        false
-      end
+    def respond_to?(*, **)
+      super
+    rescue NameError => e
+      raise if defined?(ActiveJob::UnknownJobClassError) && !e.is_a?(ActiveJob::UnknownJobClassError)
+
+      false
     end
 
     def before(record)
