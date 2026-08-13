@@ -14,7 +14,7 @@ describe Delayed do
         raise 'expected ActiveJob to not be loaded' if defined?(ActiveJob)
 
         require 'active_job'
-        ActiveJob::Base # trigger autoload, firing the on_load(:active_job) hook
+        ActiveJob::Base # fire the on_load(:active_job) hook
 
         raise 'expected DelayedAdapter to be registered' unless defined?(ActiveJob::QueueAdapters::DelayedAdapter)
       RUBY

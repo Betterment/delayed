@@ -33,7 +33,6 @@ module Delayed
         end
       end
 
-      # Evaluated lazily so that requiring this file does not require active_record.
       def self.retry_exceptions
         @retry_exceptions ||= [
           ActiveRecord::LockWaitTimeout,
