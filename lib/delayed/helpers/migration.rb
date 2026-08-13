@@ -33,18 +33,21 @@ module Delayed
         end
       end
 
-      RETRY_EXCEPTIONS = [
-        ActiveRecord::LockWaitTimeout,
-        ActiveRecord::StatementTimeout,
-        (PG::LockNotAvailable if defined?(PG::LockNotAvailable)),
-      ].compact.freeze
+      # Evaluated lazily so that requiring this file does not require active_record.
+      def self.retry_exceptions
+        @retry_exceptions ||= [
+          ActiveRecord::LockWaitTimeout,
+          ActiveRecord::StatementTimeout,
+          (PG::LockNotAvailable if defined?(PG::LockNotAvailable)),
+        ].compact.freeze
+      end
 
       def with_retry_loop(wait_timeout: 5.minutes, **opts)
         with_timeouts(**opts) do
           loop do
             yield
             break
-          rescue *RETRY_EXCEPTIONS => e
+          rescue *Migration.retry_exceptions => e
             raise if Delayed::Job.db_time_now - @migration_start > wait_timeout
 
             Delayed.logger.warn("Index creation failed for #{opts[:name]}: #{e.message}. Retrying...")
