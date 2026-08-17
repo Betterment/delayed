@@ -450,10 +450,15 @@ Delayed::Monitor.tag_columns = %i(name owner)
 
 A few behavioral notes:
 
-- Each tag column is added to the monitor's `GROUP BY`, and the generated indexes (e.g.
-  `idx_delayed_jobs_live`) cover only `priority` and `queue`. Grouping by anything else can push
-  these queries off their index and into significantly more expensive scans, so evaluate any tag
-  column by checking the query plans against a production-sized jobs table.
+- Each tag column is added to the monitor's `GROUP BY`, and no generated index contains a tag
+  column: `idx_delayed_jobs_live` covers `(priority, run_at, locked_at, queue, attempts)` and
+  `idx_delayed_jobs_failed` covers `(priority, queue)`. Grouping by a column outside these indexes
+  costs the monitor its covering-index reads and adds a sort. On PostgreSQL, the index-only scans
+  behind `delayed.job.count` become plain index scans — a heap fetch per matching row. On MySQL,
+  the failed-jobs query drops from a covering index range scan to a full table scan. These are
+  queries the monitor re-runs every `sleep_delay` (60 seconds by default), and plan choices shift
+  with table size, so check the plans against a production-sized jobs table before enabling a tag
+  column.
 - Rows whose value was never populated for a tagged column are reported under the value `'unset'`
   (e.g. jobs enqueued before the `name` column existed, mid-upgrade).
 - Configured columns must exist on the jobs table: assigning a missing column to `tag_columns`
