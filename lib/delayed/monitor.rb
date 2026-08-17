@@ -18,7 +18,7 @@ module Delayed
     cattr_accessor :sleep_delay, instance_writer: false, default: 60
 
     def self.tag_columns
-      @tag_columns ||= (Job.column_names.include?('name') ? %i(name) : []).freeze
+      @tag_columns ||= [].freeze
     end
 
     def self.tag_columns=(columns)

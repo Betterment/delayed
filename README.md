@@ -417,10 +417,10 @@ QUEUES=mailers,tasks rake delayed:monitor
 ```
 
 The following events will be emitted, grouped by priority name (e.g. "interactive"), queue name,
-and the values of any configured `tag_columns`. By default, job `name` is included. The
-metric's "`:value`" will be available in the event's payload.  **This means that there will be one
-value _per_ unique combination of queue, priority, and tag column values**, and totals must be
-computed via downstream aggregation (e.g. as a StatsD "gauge" metric, summed or maxed by tag).
+and the values of any columns configured via `tag_columns` (none, by default). The metric's
+"`:value`" will be available in the event's payload.  **This means that there will be one value
+_per_ unique combination of queue, priority, and tag column values**, and totals must be computed
+via downstream aggregation (e.g. as a StatsD "gauge" metric, summed or maxed by tag).
 
 - **delayed.job.count** - the total number of jobs
 - **delayed.job.future_count** - jobs where run_at is in the future
@@ -436,15 +436,13 @@ An additional _experimental_ metric is available, intended for use with applicat
 
 - **delayed.job.alert_age_percent** - the _percent_ to which the oldest job has reached the "age alert" threshold. (See the [Alerting Threshholds](#priority-based-alerting-threshholds) section above.)
 
-By default, these events are also tagged with the job's `name` (when the jobs table has a `name`
-column — see [Database Setup](#database-setup)) so that downstream aggregation can answer
-"_which_ job is stuck?" when `delayed.job.max_age` alerts (e.g. `max by {queue, priority, name}`
-in Datadog).
+#### Tagging metrics with additional columns
 
-The set of tagged columns is driven by `Delayed::Monitor.tag_columns`, which defaults to
-`%i(name)` when the jobs table has a `name` column (and to `[]` otherwise). You can include
-columns your application adds to the jobs table (populated at enqueue time). For example, if your
-jobs table has an `owner` column you wish to also monitor:
+These events can also be tagged with the values of other jobs-table columns, so that downstream
+aggregation can answer "_which_ job is stuck?" when `delayed.job.max_age` alerts (e.g.
+`max by {queue, priority, name}` in Datadog). This is opt-in via `Delayed::Monitor.tag_columns`,
+which defaults to `[]`. To tag by the job's `name` (see [Database Setup](#database-setup)) plus an
+`owner` column your application has added to the jobs table and populates at enqueue time:
 
 ```ruby
 Delayed::Monitor.tag_columns = %i(name owner)
@@ -452,6 +450,10 @@ Delayed::Monitor.tag_columns = %i(name owner)
 
 A few behavioral notes:
 
+- Each tag column is added to the monitor's `GROUP BY`, and the generated indexes (e.g.
+  `idx_delayed_jobs_live`) cover only `priority` and `queue`. Grouping by anything else can push
+  these queries off their index and into significantly more expensive scans, so evaluate any tag
+  column by checking the query plans against a production-sized jobs table.
 - Rows whose value was never populated for a tagged column are reported under the value `'unset'`
   (e.g. jobs enqueued before the `name` column existed, mid-upgrade).
 - Configured columns must exist on the jobs table: assigning a missing column to `tag_columns`
@@ -461,8 +463,8 @@ A few behavioral notes:
 - Tag values cannot be enumerated in advance, so a tagged series is only emitted while matching
   jobs are present. Separately, an untagged zero value is always emitted for every
   (priority, queue) combination, so that each metric maintains a baseline series even when no
-  matching jobs are enqueued. For example, `delayed.job.count` with a single enqueued job would
-  emit the following series:
+  matching jobs are enqueued. For example, with `tag_columns = %i(name)` and a single enqueued
+  job, `delayed.job.count` would emit the following series:
 
   ```ruby
   { priority: 'interactive', queue: 'default', name: 'SimpleJob', value: 1 }
@@ -473,13 +475,12 @@ A few behavioral notes:
   ```
 - Each column multiplies a metric's series cardinality by its number of distinct values (though in
   practice a job's `name` tends to determine its `priority` and any ownership tags, making the
-  number of distinct job names the effective upper bound). If cardinality is a concern for your
-  metrics provider, tagging can be disabled entirely with `Delayed::Monitor.tag_columns = []`.
+  number of distinct job names the effective upper bound).
 
-#### Rolling out a new tag column
+#### Rolling out a tag column
 
-Because assignment fails loudly on a missing column, a new tag column should be rolled out in
-three separate deploys, each fully released before the next begins:
+Because assignment fails loudly on a missing column, a tag column should be rolled out in three
+separate deploys, each fully released before the next begins:
 
 1. Migrate the column onto the jobs table (nullable — no backfill required).
 2. Deploy the code that populates the column at enqueue time.
@@ -488,11 +489,6 @@ three separate deploys, each fully released before the next begins:
 Adding the column to `tag_columns` before the migration has run everywhere would raise at boot in
 every process that loads the initializer. Jobs enqueued before step 2 will report under the
 `'unset'` tag value until they are worked off (or backfilled).
-
-The default `name` tag needs no such rollout: it applies only when the jobs table already has a
-`name` column, so a monitor running against an older schema simply emits untagged metrics until
-the generated migrations (see [Database Setup](#database-setup)) have run and the monitor process
-has restarted (the default is resolved once per process).
 
 All of these events may be subscribed to via a single regular expression (again, in your
 application config or in an initializer):
