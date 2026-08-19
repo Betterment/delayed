@@ -417,7 +417,7 @@ QUEUES=mailers,tasks rake delayed:monitor
 ```
 
 The following events will be emitted, grouped by priority name (e.g. "interactive"), queue name,
-and the values of any columns configured via `tag_columns` (none, by default). The metric's
+and the values of any columns configured via [tag_columns](#tagging-metrics-with-additional-columns) (none, by default). The metric's
 "`:value`" will be available in the event's payload.  **This means that there will be one value
 _per_ unique combination of queue, priority, and tag column values**, and totals must be computed
 via downstream aggregation (e.g. as a StatsD "gauge" metric, summed or maxed by tag).
@@ -434,66 +434,8 @@ via downstream aggregation (e.g. as a StatsD "gauge" metric, summed or maxed by 
 
 An additional _experimental_ metric is available, intended for use with application autoscaling:
 
-- **delayed.job.alert_age_percent** - the _percent_ to which the oldest job has reached the "age alert" threshold. (See the [Alerting Threshholds](#priority-based-alerting-threshholds) section above.)
-
-#### Tagging metrics with additional columns
-
-These events can also be tagged with the values of other jobs-table columns, so that downstream
-aggregation can answer "_which_ job is stuck?" when `delayed.job.max_age` alerts (e.g.
-`max by {queue, priority, name}` in Datadog). This is opt-in via `Delayed::Monitor.tag_columns`,
-which defaults to `[]`. To tag by the job's `name` (see [Database Setup](#database-setup)) plus an
-`owner` column your application has added to the jobs table and populates at enqueue time:
-
-```ruby
-Delayed::Monitor.tag_columns = %i(name owner)
-```
-
-A few behavioral notes:
-
-- Each tag column is added to the monitor's `GROUP BY`, and no generated index contains a tag
-  column: `idx_delayed_jobs_live` covers `(priority, run_at, locked_at, queue, attempts)` and
-  `idx_delayed_jobs_failed` covers `(priority, queue)`. Grouping by a column outside these indexes
-  costs the monitor its covering-index reads and adds a sort. On PostgreSQL, the index-only scans
-  behind `delayed.job.count` become plain index scans — a heap fetch per matching row. On MySQL,
-  the failed-jobs query drops from a covering index range scan to a full table scan. These are
-  queries the monitor re-runs every `sleep_delay` (60 seconds by default), and plan choices shift
-  with table size, so check the plans against a production-sized jobs table before enabling a tag
-  column.
-- Rows whose value was never populated for a tagged column are reported under the value `'unset'`
-  (e.g. jobs enqueued before the `name` column existed, mid-upgrade).
-- Configured columns must exist on the jobs table: assigning a missing column to `tag_columns`
-  raises an `ArgumentError` immediately, rather than the column being silently skipped. Because
-  the assignment validates against the schema, setting `tag_columns` in an initializer requires a
-  database connection at boot, in every process that loads it. See the rollout steps below.
-- Tag values cannot be enumerated in advance, so a tagged series is only emitted while matching
-  jobs are present. Separately, an untagged zero value is always emitted for every
-  (priority, queue) combination, so that each metric maintains a baseline series even when no
-  matching jobs are enqueued. For example, with `tag_columns = %i(name)` and a single enqueued
-  job, `delayed.job.count` would emit the following series:
-
-  ```ruby
-  { priority: 'interactive', queue: 'default', name: 'SimpleJob', value: 1 }
-  { priority: 'interactive', queue: 'default', value: 0 }
-  { priority: 'user_visible', queue: 'default', value: 0 }
-  { priority: 'eventual', queue: 'default', value: 0 }
-  { priority: 'reporting', queue: 'default', value: 0 }
-  ```
-- Each column multiplies a metric's series cardinality by its number of distinct values (though in
-  practice a job's `name` tends to determine its `priority` and any ownership tags, making the
-  number of distinct job names the effective upper bound).
-
-#### Rolling out a tag column
-
-Because assignment fails loudly on a missing column, a tag column should be rolled out in three
-separate deploys, each fully released before the next begins:
-
-1. Migrate the column onto the jobs table (nullable — no backfill required).
-2. Deploy the code that populates the column at enqueue time.
-3. Add the column to `Delayed::Monitor.tag_columns` in an initializer, and deploy.
-
-Adding the column to `tag_columns` before the migration has run everywhere would raise at boot in
-every process that loads the initializer. Jobs enqueued before step 2 will report under the
-`'unset'` tag value until they are worked off (or backfilled).
+- **delayed.job.alert_age_percent** - the _percent_ to which the oldest job has reached the "age alert"
+  threshold. (See the [Alerting Threshholds](#priority-based-alerting-threshholds) section above.)
 
 All of these events may be subscribed to via a single regular expression (again, in your
 application config or in an initializer):
@@ -518,6 +460,40 @@ ActiveSupport::Notifications.subscribe('delayed.monitor.run') do |*args|
   StatsD.distribution(...)
 end
 ```
+
+#### Tagging metrics with additional columns
+
+By default, the monitor only groups events by `priority` and `queue`. To add additional columns
+to the query's `GROUP BY` clause, declare them in an initializer config:
+
+```ruby
+Delayed::Monitor.tag_columns = %i(name owner)
+```
+
+Tagged series are only emitted while matching jobs exist, and an untagged zero is always emitted
+per (priority, queue) as a baseline. With `Delayed::Monitor.tag_columns = %i(name)` and one
+enqueued job, `delayed.job.count` emits:
+
+```ruby
+{ priority: 'interactive', queue: 'default', name: 'SimpleJob', value: 1 }
+{ priority: 'interactive', queue: 'default', value: 0 }
+{ priority: 'user_visible', queue: 'default', value: 0 }
+{ priority: 'eventual', queue: 'default', value: 0 }
+{ priority: 'reporting', queue: 'default', value: 0 }
+```
+
+Tag columns must already exist on the jobs table — the monitor validates this at startup and
+raises an `ArgumentError` if any are missing, so migrate a new column before adding it here.
+
+`NULL` values are emitted as `nil` tags. Your notification subscriber can decide how to represent
+these. Expect `nil`s for jobs enqueued before a newly added column was populated.
+
+**Avoid** choosing high-cardinality columns like `id` as this will result in very poor query
+performance (and may essentially turn every row into its own metric result!). Prefer low-cardinality
+columns like `name` (the name of the job class) that are worth the query performance trade-off.
+
+**You are strongly encouraged to add new indexes** incorporating those columns. When adding `tag_columns`,
+`idx_delayed_jobs_live` and `idx_delayed_jobs_failed` will no longer fully cover the monitor's queries.
 
 ## Configuration
 
