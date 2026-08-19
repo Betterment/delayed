@@ -116,28 +116,28 @@ module Delayed
     end
 
     # This method generates a query that scans the specified scope, groups by
-    # priority and queue (plus any extra_group_columns), and calculates the
+    # priority and queue (plus any tag_columns), and calculates the
     # specified aggregates. An outer query is executed for priority bucketing
     # and appending db_now_utc (to avoid running these computations for each
     # tuple in the inner query).
-    def grouped_query(scope, include_db_time: false, extra_group_columns: [], **kwargs)
+    def grouped_query(scope, include_db_time: false, **kwargs)
       inner_selects = kwargs.map { |key, (agg, expr)| as_expression(agg, expr, key) }
       outer_selects = kwargs.map { |key, (agg, _)| as_expression(agg == :count ? :sum : agg, key, key) }
       outer_selects << "#{self.class.sql_now_in_utc} AS db_now_utc" if include_db_time
 
       Delayed::Job
-        .from(scope.select(:priority, :queue, *extra_group_columns, *inner_selects).group(:priority, :queue, *extra_group_columns))
-        .group(priority_case_statement, :queue, *extra_group_columns).select(
+        .from(scope.select(:priority, :queue, *tag_columns, *inner_selects).group(:priority, :queue, *tag_columns))
+        .group(priority_case_statement, :queue, *tag_columns).select(
           *outer_selects,
           "#{priority_case_statement} AS priority",
           'queue AS queue',
-          *extra_group_columns.map { |column| "#{column} AS #{column}" },
-        ).group_by { |j| result_key(j, extra_group_columns) }
+          *tag_columns,
+        ).group_by { |j| result_key(j) }
         .transform_values(&:first)
     end
 
-    def result_key(record, extra_group_columns)
-      [record.priority.to_i, record.queue, *extra_group_columns.map { |column| record[column] }]
+    def result_key(record)
+      [record.priority.to_i, record.queue, *tag_columns.map { |column| record[column] }]
     end
 
     def as_expression(aggregate_function, aggregate_expression, column_name)
@@ -201,7 +201,6 @@ module Delayed
     def live_counts
       @memo[:live_counts] ||= grouped_query(
         jobs.live,
-        extra_group_columns: tag_columns,
         count: [:count, '*'],
         future_count: [:sum, case_when(Job.future_clause.to_sql)],
         erroring_count: [:sum, case_when(Job.erroring_clause.to_sql)],
@@ -212,7 +211,6 @@ module Delayed
       @memo[:pending_counts] ||= grouped_query(
         jobs.pending,
         include_db_time: true,
-        extra_group_columns: tag_columns,
         claimed_count: [:sum, case_when(Job.claimed_clause.to_sql)],
         claimable_count: [:sum, case_when(Job.claimable_clause.to_sql)],
         locked_at: [:min, case_when(Job.claimed_clause.to_sql, 'locked_at')],
@@ -222,7 +220,7 @@ module Delayed
 
     def failed_counts
       @memo[:failed_counts] ||=
-        grouped_query(jobs.failed, extra_group_columns: tag_columns, count: [:count, '*'])
+        grouped_query(jobs.failed, count: [:count, '*'])
     end
 
     def db_now(record)
