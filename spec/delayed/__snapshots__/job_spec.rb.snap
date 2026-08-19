@@ -53,8 +53,8 @@ SNAP
 snapshots["generates a postgresql query plan for multiple queues 1"] = <<-SNAP
 Index Scan using idx_delayed_jobs_live on public.delayed_jobs  (cost=...)
   Output: id, priority, attempts, handler, last_error, run_at, locked_at, failed_at, locked_by, queue, created_at, updated_at, name
-  Index Cond: (delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone)
-  Filter: (((delayed_jobs.queue)::text = ANY ('{default,mailers,tracking}'::text[])) AND ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone) OR (((delayed_jobs.locked_by)::text = 'worker1'::text) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone))))
+  Index Cond: ((delayed_jobs.run_at <= '2025-11-10 17:20:13'::timestamp without time zone) AND ((delayed_jobs.queue)::text = ANY ('{default,mailers,tracking}'::text[])))
+  Filter: ((delayed_jobs.locked_at IS NULL) OR (delayed_jobs.locked_at < '2025-11-10 16:59:43'::timestamp without time zone) OR (((delayed_jobs.locked_by)::text = 'worker1'::text) AND (delayed_jobs.locked_at >= '2025-11-10 16:59:43'::timestamp without time zone)))
 SNAP
 
 snapshots["[legacy index] generates the expected postgresql query plan 1"] = <<-SNAP
