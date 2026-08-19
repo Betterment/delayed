@@ -246,9 +246,9 @@ RSpec.describe Delayed::Monitor do
 
           let!(:unnamed_job) { Delayed::Job.create! p0_attributes.merge(name: nil, run_at: now - 10.minutes) }
 
-          it "emits metrics under the name 'unset'" do
+          it 'emits metrics with a nil name' do
             expect { subject.run! }
-              .to emit_notification("delayed.job.max_age").with_payload(named_payload.merge(name: 'unset')).approximately.with_value(10.minutes)
+              .to emit_notification("delayed.job.max_age").with_payload(named_payload.merge(name: nil)).approximately.with_value(10.minutes)
           end
         end
       end
@@ -269,12 +269,12 @@ RSpec.describe Delayed::Monitor do
         let!(:team_a_job) { Delayed::Job.create! p0_attributes.merge(owner: 'team_a', run_at: now - 10.minutes) }
         let!(:team_b_job) { Delayed::Job.create! p0_attributes.merge(owner: 'team_b', run_at: now - 20.minutes) }
 
-        it "tags each series with the column's value, reporting NULLs as 'unset'" do
+        it "tags each series with the column's value, passing NULLs through as nil" do
           expect { subject.run! }
             .to emit_notification("delayed.job.max_age").with_payload(named_payload.merge(owner: 'team_a')).approximately.with_value(10.minutes)
             .and emit_notification("delayed.job.max_age").with_payload(named_payload.merge(owner: 'team_b')).approximately.with_value(20.minutes)
-            .and emit_notification("delayed.job.max_age").with_payload(named_payload.merge(owner: 'unset')).approximately.with_value(30.seconds)
-            .and emit_notification("delayed.job.failed_count").with_payload(named_payload.merge(owner: 'unset')).with_value(1)
+            .and emit_notification("delayed.job.max_age").with_payload(named_payload.merge(owner: nil)).approximately.with_value(30.seconds)
+            .and emit_notification("delayed.job.failed_count").with_payload(named_payload.merge(owner: nil)).with_value(1)
         end
       end
 

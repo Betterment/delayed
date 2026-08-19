@@ -86,7 +86,7 @@ module Delayed
       query_for(metric)
         .merge!(default_results) { |_key, existing, _default| existing }
         .each do |(priority, queue, *column_values), value|
-        tags = column_values.zip(self.class.tag_columns).to_h { |val, column| [column, val.nil? ? 'unset' : val] }
+        tags = column_values.zip(self.class.tag_columns).to_h { |val, column| [column, val] }
         ActiveSupport::Notifications.instrument(
           "delayed.job.#{metric}",
           default_tags.merge(priority: Priority.new(priority).to_s, queue: queue, **tags, value: value),
