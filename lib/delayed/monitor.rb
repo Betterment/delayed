@@ -27,6 +27,7 @@ module Delayed
 
     def initialize
       validate_tag_columns!
+      @tag_columns = self.class.tag_columns
       @jobs = Job.group(:priority, :queue)
       @jobs = @jobs.where(queue: Worker.queues) if Worker.queues.any?
       @memo = {}
@@ -73,7 +74,7 @@ module Delayed
 
     private
 
-    attr_reader :jobs
+    attr_reader :jobs, :tag_columns
 
     def validate_tag_columns!
       if self.class.tag_columns.any? { |column| Job.column_names.exclude?(column.to_s) }
@@ -86,7 +87,7 @@ module Delayed
       query_for(metric)
         .merge!(default_results) { |_key, existing, _default| existing }
         .each do |(priority, queue, *column_values), value|
-        tags = column_values.zip(self.class.tag_columns).to_h { |val, column| [column, val] }
+        tags = column_values.zip(tag_columns).to_h { |val, column| [column, val] }
         ActiveSupport::Notifications.instrument(
           "delayed.job.#{metric}",
           default_tags.merge(priority: Priority.new(priority).to_s, queue: queue, **tags, value: value),
@@ -200,7 +201,7 @@ module Delayed
     def live_counts
       @memo[:live_counts] ||= grouped_query(
         jobs.live,
-        extra_group_columns: self.class.tag_columns,
+        extra_group_columns: tag_columns,
         count: [:count, '*'],
         future_count: [:sum, case_when(Job.future_clause.to_sql)],
         erroring_count: [:sum, case_when(Job.erroring_clause.to_sql)],
@@ -211,7 +212,7 @@ module Delayed
       @memo[:pending_counts] ||= grouped_query(
         jobs.pending,
         include_db_time: true,
-        extra_group_columns: self.class.tag_columns,
+        extra_group_columns: tag_columns,
         claimed_count: [:sum, case_when(Job.claimed_clause.to_sql)],
         claimable_count: [:sum, case_when(Job.claimable_clause.to_sql)],
         locked_at: [:min, case_when(Job.claimed_clause.to_sql, 'locked_at')],
@@ -221,7 +222,7 @@ module Delayed
 
     def failed_counts
       @memo[:failed_counts] ||=
-        grouped_query(jobs.failed, extra_group_columns: self.class.tag_columns, count: [:count, '*'])
+        grouped_query(jobs.failed, extra_group_columns: tag_columns, count: [:count, '*'])
     end
 
     def db_now(record)
