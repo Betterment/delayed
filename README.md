@@ -416,14 +416,16 @@ QUEUE=tracking rake delayed:monitor
 QUEUES=mailers,tasks rake delayed:monitor
 ```
 
-The following events will be emitted, grouped by priority name (e.g. "interactive") and queue name,
-and the metric's "`:value`" will be available in the event's payload.  **This means that there will
-be one value _per_ unique combination of queue & priority**, and totals must be computed via
-downstream aggregation (e.g. as a StatsD "gauge" metric).
+The following events will be emitted, grouped by priority name (e.g. "interactive"), queue name,
+and the values of any columns configured via [tag_columns](#tagging-metrics-with-additional-columns) (none, by default). The metric's
+"`:value`" will be available in the event's payload.  **This means that there will be one value
+_per_ unique combination of queue, priority, and tag column values**, and totals must be computed
+via downstream aggregation (e.g. as a StatsD "gauge" metric, summed or maxed by tag).
 
 - **delayed.job.count** - the total number of jobs
 - **delayed.job.future_count** - jobs where run_at is in the future
 - **delayed.job.working_count** - jobs that are currently being worked off (excludes failed jobs)
+- **delayed.job.locked_count** - jobs that are currently locked by a worker (equivalent to working_count)
 - **delayed.job.workable_count** - jobs that are waiting to be worked off
 - **delayed.job.erroring_count** - jobs where attempts > 0
 - **delayed.job.failed_count** - jobs where failed_at is not nil
@@ -432,7 +434,8 @@ downstream aggregation (e.g. as a StatsD "gauge" metric).
 
 An additional _experimental_ metric is available, intended for use with application autoscaling:
 
-- **delayed.job.alert_age_percent** - the _percent_ to which the oldest job has reached the "age alert" threshold. (See the [Alerting Threshholds](#priority-based-alerting-threshholds) section above.)
+- **delayed.job.alert_age_percent** - the _percent_ to which the oldest job has reached the "age alert"
+threshold. (See the [Alerting Threshholds](#priority-based-alerting-threshholds) section above.)
 
 All of these events may be subscribed to via a single regular expression (again, in your application
 config or in an initializer):
@@ -448,7 +451,7 @@ ActiveSupport::Notifications.subscribe(/delayed\.job\..*_(count|age|percent)/) d
 end
 ```
 
-Additionally, the monitor process with emit a **delayed.monitor.run** event with a duration
+Additionally, the monitor process will emit a **delayed.monitor.run** event with a duration
 attached, so that you can monitor the time it takes to emit these aggregate metrics.
 
 ```ruby
@@ -457,6 +460,40 @@ ActiveSupport::Notifications.subscribe('delayed.monitor.run') do |*args|
   StatsD.distribution(...)
 end
 ```
+
+#### Tagging metrics with additional columns
+
+By default, the monitor only groups events by `priority` and `queue`. To add additional columns
+to the query's `GROUP BY` clause, declare them in an initializer config:
+
+```ruby
+Delayed::Monitor.tag_columns = %i(name owner)
+```
+
+Tagged series are only emitted while matching jobs exist, and an untagged zero is always emitted
+per (priority, queue) as a baseline. With `Delayed::Monitor.tag_columns = %i(name)` and one
+enqueued job, `delayed.job.count` emits:
+
+```ruby
+{ priority: 'interactive', queue: 'default', name: 'SimpleJob', value: 1 }
+{ priority: 'interactive', queue: 'default', value: 0 }
+{ priority: 'user_visible', queue: 'default', value: 0 }
+{ priority: 'eventual', queue: 'default', value: 0 }
+{ priority: 'reporting', queue: 'default', value: 0 }
+```
+
+Tag columns must already exist on the jobs table — the monitor validates this at startup and
+raises an `ArgumentError` if any are missing, so migrate a new column before adding it here.
+
+`NULL` values are emitted as `nil` tags. Your notification subscriber can decide how to represent
+these. Expect `nil`s for jobs enqueued before a newly added column was populated.
+
+**Avoid** choosing high-cardinality columns like `id` as this will result in very poor query
+performance (and may essentially turn every row into its own metric result!). Prefer low-cardinality
+columns like `name` (the name of the job class) that are worth the query performance trade-off.
+
+**You are strongly encouraged to add new indexes** incorporating those columns. When adding `tag_columns`,
+`idx_delayed_jobs_live` and `idx_delayed_jobs_failed` will no longer fully cover the monitor's queries.
 
 ## Configuration
 

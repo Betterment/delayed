@@ -14,6 +14,12 @@ RSpec.describe Delayed::Monitor do
     }
   end
 
+  describe '.tag_columns' do
+    it 'defaults to no tag columns' do
+      expect(described_class.tag_columns).to eq []
+    end
+  end
+
   describe '#run!' do
     let(:app_local_db_time) { false }
 
@@ -199,6 +205,91 @@ RSpec.describe Delayed::Monitor do
           .and emit_notification("delayed.job.alert_age_percent").with_payload(p30_payload).approximately.with_value(100) # 6 hours / 4 hours (overflow)
           .and emit_notification("delayed.job.workable_count").with_payload(p30_payload.merge(queue: 'banana')).with_value(1)
           .and emit_notification("delayed.job.max_age").with_payload(p30_payload.merge(queue: 'banana')).approximately.with_value(4.hours)
+      end
+
+      context 'when tag_columns is set to name' do
+        around do |example|
+          described_class.tag_columns = %i(name)
+          example.run
+        ensure
+          described_class.tag_columns = []
+        end
+
+        let(:named_payload) { p0_payload.merge(name: 'SimpleJob') }
+
+        it 'tags each series with the job name' do
+          expect { subject.run! }
+            .to emit_notification("delayed.job.max_age").with_payload(named_payload).approximately.with_value(30.seconds)
+            .and emit_notification("delayed.job.failed_count").with_payload(named_payload).with_value(1)
+        end
+
+        context 'when multiple job names share a priority and queue' do
+          let!(:other_named_job) { Delayed::Job.create! p0_attributes.merge(name: 'OtherJob', run_at: now - 10.minutes) }
+
+          it 'emits a separate series per name' do
+            expect { subject.run! }
+              .to emit_notification("delayed.job.max_age").with_payload(named_payload).approximately.with_value(30.seconds)
+              .and emit_notification("delayed.job.max_age").with_payload(named_payload.merge(name: 'OtherJob')).approximately.with_value(10.minutes)
+          end
+        end
+
+        context 'when a job predates the name column' do
+          around do |example|
+            ValidateRunAtAndNameNotNull.migrate(:down)
+            AddRunAtAndNameNotNullCheck.migrate(:down)
+            example.run
+          ensure
+            Delayed::Job.delete_all
+            AddRunAtAndNameNotNullCheck.migrate(:up)
+            ValidateRunAtAndNameNotNull.migrate(:up)
+          end
+
+          let!(:unnamed_job) { Delayed::Job.create! p0_attributes.merge(name: nil, run_at: now - 10.minutes) }
+
+          it 'emits metrics with a nil name' do
+            expect { subject.run! }
+              .to emit_notification("delayed.job.max_age").with_payload(named_payload.merge(name: nil)).approximately.with_value(10.minutes)
+          end
+        end
+      end
+
+      context 'when tag_columns includes a custom column' do
+        around do |example|
+          Delayed::Job.connection.add_column :delayed_jobs, :owner, :string
+          Delayed::Job.reset_column_information
+          described_class.tag_columns = %i(name owner)
+          example.run
+        ensure
+          described_class.tag_columns = []
+          Delayed::Job.connection.remove_column :delayed_jobs, :owner
+          Delayed::Job.reset_column_information
+        end
+
+        let(:named_payload) { p0_payload.merge(name: 'SimpleJob') }
+        let!(:team_a_job) { Delayed::Job.create! p0_attributes.merge(owner: 'team_a', run_at: now - 10.minutes) }
+        let!(:team_b_job) { Delayed::Job.create! p0_attributes.merge(owner: 'team_b', run_at: now - 20.minutes) }
+
+        it "tags each series with the column's value, passing NULLs through as nil" do
+          expect { subject.run! }
+            .to emit_notification("delayed.job.max_age").with_payload(named_payload.merge(owner: 'team_a')).approximately.with_value(10.minutes)
+            .and emit_notification("delayed.job.max_age").with_payload(named_payload.merge(owner: 'team_b')).approximately.with_value(20.minutes)
+            .and emit_notification("delayed.job.max_age").with_payload(named_payload.merge(owner: nil)).approximately.with_value(30.seconds)
+            .and emit_notification("delayed.job.failed_count").with_payload(named_payload.merge(owner: nil)).with_value(1)
+        end
+      end
+
+      context 'when tag_columns names a column that does not exist' do
+        around do |example|
+          described_class.tag_columns = %i(name missing_column)
+          example.run
+        ensure
+          described_class.tag_columns = []
+        end
+
+        it 'raises loudly at monitor startup rather than skipping the column' do
+          expect { described_class.new }
+            .to raise_error(ArgumentError, /tag_columns includes columns missing from delayed_jobs\. Available columns: .*\bname\b/)
+        end
       end
 
       context 'when named priorities are customized' do
