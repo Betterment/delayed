@@ -279,8 +279,15 @@ RSpec.describe Delayed::Monitor do
       end
 
       context 'when tag_columns names a column that does not exist' do
-        it 'raises loudly rather than skipping the column' do
-          expect { described_class.tag_columns = %i(name owner) }
+        around do |example|
+          described_class.tag_columns = %i(name missing_column)
+          example.run
+        ensure
+          described_class.tag_columns = []
+        end
+
+        it 'raises loudly at monitor startup rather than skipping the column' do
+          expect { described_class.new }
             .to raise_error(ArgumentError, /tag_columns includes columns missing from delayed_jobs\. Available columns: .*\bname\b/)
         end
       end

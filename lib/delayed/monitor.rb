@@ -22,15 +22,11 @@ module Delayed
     end
 
     def self.tag_columns=(columns)
-      if columns.any? { |column| Job.column_names.exclude?(column.to_s) }
-        raise ArgumentError, "Delayed::Monitor.tag_columns includes columns missing from #{Job.table_name}. " \
-                             "Available columns: #{Job.column_names.join(', ')}"
-      end
-
       @tag_columns = columns.map(&:to_sym).freeze
     end
 
     def initialize
+      validate_tag_columns!
       @jobs = Job.group(:priority, :queue)
       @jobs = @jobs.where(queue: Worker.queues) if Worker.queues.any?
       @memo = {}
@@ -78,6 +74,13 @@ module Delayed
     private
 
     attr_reader :jobs
+
+    def validate_tag_columns!
+      if self.class.tag_columns.any? { |column| Job.column_names.exclude?(column.to_s) }
+        raise ArgumentError, "Delayed::Monitor.tag_columns includes columns missing from #{Job.table_name}. " \
+                             "Available columns: #{Job.column_names.join(', ')}"
+      end
+    end
 
     def emit_metric!(metric)
       query_for(metric)
