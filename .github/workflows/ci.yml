@@ -38,7 +38,7 @@ jobs:
             gemfile: gemfiles/rails_6_1.gemfile
     services:
       postgres:
-        image: postgres:15
+        image: postgres:18
         env:
           POSTGRES_USER: runner
           POSTGRES_PASSWORD: postgres
