@@ -435,10 +435,10 @@ via downstream aggregation (e.g. as a StatsD "gauge" metric, summed or maxed by 
 An additional _experimental_ metric is available, intended for use with application autoscaling:
 
 - **delayed.job.alert_age_percent** - the _percent_ to which the oldest job has reached the "age alert"
-  threshold. (See the [Alerting Threshholds](#priority-based-alerting-threshholds) section above.)
+threshold. (See the [Alerting Threshholds](#priority-based-alerting-threshholds) section above.)
 
-All of these events may be subscribed to via a single regular expression (again, in your
-application config or in an initializer):
+All of these events may be subscribed to via a single regular expression (again, in your application
+config or in an initializer):
 
 ```ruby
 ActiveSupport::Notifications.subscribe(/delayed\.job\..*_(count|age|percent)/) do |*args|
