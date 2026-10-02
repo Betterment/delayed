@@ -3,6 +3,8 @@
 require 'helper'
 
 RSpec::Matchers.define_negated_matcher :not_change, :change
+RSpec::Matchers.define_negated_matcher :not_yield_control, :yield_control
+RSpec::Matchers.define_negated_matcher :not_emit_notification, :emit_notification
 
 RSpec.describe Delayed::Limit do
   before do
@@ -125,6 +127,105 @@ RSpec.describe Delayed::Limit do
               .and not_change { described_class.first.drained_at }
           end
         end
+      end
+    end
+
+    context 'when called inside a database transaction' do
+      it 'raises TransactionOpenError without reserving capacity or yielding' do
+        expect { |b| described_class.transaction { described_class.within_limit(purpose, **limit, &b) } }
+          .to raise_error(described_class::TransactionOpenError, /inside a database transaction/)
+          .and not_change { described_class.count }
+          .and not_yield_control
+      end
+
+      it 'raises before the transaction is materialized (no SQL is sent)' do
+        expect { described_class.transaction { described_class.within_limit(purpose, **limit) { nil } } }
+          .to raise_error(described_class::TransactionOpenError)
+          .and not_emit_notification('sql.active_record')
+      end
+    end
+
+    context 'when the only open transaction is non-joinable' do
+      it 'does not raise, and reserves capacity as usual' do
+        expect { |b| described_class.transaction(joinable: false) { described_class.within_limit(purpose, **limit, &b) } }
+          .to yield_control.once
+
+        expect(described_class.count).to eq(1)
+      end
+
+      it 'still raises when application code opens a nested transaction' do
+        expect { |b| described_class.transaction(joinable: false) { described_class.transaction { described_class.within_limit(purpose, **limit, &b) } } }
+          .to raise_error(described_class::TransactionOpenError)
+          .and not_yield_control
+      end
+    end
+
+    context "under Rails' transactional test harness" do
+      # Opens the per-example transaction the same way ActiveRecord::TestFixtures does
+      # (via the connection pool on Rails 7.2+, and directly on the connection before that).
+      around do |example|
+        pool = described_class.connection_pool
+        if pool.respond_to?(:pin_connection!)
+          pool.pin_connection!(true)
+          begin
+            example.run
+          ensure
+            pool.unpin_connection!
+          end
+        else
+          connection = described_class.connection
+          connection.begin_transaction(joinable: false, _lazy: false)
+          begin
+            example.run
+          ensure
+            connection.rollback_transaction
+          end
+        end
+      end
+
+      it 'does not raise, and reserves capacity as usual' do
+        expect(described_class.connection.transaction_open?).to be(true)
+
+        expect { |b| described_class.within_limit(purpose, **limit, &b) }
+          .to yield_control.once
+
+        expect(described_class.count).to eq(1)
+      end
+
+      it 'still raises when the code under test opens a transaction' do
+        expect { |b| described_class.transaction { described_class.within_limit(purpose, **limit, &b) } }
+          .to raise_error(described_class::TransactionOpenError)
+          .and not_yield_control
+      end
+    end
+
+    context 'when Delayed::Limit has its own connection pool' do
+      around do |example|
+        config = if ActiveRecord::Base.respond_to?(:connection_db_config)
+                   ActiveRecord::Base.connection_db_config.configuration_hash
+                 else
+                   ActiveRecord::Base.connection_config
+                 end
+        described_class.establish_connection(config)
+        example.run
+      ensure
+        described_class.remove_connection
+      end
+
+      it 'uses a separate pool from the application' do
+        expect(described_class.connection_pool).not_to equal(ActiveRecord::Base.connection_pool)
+      end
+
+      it 'does not treat a transaction on the application pool as an open transaction' do
+        expect { |b| ActiveRecord::Base.transaction { described_class.within_limit(purpose, **limit, &b) } }
+          .to yield_control.once
+          .and change { described_class.count }.by(1)
+      end
+
+      it 'still raises for a transaction on its own pool' do
+        expect { |b| described_class.transaction { described_class.within_limit(purpose, **limit, &b) } }
+          .to raise_error(described_class::TransactionOpenError)
+          .and not_yield_control
       end
     end
 
