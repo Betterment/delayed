@@ -15,5 +15,6 @@ gem "timecop"
 gem "zeitwerk"
 gem "sqlite3", ">= 2.1"
 gem "snapshot_testing"
+gem "json", "< 3"
 
 gemspec path: "../"
