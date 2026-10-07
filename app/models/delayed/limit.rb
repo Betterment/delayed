@@ -38,6 +38,10 @@ module Delayed
   #
   # It is **not** recommended to register limits dynamically at runtime, because
   # registered limits are cached indefinitely in memory and are not thread-safe.
+  #
+  # The limiter must not be called inside an open database transaction (it
+  # raises `TransactionOpenError`), because the reserved row would stay locked
+  # until that transaction commits.
   class Limit < ActiveRecord::Base
     self.table_name = 'delayed_limits'
 
@@ -51,6 +55,12 @@ module Delayed
     # Raised when the database adapter/version does not support the limiter
     # (see `.supported?`).
     class UnsupportedDatabaseError < StandardError; end
+
+    # Raised when `.within_limit` is called inside an open database
+    # transaction. The reservation query takes a row lock that would otherwise
+    # be held until the transaction commits, causing lock contention to pile up
+    # behind the caller's (potentially long-running) work.
+    class TransactionOpenError < StandardError; end
 
     class << self
       # Used only for limits registered in advance (via `.register!`):
@@ -115,6 +125,11 @@ module Delayed
         # e.g. for a target of 100 req/min, the drain_interval would be 0.6 sec/req.
         drain_interval = config.fetch(:per).seconds / config.fetch(:max).to_d
 
+        if transaction_open?
+          raise TransactionOpenError,
+            'Delayed::Limit.within_limit cannot be called inside a database transaction '
+        end
+
         # Attempt to reserve capacity via an uncached database query:
         limit = connection.uncached do
           find_by_sql(reserve_sql(purpose, drain_interval, wait_timeout.seconds)).first
@@ -143,6 +158,14 @@ module Delayed
       end
 
       private
+
+      # Checks `joinable?` rather than the connection's `transaction_open?` so
+      # that the per-example transaction opened by Rails' transactional tests
+      # (which is non-joinable) does not trip the guard, while any transaction
+      # opened by application code (joinable by default) does.
+      def transaction_open?
+        connection.current_transaction.joinable?
+      end
 
       # We reserve capacity by pushing a 'drained_at' timestamp forward by the
       # drain_interval, returning how long the caller must wait to avoid filling

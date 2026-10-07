@@ -632,6 +632,18 @@ upserting `RETURNING` clause and database-native timestamp arithmetic. You can c
 connection at runtime with `Delayed::Limit.supported?`. (Attempting to use the limiter on an
 unsupported database will raise `Delayed::Limit::UnsupportedDatabaseError`.)
 
+Additionally, the limiter **must not be called inside an open database
+transaction** (it raises `Delayed::Limit::TransactionOpenError`), because the
+reserved row would stay locked until the transaction commits. If it must run
+inside transactions, give `Delayed::Limit` a connection pool of its own (at the
+cost of up to one extra connection per thread) in a Rails initializer:
+
+```ruby
+Rails.application.config.to_prepare do
+  Delayed::Limit.establish_connection(ActiveRecord::Base.connection_db_config.configuration_hash)
+end
+```
+
 #### Traffic Shaping vs Traffic Enforcement
 
 By default, the limiter will `sleep` up to 5 seconds (or a specified `wait_timeout`) before
