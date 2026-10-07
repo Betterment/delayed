@@ -202,10 +202,10 @@ RSpec.describe Delayed::Limit do
     context 'when Delayed::Limit has its own connection pool' do
       around do |example|
         config = if ActiveRecord::Base.respond_to?(:connection_db_config)
-                   ActiveRecord::Base.connection_db_config.configuration_hash
-                 else
-                   ActiveRecord::Base.connection_config
-                 end
+          ActiveRecord::Base.connection_db_config.configuration_hash
+        else
+          ActiveRecord::Base.connection_config
+        end
         described_class.establish_connection(config)
         example.run
       ensure
