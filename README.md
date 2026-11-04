@@ -29,7 +29,7 @@ as:
 
 - Multithreaded job execution via
   [`concurrent-ruby`](https://github.com/ruby-concurrency/concurrent-ruby)
-- A highly optimized, `SKIP LOCKED`-based pickup query (on postgres)
+- A highly optimized, `SKIP LOCKED`-based pickup query (on postgres and mysql 8.0.1+)
 - Built-in instrumentation and continuous monitoring via a new `monitor` process
 - Named priority ranges, defaulting to `:interactive`, `:user_visible`, `:eventual`, and `:reporting`
 - Priority-based alerting threshholds for job age, run time, and attempts
@@ -507,7 +507,8 @@ workers will sleep for 5 seconds.
 # The max number of jobs a worker may lock at a time (also the size of the thread pool):
 Delayed::Worker.max_claims = 5
 
-# The number of jobs to which a worker may "read ahead" when locking jobs (mysql only!):
+# The number of jobs to which a worker may "read ahead" when locking jobs
+# (only used on mysql before 8.0.1 and on mariadb, which use a read-ahead strategy instead of `SKIP LOCKED`):
 Delayed::Worker.read_ahead = 5
 
 # If a worker finds no jobs, it will sleep this number of seconds in between attempts:

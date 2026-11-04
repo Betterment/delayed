@@ -85,7 +85,11 @@ module Delayed
         when "PostgreSQL", "PostGIS"
           reserve_with_scope_using_optimized_postgres(ready_scope, worker, now)
         when "MySQL", "Mysql2"
-          reserve_with_scope_using_optimized_mysql(ready_scope, worker, now)
+          if mysql_skip_locked_supported?
+            reserve_with_scope_using_mysql_skip_locked(ready_scope, worker, now)
+          else
+            reserve_with_scope_using_optimized_mysql(ready_scope, worker, now)
+          end
         when "MSSQL", "Teradata"
           reserve_with_scope_using_optimized_mssql(ready_scope, worker, now)
         # Fallback for unknown / other DBMS
@@ -167,6 +171,41 @@ module Delayed
       end
 
       jobs
+    end
+
+    # MySQL 8.0.1+ supports `FOR UPDATE SKIP LOCKED`, which lets concurrent
+    # workers claim disjoint sets of jobs instead of racing to update the same
+    # candidate rows. (MariaDB 10.6+ also has SKIP LOCKED, but it is not covered
+    # by CI here, so MariaDB keeps using the read-ahead strategy for now.)
+    def self.mysql_skip_locked_supported?
+      !connection.mariadb? && connection.database_version >= '8.0.1'
+    end
+
+    def self.reserve_with_scope_using_mysql_skip_locked(ready_scope, worker, now)
+      # See reserve_with_scope_using_optimized_mysql for why we drop usec here.
+      now = now.change(usec: 0)
+      attrs = { locked_at: now, locked_by: worker.name }
+
+      # Lock up to max_claims candidate rows, skipping any rows that another
+      # worker is in the middle of claiming, then mark them as ours. Because
+      # each worker only ever sees unclaimed rows, there is no need to read
+      # ahead and race on per-row UPDATEs (read_ahead is ignored on this path).
+      #
+      # READ COMMITTED avoids the gap locks that a REPEATABLE READ locking read
+      # takes on the scanned index range, so enqueues are not blocked while a
+      # worker is claiming. (Isolation can only be set on a new transaction.)
+      isolation = connection.transaction_open? ? nil : :read_committed
+      transaction(isolation: isolation) do
+        jobs = ready_scope.limit(worker.max_claims).lock('FOR UPDATE SKIP LOCKED').to_a
+        if jobs.any?
+          unscoped.where(id: jobs.map(&:id)).update_all(attrs)
+          jobs.each do |job|
+            job.assign_attributes(attrs)
+            job.send(:changes_applied)
+          end
+        end
+        jobs
+      end
     end
 
     def self.reserve_with_scope_using_optimized_mssql(ready_scope, worker, now)
