@@ -656,6 +656,114 @@ describe Delayed::Job do
       job = create_job(locked_by: worker.name, locked_at: (described_class.db_time_now - 1.minute))
       expect(described_class.reserve(worker)).to eq([job])
     end
+
+    if current_adapter == 'mysql2'
+      def reserve_sql(&block)
+        queries = []
+        callback = ->(*, payload) { queries << payload[:sql] }
+        ActiveSupport::Notifications.subscribed(callback, 'sql.active_record', &block)
+        queries
+      end
+
+      context 'when the MySQL server supports SKIP LOCKED' do
+        before do
+          skip 'requires MySQL 8.0.1+' unless described_class.mysql_skip_locked_supported?
+        end
+
+        it 'claims jobs with a single FOR UPDATE SKIP LOCKED read' do
+          Delayed::Worker.max_claims = 2
+          3.times { create_job }
+          queries = reserve_sql { expect(described_class.reserve(worker).size).to eq(2) }
+          expect(queries.grep(/FOR UPDATE SKIP LOCKED/).size).to eq(1)
+          expect(queries.grep(/\AUPDATE/).size).to eq(1)
+        end
+
+        it 'skips jobs that another worker is in the middle of claiming' do
+          first = create_job(priority: 1)
+          second = create_job(priority: 2)
+          locked = Queue.new
+          release = Queue.new
+          other_claim = Thread.new do
+            described_class.connection_pool.with_connection do
+              described_class.transaction do
+                described_class.where(id: first.id).lock.load
+                locked << true
+                release.pop
+              end
+            end
+          end
+          locked.pop
+
+          expect(described_class.reserve(worker)).to eq([second])
+        ensure
+          release&.push(true)
+          other_claim&.join
+        end
+
+        it 'returns persisted, unchanged jobs that are locked by the worker' do
+          job = create_job
+          reserved = described_class.reserve(worker).first
+          expect(reserved.locked_by).to eq(worker.name)
+          expect(reserved).not_to be_changed
+          expect(job.reload.locked_by).to eq(worker.name)
+          expect(job.locked_at).to eq(reserved.locked_at)
+        end
+
+        it 'joins an already-open transaction instead of setting an isolation level' do
+          job = create_job
+          described_class.transaction do
+            expect(described_class.reserve(worker)).to eq([job])
+          end
+          expect(job.reload.locked_by).to eq(worker.name)
+        end
+      end
+
+      context 'when the MySQL server does not support SKIP LOCKED' do
+        before do
+          allow(described_class).to receive(:mysql_skip_locked_supported?).and_return(false)
+        end
+
+        it 'falls back to the read-ahead strategy' do
+          Delayed::Worker.max_claims = 2
+          jobs = Array.new(3) { create_job }
+          queries = reserve_sql { expect(described_class.reserve(worker)).to eq(jobs.first(2)) }
+          expect(queries.grep(/SKIP LOCKED/)).to be_empty
+        end
+
+        it 'does not reserve jobs locked by other workers' do
+          job = create_job
+          other_worker = Delayed::Worker.new
+          other_worker.name = 'other_worker'
+          expect(described_class.reserve(other_worker)).to eq([job])
+          expect(described_class.reserve(worker)).to eq []
+        end
+      end
+    end
+  end
+
+  describe '.mysql_skip_locked_supported?' do
+    version_class = ActiveRecord::ConnectionAdapters::AbstractAdapter::Version
+    fake_connection = Struct.new(:database_version, :mariadb) do
+      def mariadb?
+        mariadb
+      end
+    end
+
+    {
+      ['5.7.44', false] => false,
+      ['8.0.0', false] => false,
+      ['8.0.1', false] => true,
+      ['9.5.0', false] => true,
+      ['10.5.27', true] => false,
+      ['10.6.0', true] => false,
+      ['11.4.2', true] => false,
+    }.each do |(version, mariadb), supported|
+      it "is #{supported} for #{mariadb ? 'MariaDB' : 'MySQL'} #{version}" do
+        connection = fake_connection.new(version_class.new(version), mariadb)
+        allow(described_class).to receive(:connection).and_return(connection)
+        expect(described_class.mysql_skip_locked_supported?).to eq(supported)
+      end
+    end
   end
 
   describe '#name' do
@@ -1235,9 +1343,19 @@ describe Delayed::Job do
       let(:dbms) { "MySQL" }
 
       it "uses the optimized sql version" do
+        allow(described_class).to receive(:mysql_skip_locked_supported?).and_return(false)
         allow(described_class).to receive(:reserve_with_scope_using_default_sql)
         described_class.reserve_with_scope(scope, worker, Time.current)
         expect(described_class).not_to have_received(:reserve_with_scope_using_default_sql)
+      end
+
+      it "uses the SKIP LOCKED version when the server supports it" do
+        allow(described_class).to receive(:mysql_skip_locked_supported?).and_return(true)
+        allow(described_class).to receive(:reserve_with_scope_using_mysql_skip_locked)
+        allow(described_class).to receive(:reserve_with_scope_using_optimized_mysql)
+        described_class.reserve_with_scope(scope, worker, Time.current)
+        expect(described_class).to have_received(:reserve_with_scope_using_mysql_skip_locked).once
+        expect(described_class).not_to have_received(:reserve_with_scope_using_optimized_mysql)
       end
     end
 
