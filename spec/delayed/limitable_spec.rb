@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'helper'
+require 'sorbet-runtime'
 
 RSpec.describe Delayed::Limitable do
   let(:purpose) { :limitable_spec }
@@ -31,15 +32,44 @@ RSpec.describe Delayed::Limitable do
         end
       end
 
-      it 'wraps perform with within_limit' do
-        job_class.new.perform
+      it 'wraps job execution with within_limit' do
+        expect(job_class.perform_now).to eq(:result)
         expect(Delayed::Limit).to have_received(:within_limit)
           .with(purpose, wait_timeout: 5.seconds).once
+      end
+
+      it 'does not limit direct calls to perform' do
+        expect(job_class.new.perform).to eq(:result)
+        expect(Delayed::Limit).not_to have_received(:within_limit)
       end
 
       it 'registers the limit policy with Delayed::Limit' do
         job_class
         expect(Delayed::Limit.limits.fetch(purpose)).to eq(max: 4, per: 1.second)
+      end
+    end
+
+    context 'when perform has a Sorbet runtime signature' do
+      let(:job_class) do
+        p = purpose
+        Class.new(ActiveJob::Base) do
+          extend T::Sig
+
+          with_limit p, max: 4, per: 1.second
+
+          sig { params(id: Integer).returns(Integer) }
+          def perform(id:)
+            id
+          end
+        end
+      end
+
+      it 'limits repeated calls and preserves runtime type checking' do
+        expect(job_class.perform_now(id: 1)).to eq(1)
+        expect(job_class.perform_now(id: 2)).to eq(2)
+        expect(Delayed::Limit).to have_received(:within_limit)
+          .with(purpose, wait_timeout: 5.seconds).twice
+        expect { job_class.perform_now(id: 'invalid') }.to raise_error(TypeError)
       end
     end
 
@@ -56,7 +86,7 @@ RSpec.describe Delayed::Limitable do
       end
 
       it 'defaults the purpose to the underscored class name' do
-        job_class.new.perform
+        job_class.perform_now
         expect(Delayed::Limit).to have_received(:within_limit)
           .with(:limitable_default_purpose_job, wait_timeout: 5.seconds).once
       end
@@ -73,9 +103,26 @@ RSpec.describe Delayed::Limitable do
       end
 
       it 'passes the wait_timeout through to within_limit' do
-        job_class.new.perform
+        job_class.perform_now
         expect(Delayed::Limit).to have_received(:within_limit)
           .with(purpose, wait_timeout: 30.seconds).once
+      end
+    end
+
+    context 'when on: is explicitly set to :perform' do
+      it 'limits direct calls to perform' do
+        p = purpose
+        job_class = Class.new(ActiveJob::Base) do
+          with_limit p, max: 4, per: 1.second, on: :perform
+
+          def perform
+            :result
+          end
+        end
+
+        expect(job_class.new.perform).to eq(:result)
+        expect(Delayed::Limit).to have_received(:within_limit)
+          .with(purpose, wait_timeout: 5.seconds).once
       end
     end
 
@@ -139,7 +186,7 @@ RSpec.describe Delayed::Limitable do
       end
 
       it 'references the registered limit by purpose' do
-        job_class.new.perform
+        job_class.perform_now
         expect(Delayed::Limit).to have_received(:within_limit)
           .with(purpose, wait_timeout: 5.seconds).once
       end
@@ -232,6 +279,23 @@ RSpec.describe Delayed::Limitable do
         allow(Delayed::Limit).to receive(:within_limit).and_raise(Delayed::Limit::LimitExceededError)
         expect { klass.new.do_work }.to raise_error(Delayed::Limit::LimitExceededError)
       end
+
+      it 'wraps perform when on: is omitted' do
+        p = purpose
+        plain_class = Class.new do
+          include Delayed::Limitable
+
+          with_limit p, max: 4, per: 1.second
+
+          def perform
+            :result
+          end
+        end
+
+        expect(plain_class.new.perform).to eq(:result)
+        expect(Delayed::Limit).to have_received(:within_limit)
+          .with(purpose, wait_timeout: 5.seconds).once
+      end
     end
   end
 
@@ -241,11 +305,16 @@ RSpec.describe Delayed::Limitable do
       Class.new(ActiveJob::Base) do
         with_limit p, max: 4, per: 1.second, retry_jitter: 0
 
-        define_method(:perform) { raise Delayed::Limit::LimitExceededError }
+        def perform
+          raise 'perform should not run when the limit is exceeded'
+        end
       end
     end
 
-    before { stub_const('LimitableRetryJob', job_class) }
+    before do
+      stub_const('LimitableRetryJob', job_class)
+      allow(Delayed::Limit).to receive(:within_limit).and_raise(Delayed::Limit::LimitExceededError)
+    end
 
     it 'retries the job when the limit is exceeded' do
       job = job_class.new

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module Delayed
-  # A mixin that wraps a class's `perform` method (or other methods named via
-  # `on:`) in `Delayed::Limit.within_limit`. It is automatically included in
-  # ActiveJob classes, and configures the job to retry with a polynomial
+  # A mixin that applies `Delayed::Limit.within_limit` around ActiveJob execution
+  # (or around individual methods named via `on:`). It is automatically included
+  # in ActiveJob classes, and configures the job to retry with a polynomial
   # backoff when the limit's `wait_timeout` would be exceeded:
   #
   #   class TouchesThirdPartyApiJob < ApplicationJob
@@ -44,10 +44,13 @@ module Delayed
       Float::INFINITY
     end
 
+    DEFAULT_LIMIT_TARGET = Object.new.freeze
+    private_constant :DEFAULT_LIMIT_TARGET
+
     class_methods do
       def with_limit(
         purpose = name.underscore.to_sym,
-        on: :perform,
+        on: DEFAULT_LIMIT_TARGET,
         max: nil,
         per: nil,
         wait_timeout: 5.seconds,
@@ -57,11 +60,28 @@ module Delayed
       )
         Delayed::Limit.register!(purpose, max: max, per: per) if max || per
 
-        if defined?(ActiveJob::Base) && self < ActiveJob::Base &&
-            rescue_handlers.none? { |klass, _| klass == Delayed::Limit::LimitExceededError.name }
+        active_job = defined?(ActiveJob::Base) && self < ActiveJob::Base
+        if active_job && rescue_handlers.none? { |klass, _| klass == Delayed::Limit::LimitExceededError.name }
           retry_on(Delayed::Limit::LimitExceededError, attempts: retry_attempts, wait: retry_wait)
         end
 
+        apply_limit(purpose, wait_timeout, on, active_job: active_job)
+      end
+
+      private
+
+      def apply_limit(purpose, wait_timeout, on, active_job:)
+        default_target = on.equal?(DEFAULT_LIMIT_TARGET)
+        if active_job && default_target
+          around_perform do |_, perform|
+            Delayed::Limit.within_limit(purpose, wait_timeout: wait_timeout, &perform)
+          end
+        else
+          wrap_limited_methods(default_target ? :perform : on, purpose, wait_timeout)
+        end
+      end
+
+      def wrap_limited_methods(on, purpose, wait_timeout)
         prepend(Module.new do
           Array(on).each do |method_name|
             define_method(method_name) do |*args, **kwargs, &block|
@@ -72,8 +92,6 @@ module Delayed
           end
         end)
       end
-
-      private
 
       def polynomial_backoff(min_wait, attempt, jitter)
         [min_wait, (attempt**4)].max * (1 + rand(-jitter..jitter))
