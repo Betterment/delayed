@@ -619,8 +619,14 @@ be exceeded within a configurable timeout, the job will immediately end and enqu
 with polynomial backoff. Because its state lives in the database, the limit applies across every
 worker and process at once.
 
+Without `on:`, ActiveJob limits run in an `around_perform` callback. This covers enqueued jobs
+and `perform_now`, without replacing `perform` or interfering with runtime signatures such as
+Sorbet's `sig`. A direct call to `job.perform` skips ActiveJob callbacks and is not limited.
+Use `on: :perform` if direct calls also need to be limited.
+
 Plain (non-ActiveJob) classes may `include Delayed::Limitable` to use `with_limit`, but they must
 define their own rescheduling/lifecycle behavior for `Delayed::Limit::LimitExceededError` errors.
+For these classes, omitting `on:` still wraps the `perform` method.
 
 #### Setup
 
@@ -673,8 +679,8 @@ limit is not shared with any other class:
 with_limit max: 100, per: 1.minute
 ```
 
-Use `on:` to wrap one or more other instance methods instead of `perform` (e.g. if only a portion
-of the job's work is subject to the limit):
+Use `on:` to wrap one or more instance methods directly (e.g. if only a portion of the job's
+work is subject to the limit):
 
 ```ruby
 with_limit :third_party_api, on: :deliver!
