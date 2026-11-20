@@ -44,6 +44,9 @@ module Delayed
       Float::INFINITY
     end
 
+    WRAPPER_LOCK = Mutex.new
+    private_constant :WRAPPER_LOCK
+
     class_methods do
       def with_limit(
         purpose = name.underscore.to_sym,
@@ -62,7 +65,7 @@ module Delayed
           retry_on(Delayed::Limit::LimitExceededError, attempts: retry_attempts, wait: retry_wait)
         end
 
-        prepend(Module.new do
+        defer_limit_wrapper(Module.new do
           Array(on).each do |method_name|
             define_method(method_name) do |*args, **kwargs, &block|
               Delayed::Limit.within_limit(purpose, wait_timeout: wait_timeout) do
@@ -73,7 +76,39 @@ module Delayed
         end)
       end
 
+      def new(...)
+        prepend_limit_wrappers!
+        super
+      end
+
+      def allocate
+        prepend_limit_wrappers!
+        super
+      end
+
       private
+
+      # Deferred so that `method_added` hooks (e.g. Sorbet sigs) don't find the wrapper.
+      def defer_limit_wrapper(wrapper)
+        WRAPPER_LOCK.synchronize { (@pending_limit_wrappers ||= []) << wrapper }
+      end
+
+      def prepend_limit_wrappers!
+        klass = self
+        while klass.respond_to?(:with_limit)
+          klass.send(:prepend_own_limit_wrappers!)
+          klass = klass.superclass
+        end
+      end
+
+      def prepend_own_limit_wrappers!
+        return unless @pending_limit_wrappers
+
+        WRAPPER_LOCK.synchronize do
+          @pending_limit_wrappers&.each { |wrapper| prepend(wrapper) }
+          @pending_limit_wrappers = nil
+        end
+      end
 
       def polynomial_backoff(min_wait, attempt, jitter)
         [min_wait, (attempt**4)].max * (1 + rand(-jitter..jitter))

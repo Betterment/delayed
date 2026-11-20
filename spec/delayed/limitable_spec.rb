@@ -126,6 +126,52 @@ RSpec.describe Delayed::Limitable do
       end
     end
 
+    context 'when the methods are defined after with_limit' do
+      let(:job_class) do
+        p = purpose
+        Class.new(ActiveJob::Base) do
+          def self.method_added(name)
+            super
+            (@owners_when_added ||= {})[name] = instance_method(name).owner
+          end
+
+          with_limit p, max: 4, per: 1.second, on: %i(perform deliver!)
+
+          def perform(id:)
+            deliver!(id: id)
+          end
+
+          def deliver!(id:)
+            id * 10
+          end
+        end
+      end
+
+      it 'does not shadow the methods while they are being defined' do
+        owners = job_class.instance_variable_get(:@owners_when_added)
+        expect(owners).to eq(perform: job_class, deliver!: job_class)
+      end
+
+      it 'wraps each method (with kwargs) once the job is instantiated' do
+        expect(job_class.perform_now(id: 1)).to eq(10)
+        expect(job_class.perform_now(id: 2)).to eq(20)
+        expect(Delayed::Limit).to have_received(:within_limit)
+          .with(purpose, wait_timeout: 5.seconds).exactly(4).times
+      end
+
+      it 'wraps the methods of an allocated (e.g. deserialized) job' do
+        expect(job_class.allocate.deliver!(id: 1)).to eq(10)
+        expect(Delayed::Limit).to have_received(:within_limit).once
+      end
+
+      it 'wraps the methods of a subclass instantiated before its parent' do
+        subclass = Class.new(job_class)
+        expect(subclass.new.deliver!(id: 1)).to eq(10)
+        expect(job_class.new.deliver!(id: 2)).to eq(20)
+        expect(Delayed::Limit).to have_received(:within_limit).twice
+      end
+    end
+
     context 'when the purpose was registered in advance and no config is given' do
       before { Delayed::Limit.register!(purpose, max: 4, per: 1.second) }
 
@@ -231,6 +277,29 @@ RSpec.describe Delayed::Limitable do
       it 'leaves LimitExceededError handling to the caller' do
         allow(Delayed::Limit).to receive(:within_limit).and_raise(Delayed::Limit::LimitExceededError)
         expect { klass.new.do_work }.to raise_error(Delayed::Limit::LimitExceededError)
+      end
+
+      it 'does not shadow methods defined after with_limit' do
+        p = purpose
+        owners = {}
+        plain_class = Class.new do
+          include Delayed::Limitable
+
+          define_singleton_method(:method_added) do |name|
+            super(name)
+            owners[name] = instance_method(name).owner
+          end
+
+          with_limit p, max: 4, per: 1.second, on: :do_work
+
+          def do_work
+            :result
+          end
+        end
+
+        expect(owners).to eq(do_work: plain_class)
+        expect(plain_class.new.do_work).to eq(:result)
+        expect(Delayed::Limit).to have_received(:within_limit).once
       end
     end
   end
