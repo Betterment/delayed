@@ -209,6 +209,7 @@ GEM
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
     snapshot_testing (0.3.4)
+    sorbet-runtime (0.6.13707)
     sqlite3 (2.6.0)
       mini_portile2 (~> 2.8.0)
     sqlite3 (2.6.0-aarch64-linux-gnu)
@@ -253,6 +254,7 @@ DEPENDENCIES
   rake
   rspec
   snapshot_testing
+  sorbet-runtime
   sqlite3 (>= 1.4)
   timecop
   zeitwerk
