@@ -557,7 +557,7 @@ describe Delayed::Job do
 
     context 'during DST change' do
       before do
-        Time.zone = 'US/Eastern'
+        Time.zone = 'America/New_York'
       end
 
       let(:dst_start) { Time.zone.parse('2024-11-03 01:00:00 EDT') }
@@ -604,7 +604,7 @@ describe Delayed::Job do
 
       context 'during DST change' do
         before do
-          Time.zone = 'US/Eastern'
+          Time.zone = 'America/New_York'
         end
 
         let(:dst_start) { Time.zone.parse('2024-11-03 01:00:00 EDT') }

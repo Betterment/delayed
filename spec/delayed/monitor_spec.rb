@@ -25,7 +25,7 @@ RSpec.describe Delayed::Monitor do
 
     around do |example|
       if app_local_db_time
-        Time.zone = 'US/Central'
+        Time.zone = 'America/Chicago'
         self.default_timezone = :local
       end
 
